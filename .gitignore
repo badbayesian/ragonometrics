@@ -34,7 +34,7 @@ runtime_run*.log
 .streamlit/
 
 # Data/artifacts
-papers/
+#papers/
 bench/
 indexes/
 *.index

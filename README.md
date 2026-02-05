@@ -21,7 +21,7 @@ python -m pip install -e .
 $env:OPENAI_API_KEY = "sk-..."
 ```
 
-4. Place PDFs in `papers/` or set `PAPERS_DIR`.
+4. Place PDFs in `papers/` (e.g., `papers/example.pdf`) or set `PAPERS_DIR`.
 
 5. Run the summarizer.
 
@@ -34,10 +34,10 @@ Console Entrypoints
 After installation, use:
 
 ```bash
-ragonomics index --papers-dir papers/ --index-path vectors.index
-ragonomics query --paper papers/example.pdf --question "What is the research question?"
+ragonomics index --papers-dir papers/ --index-path vectors.index --meta-db-url "postgres://user:pass@localhost:5432/ragonomics"
+ragonomics query --paper papers/example.pdf --question "What is the research question?" --model gpt-5-nano
 ragonomics ui
-ragonomics benchmark --papers-dir papers/ --out bench/benchmark.csv
+ragonomics benchmark --papers-dir papers/ --out bench/benchmark.csv --limit 5
 ```
 
 Streamlit App
