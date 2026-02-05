@@ -114,26 +114,26 @@ Architecture Diagram (Mermaid)
 ------------------------------
 ```mermaid
 flowchart LR
-    A[PDFs in papers/] --> B[io_loaders: pdftotext/pdfinfo/OCR]
-    B --> C[Normalize + Chunk (provenance + optional section tags)]
-    C --> D[Embeddings (OpenAI)]
+    A["PDFs in papers/"] --> B["io_loaders: pdftotext/pdfinfo/OCR"]
+    B --> C["Normalize & Chunk (provenance, optional section tags)"]
+    C --> D["Embeddings (OpenAI)"]
     D --> E[FAISS Index]
-    C --> F[Metadata DB (Postgres)]
-    E --> G[Retriever (BM25+FAISS)]
+    C --> F["Metadata DB (Postgres)"]
+    E --> G["Retriever (BM25 + FAISS)"]
     F --> G
     G --> H[Context]
-    H --> I[LLM Response (call_openai)]
+    H --> I["LLM Response (call_openai)"]
 
-    I --> J[CLI Summary / Query]
-    I --> K[Streamlit Chat Tab]
+    I --> J["CLI Summary / Query"]
+    I --> K["Streamlit Chat Tab"]
 
-    C --> L[DOI Extraction]
-    L --> M[Crossref API + Cache]
-    M --> N[DOI Network Tab]
+    C --> L["DOI Extraction"]
+    L --> M["Crossref API + Cache"]
+    M --> N["DOI Network Tab"]
 
-    Q[Redis + RQ] --> E
-    R[Query Cache (SQLite)] --> I
-    S[Index Version Sidecar + Manifest] --> E
+    Q["Redis + RQ"] --> E
+    R["Query Cache (SQLite)"] --> I
+    S["Index Version Sidecar + Manifest"] --> E
 ```
 
 Architecture
