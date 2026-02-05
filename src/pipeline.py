@@ -528,13 +528,41 @@ def call_openai(
     """
     if max_output_tokens is not None and max_output_tokens < 16:
         max_output_tokens = 16
-    resp = client.responses.create(
-        model=model,
-        instructions=instructions,
-        input=user_input,
-        max_output_tokens=max_output_tokens,
-    )
-    return response_text(resp)
+    max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
+    for attempt in range(max_retries + 1):
+        try:
+            resp = client.responses.create(
+                model=model,
+                instructions=instructions,
+                input=user_input,
+                max_output_tokens=max_output_tokens,
+            )
+            return response_text(resp)
+        except Exception as exc:
+            if attempt >= max_retries:
+                db_url = os.environ.get("DATABASE_URL")
+                if db_url:
+                    try:
+                        import psycopg2
+                        from ragonomics import metadata
+
+                        conn = psycopg2.connect(db_url)
+                        metadata.record_failure(
+                            conn,
+                            "openai",
+                            str(exc),
+                            {"model": model, "max_output_tokens": max_output_tokens},
+                        )
+                        conn.close()
+                    except Exception:
+                        pass
+                raise
+            try:
+                import time
+
+                time.sleep(0.5 * (attempt + 1))
+            except Exception:
+                pass
 
 
 def extract_json(text: str) -> Any:

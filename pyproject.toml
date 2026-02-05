@@ -23,6 +23,7 @@ dependencies = [
   "jiter>=0.13.0",
   "pydantic-core>=0.11.0",
   "pydantic>=2.0.0",
+  "tomli>=2.0.0",
 ]
   
 
@@ -41,7 +42,7 @@ ocr = [
 
 
 [project.scripts]
-ragonomics = "ragonomics.main:main"
+ragonomics = "ragonomics.entrypoints:main"
 ragonomics-cli = "ragonomics.cli:main"
 
 [tool.setuptools]

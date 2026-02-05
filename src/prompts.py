@@ -41,3 +41,14 @@ PIPELINE_CITATION_RANK_INSTRUCTIONS = (
     "`citation_id`, `title`, `authors`, `year`, `venue`, `mention_count` (int), "
     "`importance_rank` (int, 1 is highest), `importance_score` (0-100), and `rationale`."
 )
+
+QUERY_EXPANSION_PROMPT = (
+    "Generate up to 3 alternative search queries that capture the same intent as the input. "
+    "Return one query per line with no numbering."
+)
+
+RERANK_PROMPT = (
+    "You are a retrieval reranker. Given a query and a list of chunk IDs with text, "
+    "return the IDs ordered by relevance (most relevant first). "
+    "Return only a flat list of IDs, one per line."
+)

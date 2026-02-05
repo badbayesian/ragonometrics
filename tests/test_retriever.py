@@ -36,7 +36,7 @@ def test_hybrid_search_creates_hits(tmp_path, monkeypatch):
     conn = psycopg2.connect()
     cur = conn.cursor()
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS index_shards (shard_name TEXT UNIQUE, path TEXT, pipeline_run_id INTEGER, created_at TEXT, is_active INTEGER)"
+        "CREATE TABLE IF NOT EXISTS index_shards (shard_name TEXT UNIQUE, path TEXT, pipeline_run_id INTEGER, created_at TEXT, is_active INTEGER, index_id TEXT)"
     )
     cur.execute(
         "CREATE TABLE IF NOT EXISTS vectors (id INTEGER PRIMARY KEY, text TEXT, page INTEGER, start_word INTEGER, end_word INTEGER, doc_id TEXT, pipeline_run_id INTEGER, created_at TEXT)"
@@ -45,9 +45,12 @@ def test_hybrid_search_creates_hits(tmp_path, monkeypatch):
     cur.execute("DELETE FROM index_shards")
     cur.execute("DELETE FROM vectors")
     # insert index_shard and vectors rows
+    index_id = "idx-test-1"
+    sidecar = idx_path.with_suffix(".index.version.json")
+    sidecar.write_text(f'{{"index_id": "{index_id}"}}')
     cur.execute(
-        "INSERT INTO index_shards (shard_name, path, pipeline_run_id, created_at, is_active) VALUES (?, ?, ?, ?, 1)",
-        ("s1", str(idx_path), 1, "now"),
+        "INSERT INTO index_shards (shard_name, path, pipeline_run_id, created_at, is_active, index_id) VALUES (?, ?, ?, ?, 1, ?)",
+        ("s1", str(idx_path), 1, "now", index_id),
     )
     for i in range(3):
         cur.execute(

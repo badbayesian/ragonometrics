@@ -1,14 +1,39 @@
 from __future__ import annotations
 
 from typing import List, Tuple, Dict
+import json
 import os
 import hashlib
+from pathlib import Path
 
 import faiss
 import numpy as np
 from openai import OpenAI
 from rank_bm25 import BM25Okapi
 import psycopg2
+
+
+def _load_index_sidecar(path: str) -> Dict:
+    sidecar = Path(path).with_suffix(".index.version.json")
+    if not sidecar.exists():
+        raise RuntimeError(f"Index sidecar not found: {sidecar}")
+    try:
+        return json.loads(sidecar.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Failed to read index sidecar: {sidecar}") from exc
+
+
+def _verify_index_version(path: str, db_index_id: str | None) -> None:
+    if os.environ.get("ALLOW_UNVERIFIED_INDEX"):
+        return
+    sidecar = _load_index_sidecar(path)
+    sidecar_id = sidecar.get("index_id")
+    if not sidecar_id:
+        raise RuntimeError(f"Index sidecar missing index_id: {path}")
+    if not db_index_id:
+        raise RuntimeError(f"DB index_id missing for shard: {path}")
+    if sidecar_id != db_index_id:
+        raise RuntimeError(f"Index id mismatch for shard {path}: sidecar={sidecar_id} db={db_index_id}")
 
 
 def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
@@ -22,11 +47,12 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
-    cur.execute("SELECT shard_name, path FROM index_shards WHERE is_active = TRUE ORDER BY created_at DESC")
+    cur.execute("SELECT shard_name, path, index_id FROM index_shards WHERE is_active = TRUE ORDER BY created_at DESC")
     rows = cur.fetchall()
     conn.close()
     res = []
-    for shard_name, path in rows:
+    for shard_name, path, index_id in rows:
+        _verify_index_version(path, index_id)
         idx = faiss.read_index(path)
         res.append((shard_name, idx))
     return res

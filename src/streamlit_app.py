@@ -22,6 +22,7 @@ from ragonomics.main import (
 )
 from ragonomics.pipeline import call_openai
 from ragonomics.prompts import RESEARCHER_QA_PROMPT
+from ragonomics.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
 
 import networkx as nx
 import plotly.graph_objects as go
@@ -255,13 +256,27 @@ def main():
                 # context will include provenance annotations like (page X words Y-Z)
                 context = top_k_context(chunks, chunk_embeddings, query=query, client=client, settings=settings)
 
-                answer = call_openai(
-                    client,
-                    model=selected_model,
-                    instructions=RESEARCHER_QA_PROMPT,
-                    user_input=f"Context:\n{context}\n\nQuestion: {query}",
-                    max_output_tokens=None,
-                ).strip()
+                cache_key = make_cache_key(query, str(paper.path), selected_model, context)
+                cached = get_cached_answer(DEFAULT_CACHE_PATH, cache_key)
+                if cached is not None:
+                    answer = cached
+                else:
+                    answer = call_openai(
+                        client,
+                        model=selected_model,
+                        instructions=RESEARCHER_QA_PROMPT,
+                        user_input=f"Context:\n{context}\n\nQuestion: {query}",
+                        max_output_tokens=None,
+                    ).strip()
+                    set_cached_answer(
+                        DEFAULT_CACHE_PATH,
+                        cache_key=cache_key,
+                        query=query,
+                        paper_path=str(paper.path),
+                        model=selected_model,
+                        context=context,
+                        answer=answer,
+                    )
 
                 citations = parse_context_chunks(context)
                 st.session_state.history.append(

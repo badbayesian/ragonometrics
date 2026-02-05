@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import re
 import subprocess
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 try:
     from pdf2image import convert_from_path
@@ -242,6 +242,9 @@ def chunk_pages(page_texts: List[str], chunk_words_count: int, overlap_words: in
     Returns:
         List[Dict]: Dicts with "text", "page", "start_word", and "end_word".
     """
+    sections: Optional[List[str]] = None
+    if os.environ.get("SECTION_AWARE_CHUNKING"):
+        sections = infer_sections(page_texts)
     chunks: List[Dict] = []
     for page_idx, page_text in enumerate(page_texts, start=1):
         words = page_text.split()
@@ -252,13 +255,49 @@ def chunk_pages(page_texts: List[str], chunk_words_count: int, overlap_words: in
         while i < len(words):
             j = min(len(words), i + chunk_words_count)
             chunk_text = " ".join(words[i:j])
-            chunks.append({
+            chunk = {
                 "text": chunk_text,
                 "page": page_idx,
                 "start_word": i,
                 "end_word": j - 1,
-            })
+            }
+            if sections:
+                chunk["section"] = sections[page_idx - 1]
+            chunks.append(chunk)
             if j == len(words):
                 break
             i += step
     return chunks
+
+
+SECTION_PATTERNS = [
+    ("abstract", re.compile(r"^\s*abstract\b", re.IGNORECASE)),
+    ("introduction", re.compile(r"^\s*(introduction|background)\b", re.IGNORECASE)),
+    ("methods", re.compile(r"^\s*(methods|methodology|data and methods)\b", re.IGNORECASE)),
+    ("results", re.compile(r"^\s*(results|findings)\b", re.IGNORECASE)),
+    ("discussion", re.compile(r"^\s*(discussion)\b", re.IGNORECASE)),
+    ("conclusion", re.compile(r"^\s*(conclusion|conclusions)\b", re.IGNORECASE)),
+    ("references", re.compile(r"^\s*(references|bibliography|works cited)\b", re.IGNORECASE)),
+    ("appendix", re.compile(r"^\s*appendix\b", re.IGNORECASE)),
+]
+
+
+def infer_sections(page_texts: List[str]) -> List[str]:
+    """Infer a coarse section label for each page based on headings."""
+    current = "unknown"
+    labels: List[str] = []
+    for page_text in page_texts:
+        section = current
+        for raw_line in page_text.splitlines()[:80]:
+            line = raw_line.strip()
+            if not line:
+                continue
+            for name, pattern in SECTION_PATTERNS:
+                if pattern.match(line):
+                    section = name
+                    break
+            if section != current:
+                break
+        labels.append(section)
+        current = section
+    return labels

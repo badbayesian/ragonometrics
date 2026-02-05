@@ -20,7 +20,10 @@ import os
 import psycopg2
 from datetime import datetime
 import hashlib
+import uuid
 from . import metadata
+from ragonomics.manifest import build_index_version, build_run_manifest, write_index_version_sidecar, write_run_manifest
+from ragonomics.logging_utils import log_event
 
 
 def normalize(v: np.ndarray) -> np.ndarray:
@@ -55,10 +58,12 @@ def build_index(
         RuntimeError: If no metadata DB URL is available or index dims mismatch.
     """
     client = OpenAI()
+    log_event("index_start", {"papers": len(paper_paths), "index_path": str(index_path)})
 
     all_vectors: List[np.ndarray] = []
     metadata_rows = []
     next_id = 0
+    doc_ids: List[str] = []
 
     # If index exists, load it and determine starting id
     if index_path.exists():
@@ -87,6 +92,7 @@ def build_index(
         text_hash = hashlib.sha256(paper.text.encode("utf-8", errors="ignore")).hexdigest()
         file_hash = hashlib.sha256(file_bytes).hexdigest()
         doc_id = hashlib.sha256((file_hash + text_hash).encode("utf-8")).hexdigest()
+        doc_ids.append(doc_id)
         chunks = prepare_chunks_for_paper(paper, settings)
         if not chunks:
             continue
@@ -140,10 +146,34 @@ def build_index(
     cur = conn.cursor()
     # ensure metadata tables exist
     metadata.init_metadata_db(db_url)
-    # create a pipeline run
+    # idempotency key for run
+    corpus_fingerprint = hashlib.sha256("".join(sorted(doc_ids)).encode("utf-8")).hexdigest()
+    idempotency_key = hashlib.sha256(
+        f"{settings.embedding_model}|{settings.chunk_words}|{settings.chunk_overlap}|{corpus_fingerprint}".encode("utf-8")
+    ).hexdigest()
+    # create a pipeline run (or reuse existing)
     run_conn = psycopg2.connect(db_url)
-    run_id = metadata.create_pipeline_run(run_conn, git_sha=None, extractor_version=None, embedding_model=settings.embedding_model, chunk_words=settings.chunk_words, chunk_overlap=settings.chunk_overlap, normalized=True)
+    run_id = metadata.create_pipeline_run(
+        run_conn,
+        git_sha=None,
+        extractor_version=None,
+        embedding_model=settings.embedding_model,
+        chunk_words=settings.chunk_words,
+        chunk_overlap=settings.chunk_overlap,
+        normalized=True,
+        idempotency_key=idempotency_key,
+    )
     run_conn.close()
+    if os.environ.get("INDEX_IDEMPOTENT_SKIP", "1") == "1":
+        # if a run with same idempotency key already exists and vectors are present, skip
+        try:
+            cur.execute("SELECT 1 FROM vectors WHERE pipeline_run_id = %s LIMIT 1", (run_id,))
+            if cur.fetchone():
+                log_event("index_skip", {"reason": "idempotent", "run_id": run_id})
+                conn.close()
+                return
+        except Exception:
+            pass
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS vectors (
@@ -193,10 +223,41 @@ def build_index(
     # copy index to shard path (immutable)
     shutil.copy2(str(index_path), str(shard_path))
 
-    # register shard in metadata and atomically mark active
+    # build index version metadata
+    index_id = str(uuid.uuid4())
+    # register index version + shard in metadata and atomically mark active
     reg_conn = psycopg2.connect(db_url)
-    metadata.publish_shard(reg_conn, shard_name, str(shard_path), run_id)
+    metadata.create_index_version(
+        reg_conn,
+        index_id=index_id,
+        embedding_model=settings.embedding_model,
+        chunk_words=settings.chunk_words,
+        chunk_overlap=settings.chunk_overlap,
+        corpus_fingerprint=corpus_fingerprint,
+        index_path=str(index_path),
+        shard_path=str(shard_path),
+    )
+    metadata.publish_shard(reg_conn, shard_name, str(shard_path), run_id, index_id=index_id)
     reg_conn.close()
+
+    # write index version sidecar next to shard
+    index_version_payload = build_index_version(
+        index_id=index_id,
+        embedding_model=settings.embedding_model,
+        chunk_words=settings.chunk_words,
+        chunk_overlap=settings.chunk_overlap,
+        corpus_fingerprint=corpus_fingerprint,
+    )
+    write_index_version_sidecar(shard_path, index_version_payload)
+
+    manifest = build_run_manifest(
+        settings=settings,
+        paper_paths=paper_paths,
+        index_path=index_path,
+        shard_path=shard_path,
+        pipeline_run_id=run_id,
+    )
+    write_run_manifest(shard_path, manifest)
 
     print(f"Wrote index ({X.shape[0]} vectors, dim={dim}) to {index_path}")
     print(f"Wrote metadata rows to {db_url}")

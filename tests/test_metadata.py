@@ -24,3 +24,29 @@ def test_pipeline_run_and_shard_publish():
     shards = metadata.get_active_shards(conn)
     assert len(shards) == 1
     assert shards[0][0] == "shard-test"
+
+
+def test_pipeline_run_idempotency():
+    db_url = "dummy"
+    conn = metadata.init_metadata_db(db_url)
+    run_id1 = metadata.create_pipeline_run(
+        conn,
+        git_sha="deadbeef",
+        extractor_version="poppler-23",
+        embedding_model="emb-1",
+        chunk_words=256,
+        chunk_overlap=32,
+        normalized=True,
+        idempotency_key="same-key",
+    )
+    run_id2 = metadata.create_pipeline_run(
+        conn,
+        git_sha="deadbeef",
+        extractor_version="poppler-23",
+        embedding_model="emb-1",
+        chunk_words=256,
+        chunk_overlap=32,
+        normalized=True,
+        idempotency_key="same-key",
+    )
+    assert run_id1 == run_id2

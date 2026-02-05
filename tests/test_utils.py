@@ -22,8 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = REPO_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-from ragonomics.main import Settings, top_k_context, trim_words
-from ragonomics.io_loaders import chunk_words
+from ragonomics.main import Settings, top_k_context
+from ragonomics.io_loaders import chunk_words, trim_words
 
 
 def test_trim_words_truncates():

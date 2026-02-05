@@ -16,15 +16,13 @@ from typing import Optional
 
 from openai import OpenAI
 
+from ragonomics.config import DEFAULT_CONFIG_PATH, build_effective_config, hash_config_dict, load_config
 from ragonomics.io_loaders import (
     chunk_pages,
-    chunk_words,
     normalize_text,
-    run_pdftotext,
     run_pdftotext_pages,
-    trim_words,
 )
-from ragonomics.prompts import MAIN_SUMMARY_PROMPT
+from ragonomics.prompts import MAIN_SUMMARY_PROMPT, QUERY_EXPANSION_PROMPT, RERANK_PROMPT
 from ragonomics.pipeline import call_openai
 
 
@@ -57,6 +55,8 @@ class Settings:
     batch_size: int
     embedding_model: str
     chat_model: str
+    config_path: Path | None = None
+    config_hash: str | None = None
 
 
 @dataclass(frozen=True)
@@ -99,24 +99,28 @@ def load_env(path: Path) -> None:
             os.environ[key] = value
 
 
-def load_settings() -> Settings:
-    """Load runtime settings from environment variables and defaults.
+def load_settings(config_path: Path | None = None) -> Settings:
+    """Load runtime settings from config file, environment variables, and defaults.
 
     Returns:
         Settings: Resolved configuration.
     """
     load_env(DOTENV_PATH)
-    papers_dir = Path(os.getenv("PAPERS_DIR", PROJECT_ROOT / "papers"))
+    cfg_path = config_path or Path(os.getenv("RAG_CONFIG", DEFAULT_CONFIG_PATH))
+    cfg = load_config(cfg_path)
+    effective = build_effective_config(cfg, os.environ, project_root=PROJECT_ROOT)
     return Settings(
-        papers_dir=papers_dir,
-        max_papers=int(os.getenv("MAX_PAPERS", "3")),
-        max_words=int(os.getenv("MAX_WORDS", "12000")),
-        chunk_words=int(os.getenv("CHUNK_WORDS", "350")),
-        chunk_overlap=int(os.getenv("CHUNK_OVERLAP", "50")),
-        top_k=int(os.getenv("TOP_K", "6")),
-        batch_size=int(os.getenv("EMBED_BATCH", "64")),
-        embedding_model=os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"),
-        chat_model=os.getenv("OPENAI_MODEL") or os.getenv("CHAT_MODEL", "gpt-5-nano"),
+        papers_dir=Path(effective["papers_dir"]),
+        max_papers=int(effective["max_papers"]),
+        max_words=int(effective["max_words"]),
+        chunk_words=int(effective["chunk_words"]),
+        chunk_overlap=int(effective["chunk_overlap"]),
+        top_k=int(effective["top_k"]),
+        batch_size=int(effective["batch_size"]),
+        embedding_model=str(effective["embedding_model"]),
+        chat_model=str(effective["chat_model"]),
+        config_path=cfg_path if cfg_path.exists() else None,
+        config_hash=hash_config_dict(effective),
     )
 
 
@@ -223,12 +227,36 @@ def fetch_references_from_crossref(doi: str, timeout: int = 10, cache_db_url: st
         data = requests.utils.json.loads(raw)
     else:
         url = f"https://api.crossref.org/works/{requests.utils.requote_uri(doi)}"
-        try:
-            resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Ragonomics/0.1 (mailto:example@example.com)"})
-            resp.raise_for_status()
-        except requests.RequestException:
+        data = None
+        for attempt in range(3):
+            try:
+                resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Ragonomics/0.1 (mailto:example@example.com)"})
+                resp.raise_for_status()
+                data = resp.json()
+                break
+            except requests.RequestException as exc:
+                if attempt == 2:
+                    # optional failure logging
+                    db_url = os.environ.get("DATABASE_URL")
+                    if db_url:
+                        try:
+                            from ragonomics import metadata
+
+                            conn = psycopg2.connect(db_url)
+                            metadata.record_failure(conn, "crossref", str(exc), {"doi": doi})
+                            conn.close()
+                        except Exception:
+                            pass
+                    return []
+                # backoff
+                try:
+                    import time
+
+                    time.sleep(0.5 * (attempt + 1))
+                except Exception:
+                    pass
+        if data is None:
             return []
-        data = resp.json()
     message = data.get("message") or {}
     references = message.get("reference") or []
     cited = []
@@ -394,6 +422,69 @@ def cosine(a: List[float], b: List[float]) -> float:
     return dot / math.sqrt(norm_a * norm_b)
 
 
+def expand_queries(query: str, client: OpenAI, settings: Settings) -> List[str]:
+    """Optionally expand a query using a lightweight LLM prompt."""
+    mode = os.environ.get("QUERY_EXPANSION", "").strip().lower()
+    if not mode:
+        return [query]
+    model = os.environ.get("QUERY_EXPAND_MODEL") or settings.chat_model
+    try:
+        raw = call_openai(
+            client,
+            model=model,
+            instructions=QUERY_EXPANSION_PROMPT,
+            user_input=query,
+            max_output_tokens=200,
+        )
+    except Exception:
+        return [query]
+    candidates: List[str] = [query]
+    for line in raw.splitlines():
+        line = line.strip().lstrip("-*•").strip()
+        if not line:
+            continue
+        if line not in candidates:
+            candidates.append(line)
+        if len(candidates) >= 4:
+            break
+    return candidates
+
+
+def rerank_with_llm(
+    *,
+    query: str,
+    items: List[Dict[str, str]],
+    client: OpenAI,
+    settings: Settings,
+) -> List[str] | None:
+    """Use an LLM to rerank items by relevance.
+
+    Returns:
+        List[str] | None: Ordered list of item ids, or None on failure.
+    """
+    model = os.environ.get("RERANKER_MODEL")
+    if not model:
+        return None
+    payload_lines = [f"{it['id']}: {it['text']}" for it in items]
+    payload = "\n\n".join(payload_lines)
+    try:
+        raw = call_openai(
+            client,
+            model=model,
+            instructions=RERANK_PROMPT,
+            user_input=f"Query:\n{query}\n\nChunks:\n{payload}",
+            max_output_tokens=300,
+        )
+    except Exception:
+        return None
+    # parse JSON-ish list of ids
+    ids: List[str] = []
+    for tok in re.findall(r"[A-Za-z0-9_-]+", raw):
+        if tok in {it["id"] for it in items} and tok not in ids:
+            ids.append(tok)
+    return ids or None
+
+
 def top_k_context(
     chunks: List[str],
     chunk_embeddings: List[List[float]],
@@ -416,6 +507,8 @@ def top_k_context(
     Returns:
         str: Concatenated context string.
     """
+    queries = expand_queries(query, client, settings)
+
     # If a Postgres-backed retriever is available, prefer hybrid retrieval
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
@@ -431,7 +524,12 @@ def top_k_context(
             except Exception:
                 bm25_weight = 0.5
 
-            hits = hybrid_search(query, client=client, db_url=db_url, top_k=settings.top_k, bm25_weight=bm25_weight)
+            combined: Dict[int, float] = {}
+            for q in queries:
+                hits = hybrid_search(q, client=client, db_url=db_url, top_k=settings.top_k * 5, bm25_weight=bm25_weight)
+                for vid, score in hits:
+                    combined[vid] = max(combined.get(vid, float("-inf")), float(score))
+            hits = sorted(combined.items(), key=lambda x: x[1], reverse=True)[: settings.top_k * 5]
             if hits:
                 # fetch rows by id and return ordered context
                 conn = psycopg2.connect(db_url)
@@ -442,8 +540,23 @@ def top_k_context(
                 rows = cur.fetchall()
                 conn.close()
                 id_to_row = {r[0]: r for r in rows}
+                # optional rerank over top-N
+                rerank_top_n = int(os.environ.get("RERANK_TOP_N", "30"))
+                if os.environ.get("RERANKER_MODEL") and rerank_top_n > 0:
+                    candidates = []
+                    for vid, _ in hits[:rerank_top_n]:
+                        r = id_to_row.get(vid)
+                        if not r:
+                            continue
+                        _, text, page, start_word, end_word = r
+                        candidates.append({"id": str(vid), "text": text[:800]})
+                    order = rerank_with_llm(query=query, items=candidates, client=client, settings=settings)
+                    if order:
+                        order_map = {oid: i for i, oid in enumerate(order)}
+                        hits = sorted(hits, key=lambda x: order_map.get(str(x[0]), 999999))
+
                 out_parts: List[str] = []
-                for vid, score in hits:
+                for vid, score in hits[: settings.top_k]:
                     r = id_to_row.get(vid)
                     if not r:
                         continue
@@ -453,17 +566,34 @@ def top_k_context(
                 return "\n\n".join(out_parts)
 
     # fallback: support chunks as list of dicts with provenance metadata or simple strings
-    query_embedding = client.embeddings.create(model=settings.embedding_model, input=query).data[0].embedding
-    scored = [(idx, cosine(query_embedding, emb)) for idx, emb in enumerate(chunk_embeddings)]
+    query_emb_resp = client.embeddings.create(model=settings.embedding_model, input=queries).data
+    query_embeddings = [item.embedding for item in query_emb_resp]
+    scored = [(idx, max(cosine(qemb, emb) for qemb in query_embeddings)) for idx, emb in enumerate(chunk_embeddings)]
     scored.sort(key=lambda x: x[1], reverse=True)
-    top = [idx for idx, _ in scored[: settings.top_k]]
-    top_sorted = sorted(top)
+    top = [idx for idx, _ in scored[: settings.top_k * 5]]
+
+    # optional rerank via LLM
+    rerank_top_n = int(os.environ.get("RERANK_TOP_N", "30"))
+    if os.environ.get("RERANKER_MODEL") and rerank_top_n > 0:
+        candidates = []
+        for idx in top[:rerank_top_n]:
+            chunk = chunks[idx]
+            text = chunk["text"] if isinstance(chunk, dict) else str(chunk)
+            candidates.append({"id": str(idx), "text": text[:800]})
+        order = rerank_with_llm(query=query, items=candidates, client=client, settings=settings)
+        if order:
+            order_map = {oid: i for i, oid in enumerate(order)}
+            top = sorted(top, key=lambda x: order_map.get(str(x), 999999))
+
+    top_sorted = sorted(top[: settings.top_k])
 
     out_parts: List[str] = []
     for i in top_sorted:
         chunk = chunks[i]
         if isinstance(chunk, dict):
-            meta = f"(page {chunk.get('page')} words {chunk.get('start_word')}-{chunk.get('end_word')})"
+            section = chunk.get("section")
+            section_txt = f" section {section}" if section and section != "unknown" else ""
+            meta = f"(page {chunk.get('page')} words {chunk.get('start_word')}-{chunk.get('end_word')}{section_txt})"
             out_parts.append(f"{meta}\n{chunk.get('text')}")
         else:
             out_parts.append(str(chunk))
