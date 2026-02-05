@@ -1,0 +1,387 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import html
+import re
+from typing import List, Optional
+
+import streamlit as st
+from openai import OpenAI
+
+from ragonomics.main import (
+    Settings,
+    Paper,
+    build_and_store_doi_network,
+    build_doi_network_from_paper,
+    embed_texts,
+    load_papers,
+    load_settings,
+    prepare_chunks_for_paper,
+    top_k_context,
+)
+from ragonomics.pipeline import call_openai
+from ragonomics.prompts import RESEARCHER_QA_PROMPT
+
+import networkx as nx
+import plotly.graph_objects as go
+
+try:
+    from pdf2image import convert_from_path
+except Exception:
+    convert_from_path = None
+
+try:
+    import pytesseract
+    from PIL import ImageDraw
+except Exception:
+    pytesseract = None
+    ImageDraw = None
+
+
+st.set_page_config(page_title="Ragonomics Chat", layout="wide")
+
+
+def list_papers(papers_dir: Path) -> List[Path]:
+    """List PDF files in the provided directory.
+
+    Args:
+        papers_dir: Directory containing PDF files.
+
+    Returns:
+        List[Path]: Sorted list of PDF paths.
+    """
+    if not papers_dir.exists():
+        return []
+    return sorted(papers_dir.glob("*.pdf"))
+
+
+@st.cache_data
+def load_and_prepare(path: Path, settings: Settings):
+    """Load a paper, prepare chunks/embeddings, and cache the result.
+
+    A client is constructed internally so caching depends on `path` and `settings`.
+
+    Args:
+        path: PDF path to load.
+        settings: Runtime settings.
+
+    Returns:
+        tuple[Paper, list[dict], list[list[float]]]: Paper, chunks, embeddings.
+    """
+    papers = load_papers([path])
+    paper = papers[0]
+    chunks = prepare_chunks_for_paper(paper, settings)
+    if not chunks:
+        return paper, [], []
+    client = OpenAI()
+    chunk_texts = [c["text"] if isinstance(c, dict) else str(c) for c in chunks]
+    embeddings = embed_texts(client, chunk_texts, settings.embedding_model, settings.batch_size)
+    return paper, chunks, embeddings
+
+
+def parse_context_chunks(context: str) -> List[dict]:
+    """Parse concatenated context into structured chunks.
+
+    Args:
+        context: Context string with optional provenance lines.
+
+    Returns:
+        List[dict]: Dicts with "meta", "text", and optional "page".
+    """
+    chunks: List[dict] = []
+    for block in context.split("\n\n"):
+        block = block.strip()
+        if not block:
+            continue
+        meta = None
+        text = block
+        page: Optional[int] = None
+        if block.startswith("(page "):
+            parts = block.split("\n", 1)
+            meta = parts[0].strip()
+            text = parts[1].strip() if len(parts) > 1 else ""
+            m = re.search(r"\(page\s+(\d+)\b", meta)
+            if m:
+                try:
+                    page = int(m.group(1))
+                except ValueError:
+                    page = None
+        chunks.append({"meta": meta, "text": text, "page": page})
+    return chunks
+
+
+def extract_highlight_terms(query: str, max_terms: int = 6) -> List[str]:
+    """Extract key terms from a query for highlighting."""
+    stop = {
+        "the", "and", "or", "but", "a", "an", "of", "to", "in", "for", "on", "with",
+        "is", "are", "was", "were", "be", "been", "it", "this", "that", "these",
+        "those", "as", "at", "by", "from", "about", "into", "over", "after", "before",
+        "what", "which", "who", "whom", "why", "how", "when", "where",
+    }
+    tokens = re.findall(r"[A-Za-z0-9]{3,}", query.lower())
+    terms = []
+    for tok in tokens:
+        if tok in stop:
+            continue
+        if tok not in terms:
+            terms.append(tok)
+        if len(terms) >= max_terms:
+            break
+    return terms
+
+
+def highlight_text_html(text: str, terms: List[str]) -> str:
+    """Return HTML with highlight marks for matching terms."""
+    if not terms:
+        return html.escape(text)
+    escaped = html.escape(text)
+    for term in terms:
+        pattern = re.compile(rf"\b({re.escape(term)})\b", re.IGNORECASE)
+        escaped = pattern.sub(r"<mark>\1</mark>", escaped)
+    return escaped
+
+
+def highlight_image_terms(image, terms: List[str]):
+    """Highlight matched terms on a PIL image using OCR."""
+    if not terms or not pytesseract or not ImageDraw:
+        return image
+    try:
+        data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+    except Exception:
+        return image
+    if not data or "text" not in data:
+        return image
+
+    img = image.convert("RGBA")
+    overlay = ImageDraw.Draw(img, "RGBA")
+    terms_lower = {t.lower() for t in terms}
+    for i, word in enumerate(data["text"]):
+        if not word:
+            continue
+        w = word.strip().lower()
+        if w in terms_lower:
+            x = data["left"][i]
+            y = data["top"][i]
+            w_box = data["width"][i]
+            h_box = data["height"][i]
+            overlay.rectangle([x, y, x + w_box, y + h_box], fill=(255, 235, 59, 120), outline=(255, 193, 7, 200))
+    return img
+
+
+def render_citation_snapshot(path: Path, citation: dict, idx: int, query: str) -> None:
+    """Render a highlighted text snapshot and optional page image for a citation chunk."""
+    meta = citation.get("meta") or "Context chunk"
+    text = citation.get("text") or ""
+    page = citation.get("page")
+    terms = extract_highlight_terms(query)
+
+    st.markdown(f"**{meta}**")
+    if text:
+        snippet = text if len(text) <= 1200 else text[:1200] + "..."
+        highlighted = highlight_text_html(snippet, terms)
+        st.markdown(
+            f"<div style='font-family: monospace; white-space: pre-wrap;'>{highlighted}</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("No text available for this chunk.")
+
+    if page and convert_from_path:
+        show_key = f"show_page_{idx}_{page}"
+        if st.checkbox(f"Show page {page} snapshot", key=show_key):
+            try:
+                images = convert_from_path(str(path), first_page=page, last_page=page)
+                if images:
+                    img = highlight_image_terms(images[0], terms)
+                    st.image(img, caption=f"Page {page}")
+            except Exception as exc:
+                st.warning(f"Failed to render page {page}: {exc}")
+    elif page:
+        st.caption(f"Page {page} (snapshot requires pdf2image + poppler)")
+
+
+def main():
+    """Run the Streamlit app."""
+    st.title("Ragonomics — Paper Chatbot")
+
+    settings = load_settings()
+    client = OpenAI()
+
+    st.sidebar.header("Settings")
+    papers_dir = st.sidebar.text_input("Papers directory", str(settings.papers_dir))
+    papers_dir = Path(papers_dir)
+    top_k = st.sidebar.number_input("Top K chunks", value=settings.top_k, min_value=1)
+    model_options = [settings.chat_model]
+    extra_models = [m.strip() for m in os.getenv("LLM_MODELS", "").split(",") if m.strip()]
+    for m in extra_models:
+        if m not in model_options:
+            model_options.append(m)
+    selected_model = st.sidebar.selectbox("LLM model", options=model_options, index=0)
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("Make sure `pdftotext`/`pdfinfo` are installed and `OPENAI_API_KEY` is set.")
+
+    files = list_papers(papers_dir)
+
+    if not files:
+        st.warning(f"No PDF files found in {papers_dir}")
+        return
+
+    file_choice = st.selectbox("Select a paper", options=[p.name for p in files])
+    selected_path = next(p for p in files if p.name == file_choice)
+
+    with st.spinner("Loading and preparing paper..."):
+        paper, chunks, chunk_embeddings = load_and_prepare(selected_path, settings)
+
+    st.subheader(paper.title)
+    st.caption(f"Author: {paper.author} — {paper.path.name}")
+
+    if not chunks:
+        st.info("No text could be extracted from this PDF.")
+        return
+
+    if "history" not in st.session_state:
+        st.session_state.history = []
+
+    tab_chat, tab_doi = st.tabs(["Chat", "DOI Network"])
+
+    with tab_chat:
+        query = st.text_input("Ask a question about this paper", key="query_input")
+
+        if st.button("Send") and query:
+            with st.spinner("Retrieving context and querying model..."):
+                # compute top-k context using the same cosine-based retriever
+                # context will include provenance annotations like (page X words Y-Z)
+                context = top_k_context(chunks, chunk_embeddings, query=query, client=client, settings=settings)
+
+                answer = call_openai(
+                    client,
+                    model=selected_model,
+                    instructions=RESEARCHER_QA_PROMPT,
+                    user_input=f"Context:\n{context}\n\nQuestion: {query}",
+                    max_output_tokens=None,
+                ).strip()
+
+                citations = parse_context_chunks(context)
+                st.session_state.history.append(
+                    {"query": query, "answer": answer, "citations": citations}
+                )
+
+        if st.session_state.history:
+            for i, item in enumerate(reversed(st.session_state.history), start=1):
+                if isinstance(item, tuple):
+                    q, a = item
+                    citations = []
+                else:
+                    q = item.get("query")
+                    a = item.get("answer")
+                    citations = item.get("citations", [])
+
+                st.markdown(f"**Q:** {q}")
+                st.markdown(f"**A:** {a}")
+
+                if citations:
+                    st.markdown("**Citations & Snapshots**")
+                    tab_labels = []
+                    for c_idx, c in enumerate(citations, start=1):
+                        page = c.get("page")
+                        suffix = f" (p{page})" if page else ""
+                        tab_labels.append(f"Citation {c_idx}{suffix}")
+                    tabs = st.tabs(tab_labels)
+                    for c_idx, (tab, c) in enumerate(zip(tabs, citations), start=1):
+                        with tab:
+                            render_citation_snapshot(paper.path, c, idx=(i * 100 + c_idx), query=q)
+                st.markdown("---")
+
+    with tab_doi:
+        st.subheader("DOI Network")
+        st.markdown("Build and visualize the DOI citation network extracted from the selected paper.")
+
+        def visualize_network(network: dict) -> None:
+            """Render a DOI citation network using Plotly.
+
+            Args:
+                network: Mapping of source DOI to cited DOIs.
+            """
+            G = nx.DiGraph()
+            for src, targets in network.items():
+                G.add_node(src)
+                for tgt in targets:
+                    G.add_node(tgt)
+                    G.add_edge(src, tgt)
+
+            if len(G) == 0:
+                st.info("No DOIs or citation edges found for this paper.")
+                return
+
+            pos = nx.spring_layout(G, seed=42)
+
+            edge_x = []
+            edge_y = []
+            for u, v in G.edges():
+                x0, y0 = pos[u]
+                x1, y1 = pos[v]
+                edge_x += [x0, x1, None]
+                edge_y += [y0, y1, None]
+
+            edge_trace = go.Scatter(
+                x=edge_x,
+                y=edge_y,
+                line=dict(width=1, color="#888"),
+                hoverinfo="none",
+                mode="lines",
+            )
+
+            node_x = []
+            node_y = []
+            node_text = []
+            for node in G.nodes():
+                x, y = pos[node]
+                node_x.append(x)
+                node_y.append(y)
+                node_text.append(node)
+
+            node_trace = go.Scatter(
+                x=node_x,
+                y=node_y,
+                mode="markers+text",
+                hoverinfo="text",
+                textposition="top center",
+                marker=dict(
+                    showscale=False,
+                    color="#6175c1",
+                    size=10,
+                    line_width=1,
+                ),
+                text=[n if len(n) <= 30 else n[:27] + "..." for n in node_text],
+                hovertext=node_text,
+            )
+
+            fig = go.Figure(data=[edge_trace, node_trace])
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(b=20, l=5, r=5, t=40),
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            build_network = st.button("Build DOI Network")
+            store_db = st.checkbox("Store network to DB (Postgres)", value=False)
+
+        if build_network:
+            with st.spinner("Building DOI network (may make web requests)..."):
+                if store_db:
+                    db_url = os.environ.get("DATABASE_URL")
+                    network = build_and_store_doi_network(paper, db_url=db_url)
+                else:
+                    network = build_doi_network_from_paper(paper)
+            visualize_network(network)
+
+
+if __name__ == "__main__":
+    main()

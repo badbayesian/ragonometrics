@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+env/
+
+# Local env and secrets
+.env
+.env.*
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+runtime_run*.log
+
+# Streamlit
+.streamlit/
+
+# Data/artifacts
+papers/
+bench/
+indexes/
+*.index
+*.faiss
+*.sqlite
+*.sqlite3
+vectors_meta.sqlite
+doi_network.sqlite
+crossref_cache.sqlite
+bench_results.json
+bench/benchmark.csv
+bench/sweep/
+
+# FAISS/metadata artifacts
+vectors_*.index
+vectors_*.sqlite
+
