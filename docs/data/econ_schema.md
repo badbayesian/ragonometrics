@@ -63,5 +63,5 @@ Sample Report (JSON)
 
 Related Code
 ------------
-- `ragonometrics/integrations/econ_data.py`
-- `tools/econ_workflow.py`
+- [`ragonometrics/integrations/econ_data.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/econ_data.py)
+- [`tools/econ_workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/tools/econ_workflow.py)

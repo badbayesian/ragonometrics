@@ -16,12 +16,12 @@ Decision
 --------
 Adopt a modular package layout:
 
-- `core/` for ingestion + configuration
-- `pipeline/` for LLM orchestration + caching
-- `indexing/` for FAISS + Postgres metadata
-- `integrations/` for external APIs + queues
-- `ui/` for Streamlit
-- `eval/` for evaluation and benchmarking
+- [`ragonometrics/core/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/core) for ingestion + configuration
+- [`ragonometrics/pipeline/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/pipeline) for LLM orchestration + caching
+- [`ragonometrics/indexing/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/indexing) for FAISS + Postgres metadata
+- [`ragonometrics/integrations/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/integrations) for external APIs + queues
+- [`ragonometrics/ui/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/ui) for Streamlit
+- [`ragonometrics/eval/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/eval) for evaluation and benchmarking
 
 Consequences
 ------------

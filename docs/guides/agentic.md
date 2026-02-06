@@ -19,18 +19,18 @@ Workflow Steps
 
 State Persistence
 -----------------
-State is persisted to SQLite in `sqlite/ragonometrics_workflow_state.sqlite`:
+State is persisted to SQLite in [`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite):
 
 - `workflow_runs` stores overall run metadata and status.
 - `workflow_steps` stores per-step status, timestamps, and output JSON.
 
 Code locations:
-- `ragonometrics/pipeline/state.py`
-- `ragonometrics/pipeline/workflow.py`
+- [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py)
+- [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py)
 
 Async Execution (RQ)
 --------------------
-Use the queue helper in `ragonometrics/integrations/rq_queue.py`:
+Use the queue helper in [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py):
 
 ```python
 from pathlib import Path
@@ -40,11 +40,13 @@ job = enqueue_workflow(Path("papers/"), redis_url="redis://localhost:6379")
 print("queued job:", job.id)
 ```
 
+Example input path: [`papers/`](https://github.com/badbayesian/ragonometrics/tree/main/papers).
+
 Operational Notes
 -----------------
 - For long-running workflows, keep state DB on durable storage.
 - Use Postgres (`DATABASE_URL`) for metadata + hybrid retrieval.
-- Use `reports/` for archived summaries or push to object storage.
+- Use [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports) for archived summaries or push to object storage.
 - Enable the agentic step with `WORKFLOW_AGENTIC=1` or `--agentic` on the CLI.
 - Provide `WORKFLOW_QUESTION` or `--question` to control the agentic objective.
 - Enable citation enrichment with `WORKFLOW_AGENTIC_CITATIONS=1` or `--agentic-citations`.

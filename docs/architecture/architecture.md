@@ -69,15 +69,15 @@ flowchart LR
 Key Components
 --------------
 - Config and prompts
-  - `config.toml` (optional) is the primary configuration surface with env-var overrides.
-  - Centralized prompts live in `ragonometrics/core/prompts.py`.
+  - [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) (optional) is the primary configuration surface with env-var overrides.
+  - Centralized prompts live in [`ragonometrics/core/prompts.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/core/prompts.py).
 - Package layout (logical groupings)
-  - `ragonometrics/core/`: settings, ingestion, extraction, core prompts, logging.
-  - `ragonometrics/pipeline/`: LLM call wrapper, query cache, token usage accounting.
-  - `ragonometrics/indexing/`: FAISS indexing, Postgres metadata, hybrid retrieval, migrations.
-  - `ragonometrics/integrations/`: Crossref cache, Semantic Scholar, CitEc, Redis/RQ jobs.
-  - `ragonometrics/ui/`: Streamlit app.
-  - `ragonometrics/eval/`: eval + benchmark tooling.
+  - [`ragonometrics/core/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/core): settings, ingestion, extraction, core prompts, logging.
+  - [`ragonometrics/pipeline/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/pipeline): LLM call wrapper, query cache, token usage accounting.
+  - [`ragonometrics/indexing/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/indexing): FAISS indexing, Postgres metadata, hybrid retrieval, migrations.
+  - [`ragonometrics/integrations/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/integrations): Crossref cache, Semantic Scholar, CitEc, Redis/RQ jobs.
+  - [`ragonometrics/ui/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/ui): Streamlit app.
+  - [`ragonometrics/eval/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/eval): eval + benchmark tooling.
 - PDF extraction and preprocessing
   - `pdftotext` + `pdfinfo` (Poppler) with OCR fallback.
   - Per-page extraction supports provenance (page + word offsets).
@@ -92,38 +92,38 @@ Key Components
   - Postgres metadata stores vectors, index shards, and index version rows.
   - Idempotent indexing based on a deterministic key (same corpus + params).
 - UI and CLI
-  - Streamlit UI (`ragonometrics/ui/streamlit_app.py`) provides Chat, DOI Network, and Usage tabs.
+  - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, DOI Network, and Usage tabs.
   - External metadata (Semantic Scholar + CitEc) is shown in a UI expander and injected into prompts.
   - Console entrypoints: `ragonometrics index | query | ui | benchmark`.
 - Agentic workflow
-  - `ragonometrics/pipeline/workflow.py` orchestrates ingest → enrich → index → evaluate → report.
-  - State persisted in SQLite via `ragonometrics/pipeline/state.py`.
-  - Optional async execution with Redis + RQ (`ragonometrics/integrations/rq_queue.py`).
+- [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates ingest -> enrich -> index -> evaluate -> report.
+  - State persisted in SQLite via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py).
+  - Optional async execution with Redis + RQ ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
   - Optional agentic step plans sub-questions, retrieves context, and synthesizes an answer.
 - Caching
   - Crossref responses cached in Postgres when a cache DB is provided.
-  - Semantic Scholar metadata cached in SQLite (`sqlite/ragonometrics_semantic_scholar.sqlite`).
-  - CitEc metadata cached in SQLite (`sqlite/ragonometrics_citec.sqlite`).
-  - Query/answer cache stored in local SQLite (`sqlite/ragonometrics_query_cache.sqlite`).
-  - Token usage captured in SQLite (`sqlite/ragonometrics_token_usage.sqlite`).
+  - Semantic Scholar metadata cached in SQLite ([`sqlite/ragonometrics_semantic_scholar.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_semantic_scholar.sqlite)).
+  - CitEc metadata cached in SQLite ([`sqlite/ragonometrics_citec.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_citec.sqlite)).
+  - Query/answer cache stored in local SQLite ([`sqlite/ragonometrics_query_cache.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_query_cache.sqlite)).
+  - Token usage captured in SQLite ([`sqlite/ragonometrics_token_usage.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_token_usage.sqlite)).
 
 Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
   - `vectors`, `index_shards`, `index_versions`, `pipeline_runs`, and failure logs.
 - Local artifacts:
-  - FAISS indexes in `vectors.index` and versioned shards in `indexes/`.
+  - FAISS indexes in [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index) and versioned shards in [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes).
   - Index version sidecar JSON next to each shard.
-  - Query cache in `sqlite/ragonometrics_query_cache.sqlite`.
-  - Semantic Scholar cache in `sqlite/ragonometrics_semantic_scholar.sqlite`.
-  - CitEc cache in `sqlite/ragonometrics_citec.sqlite`.
-  - Usage tracking in `sqlite/ragonometrics_token_usage.sqlite`.
-  - Workflow state in `sqlite/ragonometrics_workflow_state.sqlite`.
+  - Query cache in [`sqlite/ragonometrics_query_cache.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_query_cache.sqlite).
+  - Semantic Scholar cache in [`sqlite/ragonometrics_semantic_scholar.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_semantic_scholar.sqlite).
+  - CitEc cache in [`sqlite/ragonometrics_citec.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_citec.sqlite).
+  - Usage tracking in [`sqlite/ragonometrics_token_usage.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_token_usage.sqlite).
+  - Workflow state in [`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite).
 
 Reproducibility
 ---------------
 - A config hash is computed from effective settings (config + env overrides).
-- `config.toml` is the primary config surface; env vars override for deploys.
+- [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) is the primary config surface; env vars override for deploys.
 - Each indexing run writes a manifest JSON next to the index shard containing:
   - git SHA, dependency fingerprints, config hash + effective config snapshot.
   - corpus fingerprint, embedding dim + hashes, chunking scheme, timestamps, and artifact paths.
@@ -144,22 +144,22 @@ Operational Hardening
 
 Economics Data
 --------------
-- FRED and World Bank connectors live in `ragonometrics/integrations/econ_data.py`.
-- Example workflow in `tools/econ_workflow.py` (see `docs/data/econ_schema.md`).
+- FRED and World Bank connectors live in [`ragonometrics/integrations/econ_data.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/econ_data.py).
+- Example workflow in [`tools/econ_workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/tools/econ_workflow.py) (see [`docs/data/econ_schema.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/data/econ_schema.md)).
 
 Evaluation
 ----------
-- `ragonometrics/eval/eval.py` provides retrieval metrics (recall@k, MRR) and answer proxies
+- [`ragonometrics/eval/eval.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/eval/eval.py) provides retrieval metrics (recall@k, MRR) and answer proxies
   (citation coverage, hallucination proxy, self-consistency).
 - Golden-set format supports curated Q/A and expected citations.
 
 Queueing
 --------
-- Redis + RQ (`ragonometrics/integrations/rq_queue.py`) for async indexing jobs.
+- Redis + RQ ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)) for async indexing jobs.
 
 Benchmarks
 ----------
-- `ragonometrics/eval/benchmark.py` and `tools/benchmark.py` measure indexing, chunking, and retrieval timing.
+- [`ragonometrics/eval/benchmark.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/eval/benchmark.py) and [`tools/benchmark.py`](https://github.com/badbayesian/ragonometrics/blob/main/tools/benchmark.py) measure indexing, chunking, and retrieval timing.
 
 Entrypoints
 -----------
@@ -171,7 +171,7 @@ Entrypoints
 
 Containerization
 ----------------
-- `Dockerfile` installs package dependencies and Poppler.
-- `compose.yml` defines services for UI, workflow, Redis, RQ worker, and Postgres.
+- [`Dockerfile`](https://github.com/badbayesian/ragonometrics/blob/main/Dockerfile) installs package dependencies and Poppler.
+- [`compose.yml`](https://github.com/badbayesian/ragonometrics/blob/main/compose.yml) defines services for UI, workflow, Redis, RQ worker, and Postgres.
 - Services run code from the image by default; add a bind mount for live code editing if desired.
 

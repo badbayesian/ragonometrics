@@ -4,27 +4,27 @@ This document describes the workflow subsystem: how it orchestrates multi-step r
 
 Overview
 --------
-The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in `ragonometrics/pipeline/workflow.py` and persists state transitions to SQLite (`sqlite/ragonometrics_workflow_state.sqlite`).
+The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) and persists state transitions to SQLite ([`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite)).
 
 Workflow Diagram
 ----------------
 ```mermaid
-flowchart LR
-  Start[CLI: ragonometrics workflow] --> Ingest[Ingest PDFs]
-  Ingest --> Enrich[External metadata]
-  Enrich --> Econ[Econ data (optional)]
-  Econ --> Agentic[Agentic QA (optional)]
-  Agentic --> Index[Index build (optional)]
-  Index --> Eval[Evaluate]
-  Eval --> Report[Write report JSON]
+flowchart TD
+  Start["CLI: ragonometrics workflow"] --> Ingest["Ingest PDFs"]
+  Ingest --> Enrich["External metadata"]
+  Enrich --> Econ["Econ data (optional)"]
+  Econ --> Agentic["Agentic QA (optional)"]
+  Agentic --> Index["Index build (optional)"]
+  Index --> Eval["Evaluate"]
+  Eval --> Report["Write report JSON"]
 
-  Ingest -->|state| StateDB[(workflow state DB)]
-  Enrich -->|state| StateDB
-  Econ -->|state| StateDB
-  Agentic -->|state| StateDB
-  Index -->|state| StateDB
-  Eval -->|state| StateDB
-  Report -->|state| StateDB
+  Ingest --> StateDB[(workflow state DB)]
+  Enrich --> StateDB
+  Econ --> StateDB
+  Agentic --> StateDB
+  Index --> StateDB
+  Eval --> StateDB
+  Report --> StateDB
 
   Agentic --> UsageDB[(token usage DB)]
   Index --> Postgres[(metadata DB)]
@@ -33,7 +33,7 @@ flowchart LR
 Entry Points
 ------------
 - CLI: `ragonometrics workflow --papers <path> [--agentic ...]`
-- Queue: `ragonometrics/integrations/rq_queue.py` enqueues `workflow_entrypoint`
+- Queue: [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py) enqueues `workflow_entrypoint`
 
 The `--papers` flag accepts either a **directory** or a **single PDF file**. The runner normalizes this into a list of PDF paths.
 
@@ -56,7 +56,7 @@ Step-by-Step Behavior
    - Answers each sub-question with retrieval context.  
    - Builds a final synthesized answer.  
    - Optionally extracts citations for context enrichment.  
-   - Generates structured report questions (A–K) and optional “previous questions” set.
+   - Generates structured report questions (A-K) and optional "previous questions" set.
 
 5) Index (optional)  
    - Builds FAISS index + Postgres metadata if `DATABASE_URL` is reachable.  
@@ -66,16 +66,16 @@ Step-by-Step Behavior
    - Computes light-weight chunk statistics (avg/max/min).
 
 7) Report  
-   - Writes a JSON report to `reports/workflow-report-<run_id>.json`.
+   - Writes a JSON report to [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports).
 
 Artifacts and State
 -------------------
-- Workflow state DB: `sqlite/ragonometrics_workflow_state.sqlite`
+- Workflow state DB: [`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite)
   - `workflow_runs` tracks run metadata and status.
   - `workflow_steps` tracks step outputs, timestamps, status.
-- Report JSON: `reports/workflow-report-<run_id>.json`
-- Usage tracking: `sqlite/ragonometrics_token_usage.sqlite`
-- Optional FAISS + metadata: `vectors.index`, `indexes/`, Postgres tables.
+- Report JSON: [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Usage tracking: [`sqlite/ragonometrics_token_usage.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_token_usage.sqlite)
+- Optional FAISS + metadata: [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index), [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes), Postgres tables.
 
 Report Schema Highlights
 ------------------------
@@ -123,6 +123,7 @@ Performance Tips
 
 Code Locations
 --------------
-- Orchestration: `ragonometrics/pipeline/workflow.py`
-- State persistence: `ragonometrics/pipeline/state.py`
-- Report schema: `ragonometrics/pipeline/workflow.py` (agentic report section)
+- Orchestration: [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py)
+- State persistence: [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py)
+- Report schema: [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) (agentic report section)
+

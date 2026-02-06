@@ -4,11 +4,11 @@ This document describes how Ragonometrics loads configuration and which environm
 
 Primary Config File
 -------------------
-`config.toml` is the primary configuration surface (see `config.toml` in the repo). Env vars override any value, which is useful in containers/CI. To point at a different file, set `RAG_CONFIG=/path/to/config.toml`.
+[`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) is the primary configuration surface (see the config file in the repo). Env vars override any value, which is useful in containers/CI. To point at a different file, set `RAG_CONFIG=/path/to/config.toml`.
 
 Environment Variables (Overrides)
 ---------------------------------
-- `PAPERS_DIR`: directory with PDFs. Default `PROJECT_ROOT/papers`.
+- `PAPERS_DIR`: directory with PDFs. Default `PROJECT_ROOT/papers` (see [`papers/`](https://github.com/badbayesian/ragonometrics/tree/main/papers)).
 - `MAX_PAPERS`: number of PDFs to process (default `3`).
 - `MAX_WORDS`: maximum words per paper (default `12000`).
 - `CHUNK_WORDS`: words per chunk (default `350`).

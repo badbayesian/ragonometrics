@@ -17,9 +17,9 @@ python -m pip install -e .
 
 2. Install Poppler (provides `pdftotext` and `pdfinfo`). On Windows, add Poppler `bin` to PATH.
 
-3. Set your OpenAI API key in the `.env` file.
+3. Set your OpenAI API key in your environment (see [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md)).
 
-4. Place PDFs in `papers/` (e.g., `papers/example.pdf`) or set `PAPERS_DIR`.
+4. Place PDFs in [`papers/`](https://github.com/badbayesian/ragonometrics/tree/main/papers) (e.g., `papers/your.pdf`) or set `PAPERS_DIR`.
 
 5. Run the summarizer.
 
@@ -32,7 +32,7 @@ Docs (GitHub)
 Docs root: [docs/](https://github.com/badbayesian/ragonometrics/tree/main/docs)
 - [Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md): System design, tradeoffs, and reproducibility.
 - [Workflow Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md): Workflow steps, artifacts, and state.
-- [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md): `config.toml` + env override reference.
+- [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md): [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) + env override reference.
 - [Workflow and CLI](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/workflow.md): CLI commands and workflow usage.
 - [Docker](https://github.com/badbayesian/ragonometrics/blob/main/docs/deployment/docker.md): Compose usage and container notes.
 - [Indexing and Retrieval](https://github.com/badbayesian/ragonometrics/blob/main/docs/components/indexing.md): FAISS, Postgres metadata, DOI network, queueing.

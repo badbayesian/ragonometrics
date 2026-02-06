@@ -23,7 +23,7 @@ Secrets and Config
 ------------------
 - Store API keys in Secrets Manager/Secret Manager.
 - Inject at runtime using task definitions or workload identity.
-- Keep `.env` for local dev only.
+- Keep local environment configuration for dev only (see [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md)).
 
 Deployment Checklist
 --------------------
@@ -44,5 +44,5 @@ Cert Alignment (Examples)
 
 References in Repo
 ------------------
-- `deploy/terraform/aws/` and `deploy/terraform/gcp/` stubs
-- `docs/architecture/architecture.md` for component overview
+- [`deploy/terraform/aws/`](https://github.com/badbayesian/ragonometrics/tree/main/deploy/terraform/aws) and [`deploy/terraform/gcp/`](https://github.com/badbayesian/ragonometrics/tree/main/deploy/terraform/gcp) stubs
+- [`docs/architecture/architecture.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md) for component overview
