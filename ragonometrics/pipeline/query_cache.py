@@ -9,8 +9,10 @@ from pathlib import Path
 from typing import Optional
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CACHE_PATH = PROJECT_ROOT / "ragonometrics_query_cache.sqlite"
+from ragonometrics.core.config import SQLITE_DIR
+
+
+DEFAULT_CACHE_PATH = SQLITE_DIR / "ragonometrics_query_cache.sqlite"
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:

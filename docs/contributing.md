@@ -1,0 +1,23 @@
+# Contributing
+
+Thank you for contributing to Ragonometrics.
+
+PR Checklist
+------------
+- Tests updated or added
+- `docs/architecture.md` updated if architecture changed
+- `docs/adr/` entry added for major decisions
+- Lint/format expectations respected
+- New dependencies justified in the PR description
+
+Review Expectations
+-------------------
+- Explain tradeoffs and failure modes.
+- Include run logs or screenshots for UI changes.
+- Prefer small, focused PRs.
+
+Documentation Standards
+-----------------------
+- Update README for new commands or env vars.
+- Keep module docstrings current.
+- Add or update `docs/*` for new subsystems.

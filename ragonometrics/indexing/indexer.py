@@ -42,6 +42,19 @@ def normalize(v: np.ndarray) -> np.ndarray:
     return v / norms
 
 
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_text(text: str) -> str:
+    return _sha256_bytes(text.encode("utf-8", errors="ignore"))
+
+
+def _stable_chunk_id(doc_id: str, page: int | None, start_word: int | None, end_word: int | None, chunk_hash: str) -> str:
+    payload = f"{doc_id}|{page}|{start_word}|{end_word}|{chunk_hash}"
+    return _sha256_text(payload)
+
+
 def build_index(
     settings: Settings,
     paper_paths: List[Path],
@@ -62,10 +75,12 @@ def build_index(
     client = OpenAI()
     log_event("index_start", {"papers": len(paper_paths), "index_path": str(index_path)})
 
+    paper_paths = sorted(paper_paths, key=lambda p: str(p).lower())
     all_vectors: List[np.ndarray] = []
     metadata_rows = []
     next_id = 0
     doc_ids: List[str] = []
+    paper_manifests: List[dict] = []
 
     # If index exists, load it and determine starting id
     if index_path.exists():
@@ -91,9 +106,9 @@ def build_index(
                 file_bytes = fh.read()
         except Exception:
             file_bytes = b""
-        text_hash = hashlib.sha256(paper.text.encode("utf-8", errors="ignore")).hexdigest()
-        file_hash = hashlib.sha256(file_bytes).hexdigest()
-        doc_id = hashlib.sha256((file_hash + text_hash).encode("utf-8")).hexdigest()
+        text_hash = _sha256_text(paper.text)
+        file_hash = _sha256_bytes(file_bytes)
+        doc_id = _sha256_text(f"{file_hash}:{text_hash}")
         doc_ids.append(doc_id)
         chunks = prepare_chunks_for_paper(paper, settings)
         if not chunks:
@@ -105,21 +120,52 @@ def build_index(
         vecs = np.array(embeddings, dtype=np.float32)
         vecs = normalize(vecs)
 
+        paper_chunk_manifest = []
         for i, c in enumerate(chunks):
+            chunk_text = c["text"] if isinstance(c, dict) else str(c)
+            page = c["page"] if isinstance(c, dict) else None
+            start_word = c["start_word"] if isinstance(c, dict) else None
+            end_word = c["end_word"] if isinstance(c, dict) else None
+            chunk_hash = _sha256_text(chunk_text)
+            chunk_id = _stable_chunk_id(doc_id, page, start_word, end_word, chunk_hash)
             metadata_rows.append(
                 (
                     next_id,
                     doc_id,
+                    chunk_id,
+                    chunk_hash,
                     str(path),
-                    c["page"] if isinstance(c, dict) else None,
-                    c["start_word"] if isinstance(c, dict) else None,
-                    c["end_word"] if isinstance(c, dict) else None,
-                    c["text"] if isinstance(c, dict) else str(c),
+                    page,
+                    start_word,
+                    end_word,
+                    chunk_text,
                     None,  # pipeline_run_id placeholder; set later
                     datetime.utcnow().isoformat(),
                 )
             )
+            paper_chunk_manifest.append(
+                {
+                    "chunk_id": chunk_id,
+                    "chunk_hash": chunk_hash,
+                    "page": page,
+                    "start_word": start_word,
+                    "end_word": end_word,
+                }
+            )
             next_id += 1
+
+        paper_manifests.append(
+            {
+                "path": str(path),
+                "title": paper.title,
+                "author": paper.author,
+                "doc_id": doc_id,
+                "file_sha256": file_hash,
+                "text_sha256": text_hash,
+                "chunk_count": len(paper_chunk_manifest),
+                "chunks": paper_chunk_manifest,
+            }
+        )
 
         all_vectors.append(vecs)
 
@@ -129,6 +175,7 @@ def build_index(
 
     X = np.vstack(all_vectors).astype(np.float32)
     dim = X.shape[1]
+    embeddings_sha256 = _sha256_bytes(X.tobytes())
     if index is None:
         index = faiss.IndexFlatIP(dim)
         index.add(X)
@@ -149,7 +196,7 @@ def build_index(
     # ensure metadata tables exist
     metadata.init_metadata_db(db_url)
     # idempotency key for run
-    corpus_fingerprint = hashlib.sha256("".join(sorted(doc_ids)).encode("utf-8")).hexdigest()
+    corpus_fingerprint = hashlib.sha256("|".join(sorted(doc_ids)).encode("utf-8")).hexdigest()
     idempotency_key = hashlib.sha256(
         f"{settings.embedding_model}|{settings.chunk_words}|{settings.chunk_overlap}|{corpus_fingerprint}".encode("utf-8")
     ).hexdigest()
@@ -180,25 +227,56 @@ def build_index(
         """
         CREATE TABLE IF NOT EXISTS vectors (
             id BIGINT PRIMARY KEY,
+            doc_id TEXT,
+            chunk_id TEXT,
+            chunk_hash TEXT,
             paper_path TEXT,
             page INTEGER,
             start_word INTEGER,
             end_word INTEGER,
             text TEXT,
+            pipeline_run_id INTEGER,
             created_at TEXT
         )
         """
     )
+    for paper_meta in paper_manifests:
+        cur.execute(
+            """
+            INSERT INTO documents (doc_id, path, title, author, extracted_at, file_hash, text_hash)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (doc_id) DO UPDATE SET
+                path = EXCLUDED.path,
+                title = EXCLUDED.title,
+                author = EXCLUDED.author,
+                extracted_at = EXCLUDED.extracted_at,
+                file_hash = EXCLUDED.file_hash,
+                text_hash = EXCLUDED.text_hash
+            """,
+            (
+                paper_meta["doc_id"],
+                paper_meta["path"],
+                paper_meta["title"],
+                paper_meta["author"],
+                datetime.utcnow().isoformat(),
+                paper_meta["file_sha256"],
+                paper_meta["text_sha256"],
+            ),
+        )
     # Upsert rows
     # upsert rows and attach pipeline_run_id
     for row in metadata_rows:
-        id_, doc_id, paper_path, page, start_word, end_word, text, _, created_at = row
+        id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, _, created_at = row
         cur.execute(
             """
-            INSERT INTO vectors (id, doc_id, paper_path, page, start_word, end_word, text, pipeline_run_id, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO vectors (
+                id, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, pipeline_run_id, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
                 doc_id = EXCLUDED.doc_id,
+                chunk_id = EXCLUDED.chunk_id,
+                chunk_hash = EXCLUDED.chunk_hash,
                 paper_path = EXCLUDED.paper_path,
                 page = EXCLUDED.page,
                 start_word = EXCLUDED.start_word,
@@ -207,7 +285,7 @@ def build_index(
                 pipeline_run_id = EXCLUDED.pipeline_run_id,
                 created_at = EXCLUDED.created_at
             """,
-            (id_, doc_id, paper_path, page, start_word, end_word, text, run_id, created_at),
+            (id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, run_id, created_at),
         )
     conn.commit()
     conn.close()
@@ -217,7 +295,8 @@ def build_index(
 
     with open(str(index_path), "rb") as f:
         raw = f.read()
-    h = hashlib.sha256(raw).hexdigest()[:12]
+    index_sha256 = _sha256_bytes(raw)
+    h = index_sha256[:12]
     shards_dir = Path("indexes")
     shards_dir.mkdir(exist_ok=True)
     shard_name = f"vectors-{h}.index"
@@ -249,6 +328,7 @@ def build_index(
         chunk_words=settings.chunk_words,
         chunk_overlap=settings.chunk_overlap,
         corpus_fingerprint=corpus_fingerprint,
+        embedding_dim=dim,
     )
     write_index_version_sidecar(shard_path, index_version_payload)
 
@@ -258,6 +338,11 @@ def build_index(
         index_path=index_path,
         shard_path=shard_path,
         pipeline_run_id=run_id,
+        corpus_fingerprint=corpus_fingerprint,
+        embedding_dim=dim,
+        index_sha256=index_sha256,
+        embeddings_sha256=embeddings_sha256,
+        paper_manifest=paper_manifests,
     )
     write_run_manifest(shard_path, manifest)
 

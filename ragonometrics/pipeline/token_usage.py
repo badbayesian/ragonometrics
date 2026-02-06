@@ -9,10 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
-from ragonometrics.core.config import PROJECT_ROOT
+from ragonometrics.core.config import SQLITE_DIR
 
 
-DEFAULT_USAGE_DB = PROJECT_ROOT / "ragonometrics_token_usage.sqlite"
+DEFAULT_USAGE_DB = SQLITE_DIR / "ragonometrics_token_usage.sqlite"
 
 
 @dataclass(frozen=True)

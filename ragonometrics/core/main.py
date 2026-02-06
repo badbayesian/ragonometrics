@@ -18,7 +18,13 @@ from typing import Optional
 
 from openai import OpenAI
 
-from ragonometrics.core.config import DEFAULT_CONFIG_PATH, build_effective_config, hash_config_dict, load_config
+from ragonometrics.core.config import (
+    DEFAULT_CONFIG_PATH,
+    apply_config_env_overrides,
+    build_effective_config,
+    hash_config_dict,
+    load_config,
+)
 from ragonometrics.core.io_loaders import (
     chunk_pages,
     normalize_text,
@@ -51,6 +57,7 @@ class Settings:
         batch_size: Embedding batch size.
         embedding_model: Embedding model name.
         chat_model: Chat completion model name.
+        config_effective: Effective config dict used for hashing and manifests.
     """
 
     papers_dir: Path
@@ -64,6 +71,7 @@ class Settings:
     chat_model: str
     config_path: Path | None = None
     config_hash: str | None = None
+    config_effective: Dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +127,7 @@ def load_settings(config_path: Path | None = None) -> Settings:
     load_env(DOTENV_PATH)
     cfg_path = config_path or Path(os.getenv("RAG_CONFIG", DEFAULT_CONFIG_PATH))
     cfg = load_config(cfg_path)
+    apply_config_env_overrides(cfg, os.environ)
     effective = build_effective_config(cfg, os.environ, project_root=PROJECT_ROOT)
     return Settings(
         papers_dir=Path(effective["papers_dir"]),
@@ -132,6 +141,7 @@ def load_settings(config_path: Path | None = None) -> Settings:
         chat_model=str(effective["chat_model"]),
         config_path=cfg_path if cfg_path.exists() else None,
         config_hash=hash_config_dict(effective),
+        config_effective=effective,
     )
 
 
@@ -604,59 +614,66 @@ def top_k_context(
             hybrid_search = None
 
         if hybrid_search:
-            # allow runtime tuning of BM25 weight via env var
             try:
-                bm25_weight = float(os.environ.get("BM25_WEIGHT", "0.5"))
-            except Exception:
-                bm25_weight = 0.5
+                # allow runtime tuning of BM25 weight via env var
+                try:
+                    bm25_weight = float(os.environ.get("BM25_WEIGHT", "0.5"))
+                except Exception:
+                    bm25_weight = 0.5
 
-            combined: Dict[int, float] = {}
-            for q in queries:
-                hits = hybrid_search(q, client=client, db_url=db_url, top_k=settings.top_k * 5, bm25_weight=bm25_weight)
-                for vid, score in hits:
-                    combined[vid] = max(combined.get(vid, float("-inf")), float(score))
-            hits = sorted(combined.items(), key=lambda x: x[1], reverse=True)[: settings.top_k * 5]
-            if hits:
-                # fetch rows by id and return ordered context
-                conn = psycopg2.connect(db_url)
-                cur = conn.cursor()
-                ids = [h[0] for h in hits]
-                placeholders = ",".join(["%s"] * len(ids))
-                cur.execute(f"SELECT id, text, page, start_word, end_word FROM vectors WHERE id IN ({placeholders})", tuple(ids))
-                rows = cur.fetchall()
-                conn.close()
-                id_to_row = {r[0]: r for r in rows}
-                # optional rerank over top-N
-                rerank_top_n = int(os.environ.get("RERANK_TOP_N", "30"))
-                if os.environ.get("RERANKER_MODEL") and rerank_top_n > 0:
-                    candidates = []
-                    for vid, _ in hits[:rerank_top_n]:
+                combined: Dict[int, float] = {}
+                for q in queries:
+                    hits = hybrid_search(q, client=client, db_url=db_url, top_k=settings.top_k * 5, bm25_weight=bm25_weight)
+                    for vid, score in hits:
+                        combined[vid] = max(combined.get(vid, float("-inf")), float(score))
+                hits = sorted(combined.items(), key=lambda x: x[1], reverse=True)[: settings.top_k * 5]
+                if hits:
+                    # fetch rows by id and return ordered context
+                    conn = psycopg2.connect(db_url)
+                    cur = conn.cursor()
+                    ids = [h[0] for h in hits]
+                    placeholders = ",".join(["%s"] * len(ids))
+                    cur.execute(
+                        f"SELECT id, text, page, start_word, end_word FROM vectors WHERE id IN ({placeholders})",
+                        tuple(ids),
+                    )
+                    rows = cur.fetchall()
+                    conn.close()
+                    id_to_row = {r[0]: r for r in rows}
+                    # optional rerank over top-N
+                    rerank_top_n = int(os.environ.get("RERANK_TOP_N", "30"))
+                    if os.environ.get("RERANKER_MODEL") and rerank_top_n > 0:
+                        candidates = []
+                        for vid, _ in hits[:rerank_top_n]:
+                            r = id_to_row.get(vid)
+                            if not r:
+                                continue
+                            _, text, page, start_word, end_word = r
+                            candidates.append({"id": str(vid), "text": text[:800]})
+                        order = rerank_with_llm(
+                            query=query,
+                            items=candidates,
+                            client=client,
+                            settings=settings,
+                            session_id=session_id,
+                            request_id=request_id,
+                        )
+                        if order:
+                            order_map = {oid: i for i, oid in enumerate(order)}
+                            hits = sorted(hits, key=lambda x: order_map.get(str(x[0]), 999999))
+
+                    out_parts: List[str] = []
+                    for vid, score in hits[: settings.top_k]:
                         r = id_to_row.get(vid)
                         if not r:
                             continue
                         _, text, page, start_word, end_word = r
-                        candidates.append({"id": str(vid), "text": text[:800]})
-                    order = rerank_with_llm(
-                        query=query,
-                        items=candidates,
-                        client=client,
-                        settings=settings,
-                        session_id=session_id,
-                        request_id=request_id,
-                    )
-                    if order:
-                        order_map = {oid: i for i, oid in enumerate(order)}
-                        hits = sorted(hits, key=lambda x: order_map.get(str(x[0]), 999999))
-
-                out_parts: List[str] = []
-                for vid, score in hits[: settings.top_k]:
-                    r = id_to_row.get(vid)
-                    if not r:
-                        continue
-                    _, text, page, start_word, end_word = r
-                    meta = f"(page {page} words {start_word}-{end_word})"
-                    out_parts.append(f"{meta}\n{text}")
-                return "\n\n".join(out_parts)
+                        meta = f"(page {page} words {start_word}-{end_word})"
+                        out_parts.append(f"{meta}\n{text}")
+                    return "\n\n".join(out_parts)
+            except Exception:
+                # fall back to local embedding retrieval if DB is unreachable
+                pass
 
     # fallback: support chunks as list of dicts with provenance metadata or simple strings
     query_emb_response = client.embeddings.create(model=settings.embedding_model, input=queries)
@@ -782,7 +799,8 @@ def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
     )
     prefix_parts = [ctx for ctx in (semantic_context, citec_context) if ctx]
     if prefix_parts:
-        user_input = f"{'\n\n'.join(prefix_parts)}\n\n{user_input}"
+        prefix = "\n\n".join(prefix_parts)
+        user_input = f"{prefix}\n\n{user_input}"
     return call_openai(
         client,
         model=settings.chat_model,
@@ -792,17 +810,33 @@ def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
     ).strip()
 
 
-def load_papers(paths: Iterable[Path]) -> List[Paper]:
+def load_papers(
+    paths: Iterable[Path],
+    *,
+    progress: bool = False,
+    progress_desc: str = "Loading papers",
+) -> List[Paper]:
     """Load and extract text for a collection of PDF files.
 
     Args:
         paths: Iterable of PDF paths.
+        progress: Whether to show a tqdm progress bar.
+        progress_desc: Description for the progress bar.
 
     Returns:
         List[Paper]: Extracted paper objects.
     """
+    path_list = list(paths)
+    iterator = path_list
+    if progress:
+        try:
+            from tqdm import tqdm
+
+            iterator = tqdm(path_list, desc=progress_desc)
+        except Exception:
+            iterator = path_list
     papers: List[Paper] = []
-    for path in paths:
+    for path in iterator:
         metadata = run_pdfinfo(path)
         page_texts = run_pdftotext_pages(path)
         normalized_pages = [normalize_text(p) for p in page_texts if p is not None]

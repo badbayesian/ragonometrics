@@ -14,8 +14,10 @@ import xml.etree.ElementTree as ET
 import requests
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CACHE_PATH = PROJECT_ROOT / "ragonometrics_citec.sqlite"
+from ragonometrics.core.config import SQLITE_DIR
+
+
+DEFAULT_CACHE_PATH = SQLITE_DIR / "ragonometrics_citec.sqlite"
 DEFAULT_BASE_URL = os.environ.get("CITEC_API_BASE", "http://citec.repec.org/api").rstrip("/")
 
 

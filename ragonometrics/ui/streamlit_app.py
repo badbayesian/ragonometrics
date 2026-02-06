@@ -211,11 +211,40 @@ def render_citation_snapshot(path: Path, citation: dict, key_prefix: str, query:
         st.caption(f"Page {page} (snapshot requires pdf2image + poppler)")
 
 
+def auth_gate() -> None:
+    """Simple username/password gate for the Streamlit app."""
+    expected_user = os.getenv("STREAMLIT_USERNAME")
+    expected_pass = os.getenv("STREAMLIT_PASSWORD")
+
+    if not expected_user or not expected_pass:
+        st.sidebar.info("Login disabled (set STREAMLIT_USERNAME/STREAMLIT_PASSWORD to enable).")
+        return
+
+    if st.session_state.get("authenticated"):
+        return
+
+    st.sidebar.subheader("Login")
+    with st.sidebar.form("login_form"):
+        user = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Log in")
+
+    if submitted:
+        if user == expected_user and password == expected_pass:
+            st.session_state.authenticated = True
+            st.sidebar.success("Logged in.")
+            return
+        st.sidebar.error("Invalid credentials.")
+
+    st.stop()
+
+
 def main():
     """Run the Streamlit app."""
     st.title("Ragonometrics — Paper Chatbot")
 
     settings = load_settings()
+    auth_gate()
     client = OpenAI()
 
     st.sidebar.header("Settings")

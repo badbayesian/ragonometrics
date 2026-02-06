@@ -10,13 +10,14 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Install a minimal set of runtime dependencies. We rely on pyproject.toml for packaging,
-# but installing the core deps directly keeps the image simple and fast.
+# Install runtime dependencies from pyproject.toml.
 RUN pip install --no-cache-dir pip setuptools wheel
-RUN pip install --no-cache-dir openai streamlit requests
 
 # Copy the project into the image
 COPY . /app
+
+# Install package (editable keeps dev volume mounts in sync when using docker-compose)
+RUN pip install --no-cache-dir -e .
 
 ENV PAPERS_DIR=/app/papers
 

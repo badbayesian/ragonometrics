@@ -7,8 +7,11 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
+      - STREAMLIT_USERNAME=${STREAMLIT_USERNAME}
+      - STREAMLIT_PASSWORD=${STREAMLIT_PASSWORD}
+      - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - S2_API_KEY=${S2_API_KEY}
     volumes:
-      - ./:/app:rw
       - ./papers:/app/papers:rw
     restart: unless-stopped
 
@@ -18,8 +21,9 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
+      - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - S2_API_KEY=${S2_API_KEY}
     volumes:
-      - ./:/app:rw
       - ./papers:/app/papers:rw
     restart: "no"
 
@@ -32,7 +36,6 @@ services:
       - PAPERS_DIR=/app/papers
       - DATABASE_URL=${DATABASE_URL}
     volumes:
-      - ./:/app:rw
       - ./papers:/app/papers:rw
     depends_on:
       - worker
@@ -44,8 +47,9 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
       - DATABASE_URL=${DATABASE_URL}
+      - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - S2_API_KEY=${S2_API_KEY}
     volumes:
-      - ./:/app:rw
       - ./papers:/app/papers:rw
     restart: "no"
     depends_on:
@@ -60,11 +64,33 @@ services:
     command: rq worker -u redis://redis:6379 default
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - ./:/app:rw
+      - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - S2_API_KEY=${S2_API_KEY}
     depends_on:
       - redis
     restart: unless-stopped
+
+  workflow:
+    build: .
+    command: ragonometrics workflow --papers-dir /app/papers --agentic --agentic-citations
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PAPERS_DIR=/app/papers
+      - DATABASE_URL=${DATABASE_URL}
+      - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - S2_API_KEY=${S2_API_KEY}
+      - FRED_API_KEY=${FRED_API_KEY}
+      - ECON_SERIES_IDS=${ECON_SERIES_IDS}
+      - WORKFLOW_AGENTIC=${WORKFLOW_AGENTIC}
+      - WORKFLOW_QUESTION=${WORKFLOW_QUESTION}
+      - WORKFLOW_AGENTIC_MODEL=${WORKFLOW_AGENTIC_MODEL}
+      - WORKFLOW_AGENTIC_CITATIONS=${WORKFLOW_AGENTIC_CITATIONS}
+    volumes:
+      - ./papers:/app/papers:rw
+      - ./reports:/app/reports:rw
+    depends_on:
+      - redis
+    restart: "no"
 
   postgres:
     image: postgres:15-alpine

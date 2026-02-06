@@ -1,0 +1,31 @@
+[ragonometrics]
+# Primary config file. Env vars override any values here.
+
+# Ingestion and chunking
+papers_dir = "papers"
+max_papers = 3
+max_words = 12000
+chunk_words = 350
+chunk_overlap = 50
+
+# Retrieval
+top_k = 6
+bm25_weight = 0.5
+reranker_model = ""
+rerank_top_n = 30
+query_expansion = ""
+query_expand_model = ""
+
+# Embeddings/LLM
+batch_size = 64
+embedding_model = "text-embedding-3-small"
+chat_model = "gpt-5-nano"
+
+# Storage / indexing
+database_url = ""
+index_idempotent_skip = true
+allow_unverified_index = false
+
+# Extraction options
+section_aware_chunking = false
+force_ocr = false

@@ -23,6 +23,8 @@ from ragonometrics.core.prompts import RESEARCHER_QA_PROMPT
 from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
 from ragonometrics.integrations.semantic_scholar import format_semantic_scholar_context
 from ragonometrics.integrations.citec import format_citec_context
+from ragonometrics.pipeline.workflow import run_workflow
+from ragonometrics.integrations.rq_queue import enqueue_workflow
 
 
 def cmd_index(args: argparse.Namespace) -> int:
@@ -87,7 +89,8 @@ def cmd_query(args: argparse.Namespace) -> int:
         user_input = f"Context:\n{context}\n\nQuestion: {args.question}"
         prefix_parts = [ctx for ctx in (semantic_context, citec_context) if ctx]
         if prefix_parts:
-            user_input = f"{'\n\n'.join(prefix_parts)}\n\n{user_input}"
+            prefix = "\n\n".join(prefix_parts)
+            user_input = f"{prefix}\n\n{user_input}"
         answer = call_openai(
             client,
             model=model,
@@ -147,6 +150,46 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_workflow(args: argparse.Namespace) -> int:
+    """Run or enqueue the multi-step workflow.
+
+    Args:
+        args: Parsed CLI arguments.
+
+    Returns:
+        int: Exit code (0 on success).
+    """
+    papers_dir = Path(args.papers) if args.papers else load_settings().papers_dir
+    if args.async_mode:
+        job = enqueue_workflow(
+            papers_dir,
+            redis_url=args.redis_url,
+            config_path=Path(args.config_path) if args.config_path else None,
+            meta_db_url=args.meta_db_url,
+            agentic=args.agentic,
+            question=args.question,
+            agentic_model=args.agentic_model,
+            agentic_citations=args.agentic_citations,
+            report_question_set=args.report_question_set,
+        )
+        print(f"Enqueued workflow job: {job.id}")
+        return 0
+
+    summary = run_workflow(
+        papers_dir=papers_dir,
+        config_path=Path(args.config_path) if args.config_path else None,
+        meta_db_url=args.meta_db_url,
+        agentic=args.agentic,
+        question=args.question,
+        agentic_model=args.agentic_model,
+        agentic_citations=args.agentic_citations,
+        report_question_set=args.report_question_set,
+    )
+    print(f"Workflow run completed: {summary.get('run_id')}")
+    print(f"Report: {summary.get('report_path')}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -180,6 +223,25 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--force-ocr", action="store_true")
     b.add_argument("--db-url", type=str, default=None)
     b.set_defaults(func=cmd_benchmark)
+
+    w = sub.add_parser("workflow", help="Run or enqueue a multi-step workflow")
+    w.add_argument("--papers", type=str, default=None, help="PDF file or directory")
+    w.add_argument("--papers-dir", dest="papers", type=str, help=argparse.SUPPRESS)
+    w.add_argument("--config-path", type=str, default=None)
+    w.add_argument("--meta-db-url", type=str, default=None)
+    w.add_argument("--redis-url", type=str, default="redis://redis:6379")
+    w.add_argument("--async", dest="async_mode", action="store_true", help="Enqueue workflow via Redis/RQ")
+    w.add_argument("--agentic", action="store_true", help="Enable agentic LLM sub-question workflow")
+    w.add_argument("--question", type=str, default=None, help="Main question for agentic workflow")
+    w.add_argument("--agentic-model", type=str, default=None, help="Model override for agentic workflow")
+    w.add_argument("--agentic-citations", action="store_true", help="Use citations API to enrich agentic context")
+    w.add_argument(
+        "--report-question-set",
+        type=str,
+        default=None,
+        help="Report questions: structured|agentic|both|none (overrides WORKFLOW_REPORT_QUESTIONS_SET).",
+    )
+    w.set_defaults(func=cmd_workflow)
 
     return p
 

@@ -24,6 +24,7 @@ dependencies = [
   "pydantic-core>=2.41.5",
   "pydantic>=2.12.5",
   "tomli>=2.4.0",
+  "tqdm>=4.67.1",
 ]
   
 

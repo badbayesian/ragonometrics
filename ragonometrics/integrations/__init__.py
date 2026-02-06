@@ -1,1 +1,1 @@
-"""External service integrations (Crossref cache, Semantic Scholar, CitEc, Redis/RQ jobs)."""
+"""External service integrations (Crossref cache, Semantic Scholar, CitEc, econ data, Redis/RQ jobs)."""

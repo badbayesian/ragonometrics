@@ -104,6 +104,8 @@ def init_metadata_db(db_url: str):
         CREATE TABLE IF NOT EXISTS vectors (
             id BIGINT PRIMARY KEY,
             doc_id TEXT,
+            chunk_id TEXT,
+            chunk_hash TEXT,
             paper_path TEXT,
             page INTEGER,
             start_word INTEGER,
@@ -115,6 +117,16 @@ def init_metadata_db(db_url: str):
         """
     )
 
+    # add chunk_id/hash columns if missing (older deployments)
+    for col in ("chunk_id", "chunk_hash"):
+        try:
+            cur.execute(f"ALTER TABLE vectors ADD COLUMN IF NOT EXISTS {col} TEXT")
+        except Exception:
+            try:
+                cur.execute(f"ALTER TABLE vectors ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
+
     # simple documents table
     cur.execute(
         """
@@ -123,10 +135,22 @@ def init_metadata_db(db_url: str):
             path TEXT,
             title TEXT,
             author TEXT,
-            extracted_at TIMESTAMP
+            extracted_at TIMESTAMP,
+            file_hash TEXT,
+            text_hash TEXT
         )
         """
     )
+
+    # add file/text hash columns if missing
+    for col in ("file_hash", "text_hash"):
+        try:
+            cur.execute(f"ALTER TABLE documents ADD COLUMN IF NOT EXISTS {col} TEXT")
+        except Exception:
+            try:
+                cur.execute(f"ALTER TABLE documents ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
 
     conn.commit()
     return conn

@@ -3,7 +3,7 @@ Ragonometrics - RAG pipeline for economics papers
 
 Overview
 --------
-Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes with FAISS, and serves retrieval + LLM summaries via CLI and a Streamlit UI. DOI metadata can be fetched from Crossref and cached. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
+Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes with FAISS, and serves retrieval + LLM summaries via CLI and a Streamlit UI. External metadata is enriched via Semantic Scholar and CitEc when available, and DOI metadata can be fetched from Crossref and cached. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
 
 This repo is a combination of coding + vibe coding.
 
@@ -27,49 +27,25 @@ python -m pip install -e .
 python -m ragonometrics.core.main
 ```
 
-Console Entrypoints
--------------------
-After installation, use:
+CLI and Workflow
+----------------
+See `docs/workflow.md` for CLI usage and workflow examples.
 
-```bash
-ragonometrics query --paper papers/example.pdf --question "What is the research question?" --model gpt-5-nano
-ragonometrics benchmark --papers-dir papers/ --out bench/benchmark.csv --limit 5
-```
-
-Commands that require docker:
-```bash
-ragonometrics index --papers-dir papers/ --index-path vectors.index --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics"
-```
+Docker
+------
+See `docs/docker.md` for container usage.
 
 
 Streamlit App
 -------------
-Run the local UI:
+See `docs/ui.md` for UI usage and notes.
 
-```bash
-ragonometrics ui
-```
-
-Notes:
-- The app includes a Chat tab and a DOI Network tab.
-- Answers are concise and researcher-focused (with prompt engineering), with citations and snapshots.
-- Optional page snapshots require `pdf2image` + Poppler and benefit from `pytesseract` for highlight overlays.
-
-Configuration (Env Vars)
-------------------------
-- `PAPERS_DIR`: directory with PDFs. Default `PROJECT_ROOT/papers`.
-- `MAX_PAPERS`: number of PDFs to process (default `3`).
-- `MAX_WORDS`: maximum words per paper (default `12000`).
-- `CHUNK_WORDS`: words per chunk (default `350`).
-- `CHUNK_OVERLAP`: overlap between chunks (default `50`).
-- `TOP_K`: number of chunks retrieved for context (default `6`).
-- `EMBED_BATCH`: batch size for embeddings (default `64`).
-- `EMBEDDING_MODEL`: embedding model name (default `text-embedding-3-small`).
-- `OPENAI_MODEL` or `CHAT_MODEL`: chat model used for summaries (default `gpt-5-nano`).
-- `LLM_MODELS`: comma-separated model list for Streamlit dropdown.
-- `DATABASE_URL`: Postgres URL for metadata + hybrid retrieval.
-- `BM25_WEIGHT`: blend weight for hybrid retrieval (default `0.5`).
-- `FORCE_OCR`: set to any value to bypass `pdftotext` and use OCR (if available).
+Configuration
+-------------
+See `docs/configuration.md` for `config.toml` usage and environment variables.
+Quick start:
+- Edit `config.toml` or set `RAG_CONFIG=/path/to/config.toml`.
+- Use env vars to override values in containers/CI.
 
 Components and Files
 --------------------
@@ -82,6 +58,11 @@ Components and Files
 - Streamlit UI: `ragonometrics/ui/streamlit_app.py`.
 - Queue worker: `ragonometrics/integrations/rq_queue.py` (Redis + RQ).
 - Crossref cache: `ragonometrics/integrations/crossref_cache.py` (Postgres cache).
+- Semantic Scholar: `ragonometrics/integrations/semantic_scholar.py`.
+- CitEc: `ragonometrics/integrations/citec.py`.
+- Econ data: `ragonometrics/integrations/econ_data.py` (FRED/World Bank).
+- Workflow state: `ragonometrics/pipeline/state.py`.
+- Workflow runner: `ragonometrics/pipeline/workflow.py`.
 - Benchmarks: `ragonometrics/eval/benchmark.py` and wrapper `tools/benchmark.py`.
 
 Package Layout
@@ -96,31 +77,43 @@ Package Layout
 
 Indexing and Retrieval
 ----------------------
-- FAISS index uses `IndexFlatIP` with normalized vectors for cosine similarity.
-- Index files are written to `vectors.index` and versioned in `indexes/`.
-- Metadata and vector text are stored in Postgres (requires `DATABASE_URL`).
-
-DOI Network
------------
-- `build_doi_network_from_paper()` extracts DOIs from text and queries Crossref.
-- Optional persistence in Postgres with `build_and_store_doi_network()`.
-
-Queueing
---------
-- `rq_queue.py` enqueues indexing jobs.
-- Use Redis + RQ worker for async indexing.
+See `docs/indexing.md` for indexing, DOI network, and queueing details.
 
 Benchmarks
 ----------
 - `tools/benchmark.py` runs indexing and chunking benchmarks against sample PDFs.
 - `ragonometrics/eval/benchmark.py` supports retrieval benchmarks and OCR forcing.
 
+Economics Data
+--------------
+- Example econ workflow: `tools/econ_workflow.py`.
+- Schema notes: `docs/econ_schema.md`.
+
+Documentation
+-------------
+- Architecture: `docs/architecture.md`
+- Workflow Architecture: `docs/workflow_architecture.md`
+- Configuration: `docs/configuration.md`
+- Docker: `docs/docker.md`
+- Workflow and CLI: `docs/workflow.md`
+- Indexing and Retrieval: `docs/indexing.md`
+- Streamlit UI: `docs/ui.md`
+- Cloud deployment: `docs/cloud.md`
+- Agentic workflow: `docs/agentic.md`
+- Econ schema: `docs/econ_schema.md`
+- Onboarding: `docs/onboarding.md`
+- Contributing: `docs/contributing.md`
+- ADRs: `docs/adr/`
+
+Knowledge Sharing
+-----------------
+- Weekly 30-minute walkthrough of recent changes
+- Architecture review for meaningful refactors
+- Short internal workshops (pipeline, retrieval, workflow state)
+
 Troubleshooting
 ---------------
-- Ensure Poppler is installed for `pdftotext` and `pdfinfo`.
-- Set `OPENAI_API_KEY` before running.
-- If using hybrid retrieval or indexing, configure `DATABASE_URL`.
-- If PDF snapshots are not shown, install `pdf2image` and `pytesseract`.
+See `docs/troubleshooting.md`.
 
 Architecture Diagram (Mermaid)
 ------------------------------
@@ -142,6 +135,23 @@ flowchart LR
     C --> L["DOI Extraction"]
     L --> M["Crossref API + Cache"]
     M --> N["DOI Network Tab"]
+
+    C --> S2["Semantic Scholar API + Cache"]
+    C --> CE["CitEc API + Cache"]
+    S2 --> I
+    CE --> I
+
+    subgraph Containers
+        UI["streamlit container"] --> K
+        WF["workflow container"] --> W["Workflow Runner"]
+        RQ["rq-worker container"] --> W
+        RS["redis container"]
+        PG["postgres container"]
+    end
+
+    W --> A
+    W --> RPT["Workflow Report"]
+    W --> WS["Workflow State DB"]
 
     Q["Redis + RQ"] --> E
     R["Query Cache (SQLite)"] --> I

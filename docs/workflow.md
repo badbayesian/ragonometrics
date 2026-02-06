@@ -1,0 +1,24 @@
+# Workflow and CLI Usage
+
+Console Entrypoints
+-------------------
+After installation, use:
+
+```bash
+ragonometrics query --paper papers/example.pdf --question "What is the research question?" --model gpt-5-nano
+ragonometrics benchmark --papers-dir papers/ --out bench/benchmark.csv --limit 5
+ragonometrics workflow --papers papers/
+ragonometrics workflow --papers papers/ --agentic --question "What is the key contribution?"
+ragonometrics workflow --papers papers/ --agentic --agentic-citations --question "What is the key contribution?"
+```
+
+Commands that require Docker (Postgres):
+```bash
+ragonometrics index --papers-dir papers/ --index-path vectors.index --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics"
+```
+
+Workflow Notes
+--------------
+- `--papers` accepts a directory or a single PDF file.
+- Use `--report-question-set structured|agentic|both|none` to control report questions.
+- For faster runs, reduce `TOP_K` or use `report-question-set agentic`.

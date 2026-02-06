@@ -31,6 +31,8 @@ def test_write_run_manifest(tmp_path):
         index_path=index_path,
         shard_path=shard_path,
         pipeline_run_id=42,
+        corpus_fingerprint="corpus123",
+        embedding_dim=1536,
     )
     manifest_path = write_run_manifest(shard_path, manifest)
 
@@ -38,5 +40,7 @@ def test_write_run_manifest(tmp_path):
     data = manifest_path.read_text(encoding="utf-8")
     assert '"pipeline_run_id": 42' in data
     assert '"embedding_model": "emb"' in data
+    assert '"corpus_fingerprint": "corpus123"' in data
+    assert '"embedding_dim": 1536' in data
     assert '"config_hash": "abc123"' in data
 
