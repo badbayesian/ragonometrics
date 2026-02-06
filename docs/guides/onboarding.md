@@ -18,7 +18,7 @@ First Tasks
 Engineering Expectations
 ------------------------
 - Add or update tests for any behavior change.
-- Document new modules in `docs/` and update `docs/architecture.md`.
+- Document new modules in `docs/` and update `docs/architecture/architecture.md`.
 - Keep schema changes backward-compatible or add migration notes.
 
 Knowledge Sharing

@@ -29,18 +29,18 @@ python -m ragonometrics.core.main
 
 Docs (GitHub)
 -------------
-Docs root: https://github.com/badbayesian/ragonometrics/tree/main/docs
-- Architecture: https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture.md
-- Workflow Architecture: https://github.com/badbayesian/ragonometrics/blob/main/docs/workflow_architecture.md
-- Configuration: https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration.md
-- Workflow and CLI: https://github.com/badbayesian/ragonometrics/blob/main/docs/workflow.md
-- Docker: https://github.com/badbayesian/ragonometrics/blob/main/docs/docker.md
-- Indexing and Retrieval: https://github.com/badbayesian/ragonometrics/blob/main/docs/indexing.md
-- Streamlit UI: https://github.com/badbayesian/ragonometrics/blob/main/docs/ui.md
-- Troubleshooting: https://github.com/badbayesian/ragonometrics/blob/main/docs/troubleshooting.md
-- Agentic workflow: https://github.com/badbayesian/ragonometrics/blob/main/docs/agentic.md
-- Econ schema: https://github.com/badbayesian/ragonometrics/blob/main/docs/econ_schema.md
-- Cloud deployment: https://github.com/badbayesian/ragonometrics/blob/main/docs/cloud.md
-- Onboarding: https://github.com/badbayesian/ragonometrics/blob/main/docs/onboarding.md
-- Contributing: https://github.com/badbayesian/ragonometrics/blob/main/docs/contributing.md
-- ADRs: https://github.com/badbayesian/ragonometrics/tree/main/docs/adr
+Docs root: [docs/](https://github.com/badbayesian/ragonometrics/tree/main/docs)
+- [Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md): System design, tradeoffs, and reproducibility.
+- [Workflow Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md): Workflow steps, artifacts, and state.
+- [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md): `config.toml` + env override reference.
+- [Workflow and CLI](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/workflow.md): CLI commands and workflow usage.
+- [Docker](https://github.com/badbayesian/ragonometrics/blob/main/docs/deployment/docker.md): Compose usage and container notes.
+- [Indexing and Retrieval](https://github.com/badbayesian/ragonometrics/blob/main/docs/components/indexing.md): FAISS, Postgres metadata, DOI network, queueing.
+- [Streamlit UI](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/ui.md): UI launch and behavior.
+- [Troubleshooting](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/troubleshooting.md): Common setup and runtime fixes.
+- [Agentic workflow](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/agentic.md): Agentic mode overview and notes.
+- [Econ schema](https://github.com/badbayesian/ragonometrics/blob/main/docs/data/econ_schema.md): Time-series schema and econ data notes.
+- [Cloud deployment](https://github.com/badbayesian/ragonometrics/blob/main/docs/deployment/cloud.md): Deployment scaffolding and guidance.
+- [Onboarding](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/onboarding.md): Getting started for contributors.
+- [Contributing](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/contributing.md): Contribution guidelines.
+- [ADRs](https://github.com/badbayesian/ragonometrics/tree/main/docs/adr): Architecture decision records.

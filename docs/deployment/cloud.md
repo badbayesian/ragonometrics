@@ -45,4 +45,4 @@ Cert Alignment (Examples)
 References in Repo
 ------------------
 - `deploy/terraform/aws/` and `deploy/terraform/gcp/` stubs
-- `docs/architecture.md` for component overview
+- `docs/architecture/architecture.md` for component overview

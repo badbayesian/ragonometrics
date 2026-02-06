@@ -5,7 +5,7 @@ Thank you for contributing to Ragonometrics.
 PR Checklist
 ------------
 - Tests updated or added
-- `docs/architecture.md` updated if architecture changed
+- `docs/architecture/architecture.md` updated if architecture changed
 - `docs/adr/` entry added for major decisions
 - Lint/format expectations respected
 - New dependencies justified in the PR description
