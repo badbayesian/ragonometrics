@@ -831,11 +831,7 @@ def load_papers(
     path_list = list(paths)
     iterator = path_list
     if progress:
-        try:
-
-            iterator = tqdm(path_list, desc=progress_desc)
-        except Exception:
-            iterator = path_list
+        iterator = tqdm(path_list, desc=progress_desc)
     papers: List[Paper] = []
     for path in iterator:
         metadata = run_pdfinfo(path)

@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from openai import OpenAI
+from tqdm import tqdm
 
 from ragonometrics.core.main import (
     embed_texts,
@@ -50,13 +51,8 @@ def _resolve_paper_paths(papers_path: Path) -> List[Path]:
     return []
 
 
-def _progress_iter(items, desc: str):
-    try:
-        from tqdm import tqdm
-
-        return tqdm(items, desc=desc)
-    except Exception:
-        return items
+def _progress_iter(items, desc: str, *, total: int | None = None):
+    return tqdm(items, desc=desc, total=total)
 
 
 def _can_connect_db(db_url: str) -> bool:
@@ -522,7 +518,7 @@ def _answer_report_questions(
                 citations_context=citations_context,
                 item=item,
             )
-            for item in _progress_iter(questions, "Report questions")
+            for item in _progress_iter(questions, "Report questions", total=len(questions))
         ]
     results: List[Dict[str, Any] | None] = [None] * len(questions)
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
@@ -539,7 +535,7 @@ def _answer_report_questions(
             ): idx
             for idx, item in enumerate(questions)
         }
-        for future in _progress_iter(list(as_completed(future_map)), "Report questions"):
+        for future in _progress_iter(as_completed(future_map), "Report questions", total=len(future_map)):
             idx = future_map[future]
             try:
                 results[idx] = future.result()
@@ -790,7 +786,7 @@ def run_workflow(
                 chunk_embeddings = embed_texts(client, chunk_texts, settings.embedding_model, settings.batch_size)
                 subquestions = _agentic_plan(client, question, model=agentic_model, max_items=max_subq)
                 sub_answers: List[Dict[str, str]] = []
-                for subq in _progress_iter(subquestions, "Agentic sub-questions"):
+                for subq in _progress_iter(subquestions, "Agentic sub-questions", total=len(subquestions)):
                     sub_answers.append(
                         _answer_subquestion(
                             client=client,
