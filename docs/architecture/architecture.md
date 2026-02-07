@@ -32,7 +32,7 @@ flowchart LR
     Query[User Query] -->|expand/rerank| Retrieve[Hybrid Retrieval]
     Retrieve --> Context[Context Chunks]
     Context --> LLM[LLM Answer]
-    S2 --> LLM
+    OA --> LLM
     CitEc --> LLM
   end
 
@@ -96,7 +96,7 @@ Key Components
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
   - Console entrypoints: `ragonometrics index | query | ui | benchmark`.
 - Agentic workflow
-- [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
+  - [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
   - State persisted in SQLite via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py).
   - Optional async execution with Redis + RQ ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
   - Optional agentic step plans sub-questions, retrieves context, and synthesizes an answer.
