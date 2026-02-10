@@ -54,6 +54,8 @@ Runtime + workflow settings (env-only)
 | `WORKFLOW_REPORT_QUESTIONS` | Enable structured report questions. | `1` | bool | Use `0` to disable. |
 | `WORKFLOW_REPORT_QUESTIONS_SET` | Report question set to run. | `structured` | enum | `structured|agentic|both|none`. |
 | `WORKFLOW_REPORT_QUESTION_WORKERS` | Concurrency for report questions. | `8` | int | |
+| `DISKANN_QUERY_RESCORE` | Optional `pgvectorscale` query-time rescore count. | unset | int | Applied with `SET LOCAL diskann.query_rescore`. |
+| `DISKANN_QUERY_SEARCH_LIST_SIZE` | Optional `pgvectorscale` search list size. | unset | int | Applied with `SET LOCAL diskann.query_search_list_size`. |
 | `PREP_HASH_FILES` | Hash PDF files during prep. | `1` | bool | Set `0` for faster scans. |
 | `PREP_VALIDATE_TEXT` | Run text extraction during prep. | `0` | bool | Enables empty-text detection. |
 | `PREP_FAIL_ON_EMPTY` | Fail workflow if corpus is empty. | `0` | bool | Treats no PDFs or no text as failure. |

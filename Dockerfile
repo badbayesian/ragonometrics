@@ -3,9 +3,9 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Poppler provides `pdftotext` and `pdfinfo`
+# Poppler provides `pdftotext` and `pdfinfo`; libgomp1 is needed for faiss-cpu.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends poppler-utils \
+    && apt-get install -y --no-install-recommends poppler-utils libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

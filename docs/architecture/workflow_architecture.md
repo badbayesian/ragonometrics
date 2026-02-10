@@ -101,6 +101,7 @@ Agentic outputs include:
   - `assumption_flag`, `assumption_notes`, `related_questions`
   - `confidence` is derived from retrieval scores (not model self-report).
   - `confidence_score` is the numeric retrieval score used to set the label.
+- `report_question_confidence` summary stats (mean/median/min/max/p25/p75 + label counts).
 
 Concurrency
 -----------
