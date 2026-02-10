@@ -28,7 +28,7 @@ from ragonometrics.integrations.rq_queue import enqueue_workflow
 
 
 def cmd_index(args: argparse.Namespace) -> int:
-    """Build a FAISS index from PDFs.
+    """Build vector indexes from PDFs.
 
     Args:
         args: Parsed CLI arguments.
@@ -199,7 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="ragonometrics")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("index", help="Build FAISS index from PDFs")
+    s = sub.add_parser("index", help="Build Postgres/FAISS vector indexes from PDFs")
     s.add_argument("--papers-dir", type=str, default=None)
     s.add_argument("--index-path", type=str, default="vectors.index")
     s.add_argument("--meta-db-url", type=str, default=None)

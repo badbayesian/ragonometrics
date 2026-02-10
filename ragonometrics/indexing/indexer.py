@@ -1,4 +1,4 @@
-"""Index builder for embeddings and Postgres metadata. Creates FAISS indexes and run artifacts consumed by retrieval."""
+"""Index builder for embeddings and Postgres metadata. Writes DB vector rows, ANN indexes, and FAISS compatibility artifacts."""
 
 from __future__ import annotations
 
@@ -55,13 +55,17 @@ def _stable_chunk_id(doc_id: str, page: int | None, start_word: int | None, end_
     return _sha256_text(payload)
 
 
+def _to_pgvector_literal(values: np.ndarray) -> str:
+    return "[" + ",".join(f"{float(v):.10f}" for v in values.tolist()) + "]"
+
+
 def build_index(
     settings: Settings,
     paper_paths: List[Path],
     index_path: Path = Path("vectors.index"),
     meta_db_url: str | None = None,
 ):
-    """Build a FAISS index from paper paths and persist metadata to Postgres.
+    """Build vector indexes from paper paths and persist metadata to Postgres.
 
     Args:
         settings: Runtime settings for chunking and embeddings.
@@ -128,6 +132,7 @@ def build_index(
             end_word = c["end_word"] if isinstance(c, dict) else None
             chunk_hash = _sha256_text(chunk_text)
             chunk_id = _stable_chunk_id(doc_id, page, start_word, end_word, chunk_hash)
+            embedding_literal = _to_pgvector_literal(vecs[i])
             metadata_rows.append(
                 (
                     next_id,
@@ -139,6 +144,7 @@ def build_index(
                     start_word,
                     end_word,
                     chunk_text,
+                    embedding_literal,
                     None,  # pipeline_run_id placeholder; set later
                     datetime.utcnow().isoformat(),
                 )
@@ -235,6 +241,7 @@ def build_index(
             start_word INTEGER,
             end_word INTEGER,
             text TEXT,
+            embedding VECTOR,
             pipeline_run_id INTEGER,
             created_at TEXT
         )
@@ -266,13 +273,13 @@ def build_index(
     # Upsert rows
     # upsert rows and attach pipeline_run_id
     for row in metadata_rows:
-        id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, _, created_at = row
+        id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, embedding, _, created_at = row
         cur.execute(
             """
             INSERT INTO vectors (
-                id, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, pipeline_run_id, created_at
+                id, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, embedding, pipeline_run_id, created_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
                 doc_id = EXCLUDED.doc_id,
                 chunk_id = EXCLUDED.chunk_id,
@@ -282,10 +289,11 @@ def build_index(
                 start_word = EXCLUDED.start_word,
                 end_word = EXCLUDED.end_word,
                 text = EXCLUDED.text,
+                embedding = EXCLUDED.embedding,
                 pipeline_run_id = EXCLUDED.pipeline_run_id,
                 created_at = EXCLUDED.created_at
             """,
-            (id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, run_id, created_at),
+            (id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, embedding, run_id, created_at),
         )
     conn.commit()
     conn.close()

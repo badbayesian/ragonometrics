@@ -450,6 +450,64 @@ def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> Lis
     return report
 
 
+def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    scores: List[float] = []
+    labels: Dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("confidence") or "").lower().strip()
+        if label in labels:
+            labels[label] += 1
+        score = item.get("confidence_score")
+        if score is None:
+            continue
+        try:
+            scores.append(float(score))
+        except Exception:
+            continue
+    if not scores:
+        return {
+            "count": 0,
+            "mean": 0.0,
+            "median": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "p25": 0.0,
+            "p75": 0.0,
+            "label_counts": labels,
+        }
+    scores_sorted = sorted(scores)
+    n = len(scores_sorted)
+    mid = n // 2
+    if n % 2 == 0:
+        median = (scores_sorted[mid - 1] + scores_sorted[mid]) / 2
+    else:
+        median = scores_sorted[mid]
+
+    def _percentile(p: float) -> float:
+        if n == 1:
+            return scores_sorted[0]
+        idx = p * (n - 1)
+        lo = int(idx)
+        hi = min(lo + 1, n - 1)
+        if lo == hi:
+            return scores_sorted[lo]
+        frac = idx - lo
+        return scores_sorted[lo] * (1 - frac) + scores_sorted[hi] * frac
+
+    return {
+        "count": n,
+        "mean": sum(scores_sorted) / n,
+        "median": median,
+        "min": scores_sorted[0],
+        "max": scores_sorted[-1],
+        "p25": _percentile(0.25),
+        "p75": _percentile(0.75),
+        "label_counts": labels,
+    }
+
+
 def _answer_report_question_item(
     *,
     client: OpenAI,
@@ -876,6 +934,7 @@ def run_workflow(
                     question=question,
                     sub_answers=sub_answers,
                 )
+                report_question_summary = _summarize_confidence_scores(report_questions)
                 agentic_out = {
                     "status": "completed",
                     "question": question,
@@ -886,6 +945,7 @@ def run_workflow(
                     "report_questions_enabled": report_questions_enabled,
                     "report_questions_set": report_question_mode,
                     "report_questions": report_questions,
+                    "report_question_confidence": report_question_summary,
                     "report_questions_error": report_questions_error,
                     "citations_enabled": citations_enabled,
                     "citations_preview": citations_preview,

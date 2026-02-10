@@ -2,9 +2,9 @@
 
 Indexing and Retrieval
 ----------------------
-- FAISS index uses `IndexFlatIP` with normalized vectors for cosine similarity.
-- Index files are written to [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index) and versioned in [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes).
-- Metadata and vector text are stored in Postgres (requires `DATABASE_URL`).
+- Primary ANN backend is Postgres vector search (`pgvector` + `pgvectorscale` `diskann`) over `vectors.embedding`.
+- FAISS index artifacts are still written to [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index) and versioned in [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes) as a compatibility fallback.
+- Metadata, vector text, and embeddings are stored in Postgres (requires `DATABASE_URL`).
 - Each index build writes a manifest next to the shard with config hash, corpus fingerprint, stable doc/chunk ids, and embedding/index hashes.
 
 DOI Network

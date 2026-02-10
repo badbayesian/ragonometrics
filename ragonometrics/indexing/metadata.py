@@ -10,6 +10,43 @@ from typing import Optional
 import psycopg2
 
 
+def _safe_execute(cur, sql: str, params: tuple | None = None) -> bool:
+    """Execute SQL and suppress backend-specific incompatibilities."""
+    try:
+        cur.execute(sql, params or ())
+        return True
+    except Exception:
+        return False
+
+
+def ensure_vector_extensions(cur) -> None:
+    """Enable vector extensions when supported by the backend."""
+    # vectorscale cascades to pgvector on supported images.
+    if not _safe_execute(cur, "CREATE EXTENSION IF NOT EXISTS vectorscale CASCADE"):
+        # fallback to pgvector-only setups
+        _safe_execute(cur, "CREATE EXTENSION IF NOT EXISTS vector")
+
+
+def ensure_vector_indexes(cur) -> None:
+    """Ensure ANN vector indexes exist when backend supports vector indexes."""
+    if _safe_execute(
+        cur,
+        """
+        CREATE INDEX IF NOT EXISTS vectors_embedding_diskann_idx
+        ON vectors USING diskann (embedding vector_cosine_ops)
+        """,
+    ):
+        return
+    # Fallback for environments that have pgvector but not vectorscale.
+    _safe_execute(
+        cur,
+        """
+        CREATE INDEX IF NOT EXISTS vectors_embedding_ivfflat_idx
+        ON vectors USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
+        """,
+    )
+
+
 def init_metadata_db(db_url: str):
     """Initialize metadata tables for pipeline runs and vectors.
 
@@ -21,6 +58,7 @@ def init_metadata_db(db_url: str):
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
+    ensure_vector_extensions(cur)
 
     # pipeline runs (audit manifest for a build)
     cur.execute(
@@ -111,6 +149,7 @@ def init_metadata_db(db_url: str):
             start_word INTEGER,
             end_word INTEGER,
             text TEXT,
+            embedding VECTOR,
             pipeline_run_id INTEGER REFERENCES pipeline_runs(id),
             created_at TIMESTAMP
         )
@@ -118,12 +157,13 @@ def init_metadata_db(db_url: str):
     )
 
     # add chunk_id/hash columns if missing (older deployments)
-    for col in ("chunk_id", "chunk_hash"):
+    for col in ("chunk_id", "chunk_hash", "embedding"):
+        col_type = "VECTOR" if col == "embedding" else "TEXT"
         try:
-            cur.execute(f"ALTER TABLE vectors ADD COLUMN IF NOT EXISTS {col} TEXT")
+            cur.execute(f"ALTER TABLE vectors ADD COLUMN IF NOT EXISTS {col} {col_type}")
         except Exception:
             try:
-                cur.execute(f"ALTER TABLE vectors ADD COLUMN {col} TEXT")
+                cur.execute(f"ALTER TABLE vectors ADD COLUMN {col} {col_type}")
             except Exception:
                 pass
 
@@ -151,6 +191,8 @@ def init_metadata_db(db_url: str):
                 cur.execute(f"ALTER TABLE documents ADD COLUMN {col} TEXT")
             except Exception:
                 pass
+
+    ensure_vector_indexes(cur)
 
     conn.commit()
     return conn

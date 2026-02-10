@@ -1,0 +1,88 @@
+{
+  "run_id": "3733c1223ccc4a2a91986c67a110aac3",
+  "started_at": "2026-02-07T05:04:58.008994+00:00",
+  "papers_dir": "\\papers",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 3,
+    "max_words": 12000,
+    "chunk_words": 350,
+    "chunk_overlap": 50,
+    "top_k": 6,
+    "batch_size": 64,
+    "embedding_model": "gpt-5-nano",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "a1d2447d4c5ad563061c9abf219de5438f8b48805be35597caf4f130f1a9f9ee",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 3,
+      "max_words": 12000,
+      "chunk_words": 350,
+      "chunk_overlap": 50,
+      "top_k": 6,
+      "batch_size": 64,
+      "embedding_model": "gpt-5-nano",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.5,
+      "reranker_model": "",
+      "rerank_top_n": 30,
+      "query_expansion": "",
+      "query_expand_model": "",
+      "section_aware_chunking": false,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\sqlite\\ragonometrics_token_usage.sqlite",
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 3,
+      "total_size_bytes": 25102711,
+      "corpus_hash": "b7da815edd38d6fb6a40360a2982d16efa1c11d4dcb280d5cdc353530829b7f6",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-3733c1223ccc4a2a91986c67a110aac3.json"
+  },
+  "ingest": {
+    "num_pdfs": 3,
+    "num_papers": 3
+  },
+  "enrich": {
+    "openalex": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "failed",
+    "error": "Error code: 403 - {'error': {'message': 'You are not allowed to generate embeddings from this model', 'type': 'invalid_request_error', 'param': None, 'code': None}}"
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 58.333333333333336,
+    "max_chunks": 75,
+    "min_chunks": 42
+  },
+  "finished_at": "2026-02-07T05:05:43.276846+00:00"
+}

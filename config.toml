@@ -4,21 +4,21 @@
 # Ingestion and chunking
 papers_dir = "papers"
 max_papers = 3
-max_words = 12000
-chunk_words = 350
-chunk_overlap = 50
+max_words = 20000
+chunk_words = 275
+chunk_overlap = 60
 
 # Retrieval
-top_k = 6
-bm25_weight = 0.5
-reranker_model = ""
-rerank_top_n = 30
-query_expansion = ""
-query_expand_model = ""
+top_k = 8
+bm25_weight = 0.4
+reranker_model = "gpt-5-nano"
+rerank_top_n = 40
+query_expansion = "1"
+query_expand_model = "gpt-5-nano"
 
 # Embeddings/LLM
 batch_size = 64
-embedding_model = "text-embedding-3-small"
+embedding_model = "text-embedding-3-large"
 chat_model = "gpt-5-nano"
 
 # Storage / indexing
@@ -27,5 +27,5 @@ index_idempotent_skip = true
 allow_unverified_index = false
 
 # Extraction options
-section_aware_chunking = false
+section_aware_chunking = true
 force_ocr = false

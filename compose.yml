@@ -4,13 +4,10 @@ services:
     command: streamlit run ragonometrics/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
     ports:
       - "8501:8501"
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
-      - STREAMLIT_USERNAME=${STREAMLIT_USERNAME}
-      - STREAMLIT_PASSWORD=${STREAMLIT_PASSWORD}
-      - OPENALEX_API_KEY=${OPENALEX_API_KEY}
-      - OPENALEX_MAILTO=${OPENALEX_MAILTO}
     volumes:
       - ./papers:/app/papers:rw
     restart: unless-stopped
@@ -18,11 +15,10 @@ services:
   worker:
     build: .
     command: python -m ragonometrics.core.main
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
-      - OPENALEX_API_KEY=${OPENALEX_API_KEY}
-      - OPENALEX_MAILTO=${OPENALEX_MAILTO}
     volumes:
       - ./papers:/app/papers:rw
     restart: "no"
@@ -31,10 +27,10 @@ services:
     build: .
     # Example one-off command; override per your workflow. It runs a small DOI network build.
     command: ["python", "-c", "from ragonometrics.core.main import load_papers, build_and_store_doi_network; import os; papers=load_papers(['papers/example.pdf']); print(build_and_store_doi_network(papers[0], db_url=os.environ.get('DATABASE_URL')))" ]
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
-      - DATABASE_URL=${DATABASE_URL}
     volumes:
       - ./papers:/app/papers:rw
     depends_on:
@@ -43,17 +39,16 @@ services:
   indexer:
     build: .
     command: python -m ragonometrics.indexing.indexer --index-path vectors.index --meta-db-url $${DATABASE_URL}
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENALEX_API_KEY=${OPENALEX_API_KEY}
-      - OPENALEX_MAILTO=${OPENALEX_MAILTO}
     volumes:
       - ./papers:/app/papers:rw
     restart: "no"
     depends_on:
       - redis
+      - postgres
 
   redis:
     image: redis:7-alpine
@@ -62,46 +57,40 @@ services:
   rq-worker:
     build: .
     command: rq worker -u redis://redis:6379 default
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENALEX_API_KEY=${OPENALEX_API_KEY}
-      - OPENALEX_MAILTO=${OPENALEX_MAILTO}
+    env_file:
+      - .env
     depends_on:
       - redis
     restart: unless-stopped
 
   workflow:
     build: .
-    command: ragonometrics workflow --papers-dir /app/papers --agentic --agentic-citations
+    command: ragonometrics workflow --papers /app/papers --agentic --agentic-citations
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PAPERS_DIR=/app/papers
-      - DATABASE_URL=${DATABASE_URL}
-      - OPENALEX_API_KEY=${OPENALEX_API_KEY}
-      - OPENALEX_MAILTO=${OPENALEX_MAILTO}
-      - FRED_API_KEY=${FRED_API_KEY}
-      - ECON_SERIES_IDS=${ECON_SERIES_IDS}
-      - WORKFLOW_AGENTIC=${WORKFLOW_AGENTIC}
-      - WORKFLOW_QUESTION=${WORKFLOW_QUESTION}
-      - WORKFLOW_AGENTIC_MODEL=${WORKFLOW_AGENTIC_MODEL}
-      - WORKFLOW_AGENTIC_CITATIONS=${WORKFLOW_AGENTIC_CITATIONS}
     volumes:
       - ./papers:/app/papers:rw
       - ./reports:/app/reports:rw
+      - ./sqlite:/app/sqlite:rw
     depends_on:
       - redis
+      - postgres
     restart: "no"
 
   postgres:
-    image: postgres:15-alpine
+    image: timescale/timescaledb-ha:pg17
+    env_file:
+      - .env
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=ragonometrics
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-ragonometrics}
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/home/postgres/pgdata
     restart: unless-stopped
 
 volumes:
