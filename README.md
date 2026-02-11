@@ -27,6 +27,34 @@ python -m pip install -e .
 python -m ragonometrics.core.main
 ```
 
+Docker Compose (Current Defaults)
+---------------------------------
+- Streamlit is exposed on host port `8585` (`8585:8501`), so open `http://localhost:8585`.
+- LAN access uses `http://<host-ip>:8585`.
+- Containers read papers from `/app/papers`, mounted from host path `${PAPERS_HOST_DIR:-./papers}`.
+- In the Streamlit UI, "Papers directory" is read-only and server-configured (not user-editable).
+
+Example `.env` for container paper access:
+
+```bash
+PAPERS_HOST_DIR=./papers
+```
+
+If Docker runs on Windows and your repo is on a mapped network drive (for example `Z:`),
+bind mounts may appear empty in Linux containers. Use a local path instead, for example:
+
+```bash
+PAPERS_HOST_DIR=C:/ragonometrics-papers
+```
+
+Bring up containers and validate paper visibility:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose exec -T streamlit ls -la /app/papers
+```
+
 CLI Commands
 ------------
 - `ragonometrics index`: build Postgres vector index + metadata (and FAISS artifact fallback) for fast querying later.
