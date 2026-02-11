@@ -3,13 +3,13 @@ services:
     build: .
     command: streamlit run ragonometrics/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
     ports:
-      - "8501:8501"
+      - "8585:8501"
     env_file:
       - .env
     environment:
       - PAPERS_DIR=/app/papers
     volumes:
-      - ./papers:/app/papers:rw
+      - ${PAPERS_HOST_DIR:-./papers}:/app/papers:rw
     restart: unless-stopped
 
   worker:
@@ -20,7 +20,7 @@ services:
     environment:
       - PAPERS_DIR=/app/papers
     volumes:
-      - ./papers:/app/papers:rw
+      - ${PAPERS_HOST_DIR:-./papers}:/app/papers:rw
     restart: "no"
 
   doi-worker:
@@ -32,7 +32,7 @@ services:
     environment:
       - PAPERS_DIR=/app/papers
     volumes:
-      - ./papers:/app/papers:rw
+      - ${PAPERS_HOST_DIR:-./papers}:/app/papers:rw
     depends_on:
       - worker
 
@@ -44,7 +44,7 @@ services:
     environment:
       - PAPERS_DIR=/app/papers
     volumes:
-      - ./papers:/app/papers:rw
+      - ${PAPERS_HOST_DIR:-./papers}:/app/papers:rw
     restart: "no"
     depends_on:
       - redis
@@ -71,7 +71,7 @@ services:
     environment:
       - PAPERS_DIR=/app/papers
     volumes:
-      - ./papers:/app/papers:rw
+      - ${PAPERS_HOST_DIR:-./papers}:/app/papers:rw
       - ./reports:/app/reports:rw
       - ./sqlite:/app/sqlite:rw
     depends_on:

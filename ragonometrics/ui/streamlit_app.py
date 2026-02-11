@@ -442,8 +442,13 @@ def main():
     )
     st.sidebar.markdown("---")
     st.sidebar.header("Settings")
-    papers_dir = st.sidebar.text_input("Papers directory", str(settings.papers_dir))
-    papers_dir = Path(papers_dir)
+    papers_dir = Path(settings.papers_dir)
+    st.sidebar.text_input(
+        "Papers directory",
+        value=str(papers_dir),
+        disabled=True,
+        help="Configured by the server environment. This path is read-only in the UI.",
+    )
     top_k = st.sidebar.number_input(
         "Top K context chunks",
         value=int(settings.top_k),
@@ -457,9 +462,6 @@ def main():
         if m not in model_options:
             model_options.append(m)
     selected_model = st.sidebar.selectbox("LLM model", options=model_options, index=0)
-
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("Make sure `pdftotext`/`pdfinfo` are installed and `OPENAI_API_KEY` is set.")
 
     files = list_papers(papers_dir)
 
@@ -518,7 +520,7 @@ def main():
         if st.sidebar.button(starter, key=f"paper_starter_{selected_path.name}_{idx}", use_container_width=True):
             st.session_state["queued_query"] = starter
 
-    tab_chat, tab_doi, tab_usage = st.tabs(["Chat", "DOI Network", "Usage"])
+    tab_chat, tab_usage = st.tabs(["Chat", "Usage"])
 
     with tab_chat:
         st.caption("Conversation mode is on. Follow-up questions use recent chat turns for continuity.")
@@ -729,94 +731,6 @@ def main():
                                     with tab:
                                         key_prefix = f"citation_{history_id}_{c_idx}"
                                         render_citation_snapshot(citation_path, c, key_prefix=key_prefix, query=q or "")
-
-    with tab_doi:
-        st.subheader("DOI Network")
-        st.markdown("Build and visualize the DOI citation network extracted from the selected paper.")
-
-        def visualize_network(network: dict) -> None:
-            """Render a DOI citation network using Plotly.
-
-            Args:
-                network: Mapping of source DOI to cited DOIs.
-            """
-            G = nx.DiGraph()
-            for src, targets in network.items():
-                G.add_node(src)
-                for tgt in targets:
-                    G.add_node(tgt)
-                    G.add_edge(src, tgt)
-
-            if len(G) == 0:
-                st.info("No DOIs or citation edges found for this paper.")
-                return
-
-            pos = nx.spring_layout(G, seed=42)
-
-            edge_x = []
-            edge_y = []
-            for u, v in G.edges():
-                x0, y0 = pos[u]
-                x1, y1 = pos[v]
-                edge_x += [x0, x1, None]
-                edge_y += [y0, y1, None]
-
-            edge_trace = go.Scatter(
-                x=edge_x,
-                y=edge_y,
-                line=dict(width=1, color="#888"),
-                hoverinfo="none",
-                mode="lines",
-            )
-
-            node_x = []
-            node_y = []
-            node_text = []
-            for node in G.nodes():
-                x, y = pos[node]
-                node_x.append(x)
-                node_y.append(y)
-                node_text.append(node)
-
-            node_trace = go.Scatter(
-                x=node_x,
-                y=node_y,
-                mode="markers+text",
-                hoverinfo="text",
-                textposition="top center",
-                marker=dict(
-                    showscale=False,
-                    color="#6175c1",
-                    size=10,
-                    line_width=1,
-                ),
-                text=[n if len(n) <= 30 else n[:27] + "..." for n in node_text],
-                hovertext=node_text,
-            )
-
-            fig = go.Figure(data=[edge_trace, node_trace])
-            fig.update_layout(
-                showlegend=False,
-                margin=dict(b=20, l=5, r=5, t=40),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            )
-
-            st.plotly_chart(fig, width="stretch")
-
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            build_network = st.button("Build DOI Network")
-            store_db = st.checkbox("Store network to DB (Postgres)", value=False)
-
-        if build_network:
-            with st.spinner("Building DOI network (may make web requests)..."):
-                if store_db:
-                    db_url = os.environ.get("DATABASE_URL")
-                    network = build_and_store_doi_network(paper, db_url=db_url)
-                else:
-                    network = build_doi_network_from_paper(paper)
-            visualize_network(network)
 
     with tab_usage:
         st.subheader("Token Usage")
