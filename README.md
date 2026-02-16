@@ -105,8 +105,8 @@ Then open the printed URL (default `http://localhost:5052`).
 
 Key Docs
 --------
-- Architecture: `docs/architecture/architecture.md`
-- Data model ERD: `docs/architecture/data-model-erd.md`
-- Workflow architecture: `docs/architecture/workflow_architecture.md`
-- Docker guide: `docs/deployment/docker.md`
-- Workflow CLI guide: `docs/guides/workflow.md`
+- Architecture: [docs/architecture/architecture.md](docs/architecture/architecture.md)
+- Data model ERD: [docs/architecture/data-model-erd.md](docs/architecture/data-model-erd.md)
+- Workflow architecture: [docs/architecture/workflow_architecture.md](docs/architecture/workflow_architecture.md)
+- Docker guide: [docs/deployment/docker.md](docs/deployment/docker.md)
+- Workflow CLI guide: [docs/guides/workflow.md](docs/guides/workflow.md)
