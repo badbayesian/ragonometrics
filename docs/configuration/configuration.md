@@ -38,7 +38,9 @@ Runtime + workflow settings (env-only)
 | --- | --- | --- | --- | --- |
 | `RAG_CONFIG` | Path to alternate config file. | [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) | path | Used in [`ragonometrics/core/main.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/core/main.py). |
 | `OPENAI_API_KEY` | OpenAI API key for embeddings + chat. | unset | string | Required for most runs. |
-| `LLM_MODELS` | Extra models shown in Streamlit dropdown. | empty | CSV string | Example: `gpt-5-nano,gpt-4.1-mini`. |
+| `LLM_MODELS` | Extra models shown in Streamlit dropdown. | empty | CSV string | Example: `gpt-5,gpt-4.1-mini`. |
+| `MATH_LATEX_REVIEW_ENABLED` | Enable post-answer review that formats math/function notation to LaTeX in UI answers. | `1` | bool | Set `0` to disable. |
+| `MATH_LATEX_REVIEW_MODEL` | Model override for the math-format review pass. | `OPENAI_MODEL` | string | Falls back to the selected chat model when unset. |
 | `STREAMLIT_USERNAME` | Optional UI username. | unset | string | Login disabled if missing. |
 | `STREAMLIT_PASSWORD` | Optional UI password. | unset | string | Login disabled if missing. |
 | `OPENALEX_API_KEY` | OpenAlex API key. | unset | string | Required for higher rate limits. |

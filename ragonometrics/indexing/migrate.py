@@ -48,20 +48,41 @@ def migrate_vectors(sqlite_path: Path, pg_url: str) -> int:
     cur.execute(f"SELECT {', '.join(select_cols)} FROM vectors")
     rows = cur.fetchall()
     pg = psycopg2.connect(pg_url)
-    metadata.init_metadata_db(pg_url)
+    # Ensure stage-oriented tables exist before backfill.
+    setup_conn = metadata.init_metadata_db(pg_url)
+    setup_conn.close()
     pcur = pg.cursor()
     migrated = 0
     for r in rows:
         vals = dict(zip(select_cols, r))
         # ensure minimal fields
-        if "id" not in vals or "text" not in vals:
+        if "id" not in vals or "text" not in vals or not vals.get("doc_id"):
             continue
+        doc_id = vals.get("doc_id")
+        paper_path = vals.get("paper_path")
+        created_at = vals.get("created_at")
+        # Ensure referenced document row exists for vector FK.
         pcur.execute(
             """
-            INSERT INTO vectors (id, doc_id, paper_path, page, start_word, end_word, text, pipeline_run_id, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO ingestion.documents (doc_id, path, extracted_at)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (doc_id) DO UPDATE SET
+                path = COALESCE(ingestion.documents.path, EXCLUDED.path),
+                extracted_at = COALESCE(ingestion.documents.extracted_at, EXCLUDED.extracted_at)
+            """,
+            (doc_id, paper_path, created_at),
+        )
+        chunk_id = f"legacy-{vals.get('id')}"
+        pcur.execute(
+            """
+            INSERT INTO indexing.vectors (
+                id, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, pipeline_run_id, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (id) DO UPDATE SET
                 doc_id = EXCLUDED.doc_id,
+                chunk_id = EXCLUDED.chunk_id,
+                chunk_hash = EXCLUDED.chunk_hash,
                 paper_path = EXCLUDED.paper_path,
                 page = EXCLUDED.page,
                 start_word = EXCLUDED.start_word,
@@ -72,14 +93,16 @@ def migrate_vectors(sqlite_path: Path, pg_url: str) -> int:
             """,
             (
                 vals.get("id"),
-                vals.get("doc_id"),
-                vals.get("paper_path"),
+                doc_id,
+                chunk_id,
+                None,
+                paper_path,
                 vals.get("page"),
                 vals.get("start_word"),
                 vals.get("end_word"),
                 vals.get("text"),
                 vals.get("pipeline_run_id"),
-                vals.get("created_at"),
+                created_at,
             ),
         )
         migrated += 1
@@ -113,18 +136,36 @@ def migrate_doi_network(sqlite_path: Path, pg_url: str) -> int:
 
     rows = cur.fetchall()
     pg = psycopg2.connect(pg_url)
-    # ensure doi tables exist
-    metadata.init_metadata_db(pg_url)
+    # ensure base schemas exist
+    setup_conn = metadata.init_metadata_db(pg_url)
+    setup_conn.close()
     pcur = pg.cursor()
+    pcur.execute("CREATE SCHEMA IF NOT EXISTS ingestion")
+    pcur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingestion.dois (
+            doi TEXT PRIMARY KEY
+        )
+        """
+    )
+    pcur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ingestion.citations (
+            source_doi TEXT NOT NULL REFERENCES ingestion.dois(doi) ON DELETE CASCADE,
+            target_doi TEXT NOT NULL REFERENCES ingestion.dois(doi) ON DELETE CASCADE,
+            PRIMARY KEY (source_doi, target_doi)
+        )
+        """
+    )
     migrated = 0
     # upsert dois and citations
     for src, tgt in rows:
         if not src or not tgt:
             continue
-        pcur.execute("INSERT INTO dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (src,))
-        pcur.execute("INSERT INTO dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (tgt,))
+        pcur.execute("INSERT INTO ingestion.dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (src,))
+        pcur.execute("INSERT INTO ingestion.dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (tgt,))
         pcur.execute(
-            "INSERT INTO citations (source_doi, target_doi) VALUES (%s, %s) ON CONFLICT (source_doi, target_doi) DO NOTHING",
+            "INSERT INTO ingestion.citations (source_doi, target_doi) VALUES (%s, %s) ON CONFLICT (source_doi, target_doi) DO NOTHING",
             (src, tgt),
         )
         migrated += 1

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -32,13 +34,31 @@ from ragonometrics.pipeline.state import (
     record_step,
     set_workflow_status,
 )
-from ragonometrics.pipeline.token_usage import DEFAULT_USAGE_DB
+from ragonometrics.pipeline.report_store import store_workflow_report
 from ragonometrics.pipeline.prep import prep_corpus
 from ragonometrics.integrations.econ_data import fetch_fred_series
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _is_insufficient_quota_error(exc: Exception) -> bool:
+    current: Exception | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        msg = str(current).lower()
+        code = str(getattr(current, "code", "") or "").lower()
+        if code == "insufficient_quota":
+            return True
+        if "insufficient_quota" in msg:
+            return True
+        if "error code: 429" in msg and ("quota" in msg or "exceeded your current quota" in msg):
+            return True
+        nxt = getattr(current, "__cause__", None) or getattr(current, "__context__", None)
+        current = nxt if isinstance(nxt, Exception) else None
+    return False
 
 
 def _estimate_tokens(text: str) -> int:
@@ -86,6 +106,256 @@ def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Pat
     return path
 
 
+def _bool_env(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _tail(text: str, limit: int = 800) -> str:
+    if not text:
+        return ""
+    return text[-limit:]
+
+
+def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
+    proc = subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return proc.returncode, proc.stdout or "", proc.stderr or ""
+
+
+def _git_value(args: List[str]) -> str | None:
+    try:
+        proc = subprocess.run(
+            ["git", *args],
+            cwd=str(Path(__file__).resolve().parents[2]),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        value = (proc.stdout or "").strip()
+        if proc.returncode == 0 and value:
+            return value
+    except Exception:
+        pass
+    return None
+
+
+def _render_audit_artifacts(*, run_id: str, report_path: Path, report_dir: Path) -> Dict[str, Any]:
+    out: Dict[str, Any] = {
+        "enabled": _bool_env("WORKFLOW_RENDER_AUDIT_ARTIFACTS", True),
+        "status": "pending",
+        "markdown": {"status": "pending"},
+        "pdf": {"status": "pending"},
+    }
+    if not out["enabled"]:
+        out["status"] = "skipped"
+        out["markdown"] = {"status": "skipped", "reason": "disabled"}
+        out["pdf"] = {"status": "skipped", "reason": "disabled"}
+        return out
+
+    project_root = Path(__file__).resolve().parents[2]
+    md_script = project_root / "tools" / "workflow_report_to_audit_md.py"
+    pdf_script = project_root / "tools" / "markdown_to_latex_pdf.py"
+    md_path = report_dir / f"audit-workflow-report-{run_id}.md"
+    tex_path = report_dir / f"audit-workflow-report-{run_id}.tex"
+    pdf_path = report_dir / f"audit-workflow-report-{run_id}-latex.pdf"
+
+    if not md_script.exists():
+        out["status"] = "failed"
+        out["markdown"] = {"status": "failed", "reason": "md_script_missing", "path": str(md_script)}
+        out["pdf"] = {"status": "skipped", "reason": "markdown_failed"}
+        return out
+
+    md_cmd = [
+        sys.executable,
+        str(md_script),
+        "--input",
+        str(report_path),
+        "--output",
+        str(md_path),
+        "--full",
+        "--clean-text",
+    ]
+    md_code, md_stdout, md_stderr = _run_subprocess(md_cmd, cwd=project_root)
+    if md_code != 0:
+        out["status"] = "failed"
+        out["markdown"] = {
+            "status": "failed",
+            "exit_code": md_code,
+            "stdout_tail": _tail(md_stdout),
+            "stderr_tail": _tail(md_stderr),
+        }
+        out["pdf"] = {"status": "skipped", "reason": "markdown_failed"}
+        return out
+
+    out["markdown"] = {"status": "generated", "path": str(md_path)}
+    pdf_enabled = _bool_env("WORKFLOW_RENDER_AUDIT_PDF", True)
+    if not pdf_enabled:
+        out["pdf"] = {"status": "skipped", "reason": "pdf_disabled", "path": str(pdf_path)}
+        out["status"] = "completed"
+        return out
+
+    if not pdf_script.exists():
+        out["pdf"] = {"status": "failed", "reason": "pdf_script_missing", "path": str(pdf_script)}
+        out["status"] = "partial"
+        return out
+
+    pdf_cmd = [
+        sys.executable,
+        str(pdf_script),
+        "--input",
+        str(md_path),
+        "--output-tex",
+        str(tex_path),
+        "--output-pdf",
+        str(pdf_path),
+        "--engine",
+        "xelatex",
+        "--quiet",
+    ]
+    pdf_code, pdf_stdout, pdf_stderr = _run_subprocess(pdf_cmd, cwd=project_root)
+    if pdf_code != 0:
+        out["pdf"] = {
+            "status": "failed",
+            "exit_code": pdf_code,
+            "stdout_tail": _tail(pdf_stdout),
+            "stderr_tail": _tail(pdf_stderr),
+            "path": str(pdf_path),
+            "tex_path": str(tex_path),
+        }
+        out["status"] = "partial"
+        return out
+
+    out["pdf"] = {"status": "generated", "path": str(pdf_path), "tex_path": str(tex_path)}
+    out["status"] = "completed"
+    return out
+
+
+def _store_report_in_db(
+    *,
+    db_url: str | None,
+    run_id: str,
+    report_path: Path,
+    payload: Dict[str, Any],
+    workflow_status: str,
+) -> Dict[str, Any]:
+    out: Dict[str, Any] = {"database_url": bool(db_url)}
+    if not db_url:
+        out["status"] = "skipped"
+        out["reason"] = "db_url_missing"
+        return out
+    db_ok = _can_connect_db(db_url)
+    out["database_reachable"] = db_ok
+    if not db_ok:
+        out["status"] = "skipped"
+        out["reason"] = "db_unreachable"
+        return out
+    try:
+        store_workflow_report(
+            db_url=db_url,
+            run_id=run_id,
+            report_path=str(report_path),
+            payload=payload,
+            status=workflow_status,
+        )
+        out["status"] = "stored"
+    except Exception as exc:
+        out["status"] = "failed"
+        out["error"] = str(exc)
+    return out
+
+
+def _finalize_workflow_report(
+    *,
+    report_dir: Path,
+    run_id: str,
+    summary: Dict[str, Any],
+    state_db: Path,
+    report_started_at: str,
+    db_url: str | None,
+    workflow_status: str,
+) -> Dict[str, Any]:
+    summary.setdefault("finished_at", _utc_now())
+    summary["report_store"] = {"status": "pending", "database_url": bool(db_url)}
+    summary["audit_artifacts"] = {"status": "pending"}
+    report_path = _write_report(report_dir, run_id, summary)
+    summary["report_path"] = str(report_path)
+    audit_out = _render_audit_artifacts(run_id=run_id, report_path=report_path, report_dir=report_dir)
+    summary["audit_artifacts"] = audit_out
+    report_path = _write_report(report_dir, run_id, summary)
+    report_store_out = _store_report_in_db(
+        db_url=db_url,
+        run_id=run_id,
+        report_path=report_path,
+        payload=summary,
+        workflow_status=workflow_status,
+    )
+    summary["report_store"] = report_store_out
+    report_path = _write_report(report_dir, run_id, summary)
+    record_step(
+        state_db,
+        run_id=run_id,
+        step="report",
+        status="completed",
+        started_at=report_started_at,
+        finished_at=_utc_now(),
+        output={
+            "report_path": str(report_path),
+            "report_store": report_store_out,
+            "audit_artifacts": audit_out,
+        },
+    )
+    set_workflow_status(state_db, run_id, workflow_status)
+    return summary
+
+
+def _finalize_quota_termination(
+    *,
+    report_dir: Path,
+    run_id: str,
+    summary: Dict[str, Any],
+    state_db: Path,
+    db_url: str | None,
+    step: str,
+    exc: Exception,
+) -> Dict[str, Any]:
+    err_text = str(exc)
+    summary["error"] = err_text
+    summary["fatal_error"] = {
+        "step": step,
+        "type": "insufficient_quota",
+        "action": "terminated_early",
+        "error": err_text,
+    }
+    summary["finished_at"] = _utc_now()
+    report_start = _utc_now()
+    record_step(state_db, run_id=run_id, step="report", status="running", started_at=report_start)
+    return _finalize_workflow_report(
+        report_dir=report_dir,
+        run_id=run_id,
+        summary=summary,
+        state_db=state_db,
+        report_started_at=report_start,
+        db_url=db_url,
+        workflow_status="failed",
+    )
+
+
 def _parse_subquestions(raw: str, max_items: int) -> List[str]:
     items: List[str] = []
     for line in raw.splitlines():
@@ -103,7 +373,14 @@ def _parse_subquestions(raw: str, max_items: int) -> List[str]:
     return items
 
 
-def _agentic_plan(client: OpenAI, question: str, *, model: str, max_items: int) -> List[str]:
+def _agentic_plan(
+    client: OpenAI,
+    question: str,
+    *,
+    model: str,
+    max_items: int,
+    run_id: str | None = None,
+) -> List[str]:
     instructions = (
         "You are a research analyst. Generate a short list of sub-questions that would help "
         "answer the main question. Return one sub-question per line, no extra text."
@@ -115,6 +392,9 @@ def _agentic_plan(client: OpenAI, question: str, *, model: str, max_items: int) 
         user_input=f"Main question: {question}",
         max_output_tokens=200,
         usage_context="agent_plan",
+        run_id=run_id,
+        step="agentic_plan",
+        question_id="MAIN",
     )
     items = _parse_subquestions(raw, max_items)
     if not items:
@@ -128,6 +408,7 @@ def _agentic_summarize(
     model: str,
     question: str,
     sub_answers: List[Dict[str, str]],
+    run_id: str | None = None,
 ) -> str:
     bullets = "\n".join([f"- {item['question']}: {item['answer']}" for item in sub_answers])
     synthesis_prompt = (
@@ -142,6 +423,9 @@ def _agentic_summarize(
         user_input=synthesis_prompt,
         max_output_tokens=None,
         usage_context="agent_synthesis",
+        run_id=run_id,
+        step="agentic_synthesis",
+        question_id="MAIN",
     ).strip()
 
 
@@ -517,6 +801,7 @@ def _answer_report_question_item(
     chunk_embeddings: List[List[float]],
     citations_context: str,
     item: Dict[str, str],
+    run_id: str | None = None,
 ) -> Dict[str, Any]:
     context, retrieval_stats = top_k_context(
         chunks,
@@ -524,6 +809,9 @@ def _answer_report_question_item(
         query=item["question"],
         client=client,
         settings=settings,
+        run_id=run_id,
+        step="agentic_report_question_retrieval",
+        question_id=item.get("id"),
         return_stats=True,
     )
     if citations_context:
@@ -554,6 +842,9 @@ def _answer_report_question_item(
         user_input=prompt,
         max_output_tokens=None,
         usage_context="agent_report_question",
+        run_id=run_id,
+        step="agentic_report_question_answer",
+        question_id=item.get("id"),
     ).strip()
     parsed: Dict[str, Any] = {}
     try:
@@ -599,6 +890,7 @@ def _answer_report_questions(
     chunks: List[Dict[str, Any]] | List[str],
     chunk_embeddings: List[List[float]],
     citations_context: str,
+    run_id: str | None = None,
 ) -> List[Dict[str, str]]:
     questions = _build_report_questions()
     if not questions:
@@ -618,6 +910,7 @@ def _answer_report_questions(
                 chunk_embeddings=chunk_embeddings,
                 citations_context=citations_context,
                 item=item,
+                run_id=run_id,
             )
             for item in _progress_iter(questions, "Report questions", total=len(questions))
         ]
@@ -633,6 +926,7 @@ def _answer_report_questions(
                 chunk_embeddings=chunk_embeddings,
                 citations_context=citations_context,
                 item=item,
+                run_id=run_id,
             ): idx
             for idx, item in enumerate(questions)
         }
@@ -641,6 +935,8 @@ def _answer_report_questions(
             try:
                 results[idx] = future.result()
             except Exception as exc:
+                if _is_insufficient_quota_error(exc):
+                    raise
                 item = questions[idx]
                 results[idx] = {
                     "id": item["id"],
@@ -672,6 +968,8 @@ def _answer_subquestion(
     chunk_embeddings: List[List[float]],
     citations_context: str,
     subq: str,
+    run_id: str | None = None,
+    question_id: str | None = None,
 ) -> Dict[str, str]:
     context = top_k_context(
         chunks,
@@ -679,6 +977,9 @@ def _answer_subquestion(
         query=subq,
         client=client,
         settings=settings,
+        run_id=run_id,
+        step="agentic_subquestion_retrieval",
+        question_id=question_id,
     )
     if citations_context:
         context = f"{context}\n\n{citations_context}"
@@ -689,6 +990,9 @@ def _answer_subquestion(
         user_input=f"Context:\n{context}\n\nQuestion: {subq}",
         max_output_tokens=None,
         usage_context="agent_answer",
+        run_id=run_id,
+        step="agentic_subquestion_answer",
+        question_id=question_id,
     ).strip()
     return {
         "question": subq,
@@ -711,6 +1015,10 @@ def run_workflow(
     agentic_citations: Optional[bool] = None,
     agentic_citations_max_items: Optional[int] = None,
     report_question_set: Optional[str] = None,
+    workstream_id: Optional[str] = None,
+    arm: Optional[str] = None,
+    parent_run_id: Optional[str] = None,
+    trigger_source: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Run the multi-step workflow and persist state transitions.
 
@@ -723,22 +1031,65 @@ def run_workflow(
     """
     settings = load_settings(config_path=config_path)
     run_id = uuid4().hex
+    started_at = _utc_now()
+    question_seed = (question or os.environ.get("WORKFLOW_QUESTION") or "").strip()
+    if not question_seed:
+        question_seed = "Summarize the paper's research question, methods, and key findings."
+    report_questions_enabled_default = os.environ.get("WORKFLOW_REPORT_QUESTIONS", "1").strip() != "0"
+    report_question_mode_seed = _normalize_report_question_set(
+        report_question_set or os.environ.get("WORKFLOW_REPORT_QUESTIONS_SET"),
+        report_questions_enabled_default,
+    )
+    resolved_workstream_id = (
+        (workstream_id or os.environ.get("WORKSTREAM_ID") or os.environ.get("WORKFLOW_WORKSTREAM_ID") or "").strip()
+        or None
+    )
+    resolved_arm = (arm or os.environ.get("WORKSTREAM_ARM") or os.environ.get("WORKFLOW_ARM") or "").strip() or None
+    resolved_parent_run_id = (
+        (parent_run_id or os.environ.get("WORKSTREAM_PARENT_RUN_ID") or "").strip() or None
+    )
+    resolved_trigger_source = (
+        (trigger_source or os.environ.get("WORKFLOW_TRIGGER_SOURCE") or "").strip()
+        or ("workflow_async" if os.environ.get("RQ_WORKER_ID") else "workflow_sync")
+    )
+    resolved_git_sha = (os.environ.get("GIT_SHA") or "").strip() or _git_value(["rev-parse", "HEAD"])
+    resolved_git_branch = (os.environ.get("GIT_BRANCH") or "").strip() or _git_value(
+        ["rev-parse", "--abbrev-ref", "HEAD"]
+    )
     create_workflow_run(
         state_db,
         run_id=run_id,
         papers_dir=str(papers_dir),
         config_hash=settings.config_hash,
+        status="running",
+        started_at=started_at,
+        workstream_id=resolved_workstream_id,
+        arm=resolved_arm,
+        parent_run_id=resolved_parent_run_id,
+        trigger_source=resolved_trigger_source,
+        git_sha=resolved_git_sha,
+        git_branch=resolved_git_branch,
+        config_effective=settings.config_effective or {},
+        question=question_seed,
+        report_question_set=report_question_mode_seed,
         metadata={"config_path": str(settings.config_path) if settings.config_path else None},
     )
 
     report_dir = report_dir or Path("reports")
     summary: Dict[str, Any] = {
         "run_id": run_id,
-        "started_at": _utc_now(),
+        "started_at": started_at,
         "papers_dir": str(papers_dir),
         "config": asdict(settings),
-        "usage_db": str(DEFAULT_USAGE_DB),
+        "workstream_id": resolved_workstream_id,
+        "arm": resolved_arm,
+        "parent_run_id": resolved_parent_run_id,
+        "trigger_source": resolved_trigger_source,
+        "git_sha": resolved_git_sha,
+        "git_branch": resolved_git_branch,
     }
+    db_url = meta_db_url or os.environ.get("DATABASE_URL")
+    summary["usage_store"] = {"database_url": bool(db_url)}
 
     # Step 0: Prep (corpus profiling)
     prep_start = _utc_now()
@@ -755,39 +1106,60 @@ def run_workflow(
         output=prep_out,
     )
     summary["prep"] = prep_out
+    paper_set_hash = None
+    prep_stats = prep_out.get("stats")
+    if isinstance(prep_stats, dict):
+        paper_set_hash = str(prep_stats.get("corpus_hash") or "").strip() or None
+    if paper_set_hash:
+        summary["paper_set_hash"] = paper_set_hash
+        create_workflow_run(
+            state_db,
+            run_id=run_id,
+            papers_dir=str(papers_dir),
+            config_hash=settings.config_hash,
+            status="running",
+            started_at=started_at,
+            workstream_id=resolved_workstream_id,
+            arm=resolved_arm,
+            parent_run_id=resolved_parent_run_id,
+            trigger_source=resolved_trigger_source,
+            git_sha=resolved_git_sha,
+            git_branch=resolved_git_branch,
+            config_effective=settings.config_effective or {},
+            paper_set_hash=paper_set_hash,
+            question=question_seed,
+            report_question_set=report_question_mode_seed,
+            metadata={"config_path": str(settings.config_path) if settings.config_path else None},
+        )
 
     validate_only = os.environ.get("PREP_VALIDATE_ONLY", "").strip() == "1"
     if prep_out.get("status") == "failed":
         summary["finished_at"] = _utc_now()
-        report_path = _write_report(report_dir, run_id, summary)
-        record_step(
-            state_db,
+        report_start = _utc_now()
+        record_step(state_db, run_id=run_id, step="report", status="running", started_at=report_start)
+        return _finalize_workflow_report(
+            report_dir=report_dir,
             run_id=run_id,
-            step="report",
-            status="completed",
-            started_at=_utc_now(),
-            finished_at=_utc_now(),
-            output={"report_path": str(report_path)},
+            summary=summary,
+            state_db=state_db,
+            report_started_at=report_start,
+            db_url=db_url,
+            workflow_status="failed",
         )
-        summary["report_path"] = str(report_path)
-        set_workflow_status(state_db, run_id, "failed")
-        return summary
 
     if validate_only:
         summary["finished_at"] = _utc_now()
-        report_path = _write_report(report_dir, run_id, summary)
-        record_step(
-            state_db,
+        report_start = _utc_now()
+        record_step(state_db, run_id=run_id, step="report", status="running", started_at=report_start)
+        return _finalize_workflow_report(
+            report_dir=report_dir,
             run_id=run_id,
-            step="report",
-            status="completed",
-            started_at=_utc_now(),
-            finished_at=_utc_now(),
-            output={"report_path": str(report_path)},
+            summary=summary,
+            state_db=state_db,
+            report_started_at=report_start,
+            db_url=db_url,
+            workflow_status="completed",
         )
-        summary["report_path"] = str(report_path)
-        set_workflow_status(state_db, run_id, "completed")
-        return summary
 
     # Step 1: Ingest
     ingest_start = _utc_now()
@@ -867,6 +1239,7 @@ def run_workflow(
     agentic_start = _utc_now()
     record_step(state_db, run_id=run_id, step="agentic", status="running", started_at=agentic_start)
     agentic_out: Dict[str, Any] = {"status": "skipped"}
+    agentic_quota_error: Exception | None = None
     if agentic_enabled:
         if not papers:
             agentic_out = {"status": "skipped", "reason": "no_papers"}
@@ -888,13 +1261,32 @@ def run_workflow(
                             citations_preview = citations_full[:max_citations]
                             citations_context = _format_citations_context(citations_full, max_citations)
                     except Exception as exc:
+                        if _is_insufficient_quota_error(exc):
+                            raise
                         citations_error = str(exc)
                 chunks = prepare_chunks_for_paper(target_paper, settings)
                 chunk_texts = [c["text"] if isinstance(c, dict) else str(c) for c in chunks]
-                chunk_embeddings = embed_texts(client, chunk_texts, settings.embedding_model, settings.batch_size)
-                subquestions = _agentic_plan(client, question, model=agentic_model, max_items=max_subq)
+                chunk_embeddings = embed_texts(
+                    client,
+                    chunk_texts,
+                    settings.embedding_model,
+                    settings.batch_size,
+                    run_id=run_id,
+                    step="agentic_embeddings",
+                    question_id="MAIN",
+                )
+                subquestions = _agentic_plan(
+                    client,
+                    question,
+                    model=agentic_model,
+                    max_items=max_subq,
+                    run_id=run_id,
+                )
                 sub_answers: List[Dict[str, str]] = []
-                for subq in _progress_iter(subquestions, "Agentic sub-questions", total=len(subquestions)):
+                for idx, subq in enumerate(
+                    _progress_iter(subquestions, "Agentic sub-questions", total=len(subquestions)),
+                    start=1,
+                ):
                     sub_answers.append(
                         _answer_subquestion(
                             client=client,
@@ -904,6 +1296,8 @@ def run_workflow(
                             chunk_embeddings=chunk_embeddings,
                             citations_context=citations_context,
                             subq=subq,
+                            run_id=run_id,
+                            question_id=f"S{idx:02d}",
                         )
                     )
                 report_questions_enabled = os.environ.get("WORKFLOW_REPORT_QUESTIONS", "1").strip() != "0"
@@ -923,6 +1317,7 @@ def run_workflow(
                             chunks=chunks,
                             chunk_embeddings=chunk_embeddings,
                             citations_context=citations_context,
+                            run_id=run_id,
                         )
                     except Exception as exc:
                         report_questions_error = str(exc)
@@ -933,6 +1328,7 @@ def run_workflow(
                     model=agentic_model,
                     question=question,
                     sub_answers=sub_answers,
+                    run_id=run_id,
                 )
                 report_question_summary = _summarize_confidence_scores(report_questions)
                 agentic_out = {
@@ -953,44 +1349,80 @@ def run_workflow(
                 }
             except Exception as exc:
                 agentic_out = {"status": "failed", "error": str(exc)}
+                if _is_insufficient_quota_error(exc):
+                    agentic_quota_error = exc
+    agentic_step_status = "failed" if agentic_out.get("status") == "failed" else "completed"
     record_step(
         state_db,
         run_id=run_id,
         step="agentic",
-        status="completed",
+        status=agentic_step_status,
         started_at=agentic_start,
         finished_at=_utc_now(),
         output=agentic_out,
     )
     summary["agentic"] = agentic_out
+    if agentic_quota_error is not None:
+        return _finalize_quota_termination(
+            report_dir=report_dir,
+            run_id=run_id,
+            summary=summary,
+            state_db=state_db,
+            db_url=db_url,
+            step="agentic",
+            exc=agentic_quota_error,
+        )
 
     # Step 5: Index (optional)
     index_start = _utc_now()
     record_step(state_db, run_id=run_id, step="index", status="running", started_at=index_start)
-    db_url = meta_db_url or os.environ.get("DATABASE_URL")
     db_ok = bool(db_url) and _can_connect_db(db_url)
     index_out: Dict[str, Any] = {"database_url": bool(db_url), "database_reachable": db_ok}
+    index_quota_error: Exception | None = None
     if db_ok and pdfs:
         try:
-            build_index(settings, pdfs, index_path=Path("vectors.index"), meta_db_url=db_url)
+            build_index(
+                settings,
+                pdfs,
+                index_path=Path("vectors-3072.index"),
+                meta_db_url=db_url,
+                workflow_run_id=run_id,
+                workstream_id=resolved_workstream_id,
+                arm=resolved_arm,
+                paper_set_hash=summary.get("paper_set_hash"),
+                index_build_reason="workflow_index_step",
+            )
             index_out["status"] = "indexed"
         except Exception as exc:
             index_out["status"] = "failed"
             index_out["error"] = str(exc)
+            if _is_insufficient_quota_error(exc):
+                index_quota_error = exc
     else:
         index_out["status"] = "skipped"
         if db_url and not db_ok:
             index_out["reason"] = "db_unreachable"
+    index_step_status = "failed" if index_out.get("status") == "failed" else "completed"
     record_step(
         state_db,
         run_id=run_id,
         step="index",
-        status="completed",
+        status=index_step_status,
         started_at=index_start,
         finished_at=_utc_now(),
         output=index_out,
     )
     summary["index"] = index_out
+    if index_quota_error is not None:
+        return _finalize_quota_termination(
+            report_dir=report_dir,
+            run_id=run_id,
+            summary=summary,
+            state_db=state_db,
+            db_url=db_url,
+            step="index",
+            exc=index_quota_error,
+        )
 
     # Step 6: Evaluate (lightweight stats)
     eval_start = _utc_now()
@@ -1019,19 +1451,15 @@ def run_workflow(
     report_start = _utc_now()
     record_step(state_db, run_id=run_id, step="report", status="running", started_at=report_start)
     summary["finished_at"] = _utc_now()
-    report_path = _write_report(report_dir, run_id, summary)
-    record_step(
-        state_db,
+    return _finalize_workflow_report(
+        report_dir=report_dir,
         run_id=run_id,
-        step="report",
-        status="completed",
-        started_at=report_start,
-        finished_at=_utc_now(),
-        output={"report_path": str(report_path)},
+        summary=summary,
+        state_db=state_db,
+        report_started_at=report_start,
+        db_url=db_url,
+        workflow_status="completed",
     )
-    summary["report_path"] = str(report_path)
-    set_workflow_status(state_db, run_id, "completed")
-    return summary
 
 
 def workflow_entrypoint(
@@ -1043,6 +1471,10 @@ def workflow_entrypoint(
     agentic_model: Optional[str] = None,
     agentic_citations: Optional[bool] = None,
     report_question_set: Optional[str] = None,
+    workstream_id: Optional[str] = None,
+    arm: Optional[str] = None,
+    parent_run_id: Optional[str] = None,
+    trigger_source: Optional[str] = None,
 ) -> str:
     """Helper for queue execution. Returns run_id for logging."""
     summary = run_workflow(
@@ -1054,5 +1486,9 @@ def workflow_entrypoint(
         agentic_model=agentic_model,
         agentic_citations=agentic_citations,
         report_question_set=report_question_set,
+        workstream_id=workstream_id,
+        arm=arm,
+        parent_run_id=parent_run_id,
+        trigger_source=trigger_source,
     )
     return summary.get("run_id", "")

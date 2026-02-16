@@ -1,0 +1,31 @@
+{
+  "run_id": "cf1d92ff869046f39b7319007e9a7835",
+  "created_at": "2026-02-15T19:29:21.056426+00:00",
+  "corpus_hash": "16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e",
+  "hashing_enabled": true,
+  "validate_text": false,
+  "stats": {
+    "num_files": 1,
+    "total_size_bytes": 13145312,
+    "corpus_hash": "16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e",
+    "hashing_enabled": true,
+    "validate_text": false,
+    "duplicate_count": 0,
+    "empty_file_count": 0,
+    "empty_text_count": 0,
+    "pdfinfo_available": true
+  },
+  "warnings": [],
+  "duplicates": [],
+  "empty_files": [],
+  "empty_text_files": [],
+  "files": [
+    {
+      "path": "papers\\NetworksElectoralCompetition.pdf",
+      "size_bytes": 13145312,
+      "mtime": 1771183138.149446,
+      "pages": 69,
+      "sha256": "1b40c60c01d9835fdc8f71faedd71103402ea4a1c09092b8a3ea17791207604a"
+    }
+  ]
+}

@@ -36,21 +36,9 @@ services:
       - ${PAPERS_HOST_DIR}:/app/papers:rw
     restart: "no"
 
-  doi-worker:
-    build: .
-    # Example one-off command; override per your workflow. It runs a small DOI network build.
-    command: ["python", "-c", "from ragonometrics.core.main import load_papers, build_and_store_doi_network; import os; papers=load_papers(['papers/example.pdf']); print(build_and_store_doi_network(papers[0], db_url=os.environ.get('DATABASE_URL')))" ]
-    environment:
-      <<: *app_env
-      PAPERS_DIR: /app/papers
-    volumes:
-      - ${PAPERS_HOST_DIR}:/app/papers:rw
-    depends_on:
-      - worker
-
   indexer:
     build: .
-    command: python -m ragonometrics.indexing.indexer --index-path vectors.index --meta-db-url $${DATABASE_URL}
+    command: python -m ragonometrics.indexing.indexer --index-path vectors-3072.index --meta-db-url $${DATABASE_URL}
     environment:
       <<: *app_env
       PAPERS_DIR: /app/papers

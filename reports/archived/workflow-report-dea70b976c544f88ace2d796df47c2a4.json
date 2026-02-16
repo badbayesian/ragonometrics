@@ -1,0 +1,65 @@
+{
+  "run_id": "dea70b976c544f88ace2d796df47c2a4",
+  "started_at": "2026-02-15T20:42:01.083328+00:00",
+  "papers_dir": "papers\\alcott food deserts.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "9c62032c385bba27c04e3430b69ce09908baeae670ebfe8136b5d783fa92fb75",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5",
+      "database_url": "postgres://postgres:postgres@localhost:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_store": {
+    "database_url": true
+  },
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 1059575,
+      "corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-dea70b976c544f88ace2d796df47c2a4.json"
+  },
+  "finished_at": "2026-02-15T20:42:01.172943+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": true,
+    "status": "stored"
+  }
+}

@@ -1,0 +1,395 @@
+{
+  "run_id": "f9da6e06d28e432b9a1b2272a63304e3",
+  "started_at": "2026-02-06T19:11:00.896931+00:00",
+  "papers_dir": "papers\\Bundle-Size Pricing as an Approximation to Mixed Bundling - Chu et al. (2010).pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 3,
+    "max_words": 12000,
+    "chunk_words": 350,
+    "chunk_overlap": 50,
+    "top_k": 6,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-small",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "2fbdd0c4466155ddb3fd2cbb842e0d0eca56764445d9d443ba2213ec7acc0039",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 3,
+      "max_words": 12000,
+      "chunk_words": 350,
+      "chunk_overlap": 50,
+      "top_k": 6,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-small",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.5,
+      "reranker_model": "",
+      "rerank_top_n": 30,
+      "query_expansion": "",
+      "query_expand_model": "",
+      "section_aware_chunking": false,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\ragonometrics_token_usage.sqlite",
+  "ingest": {
+    "num_pdfs": 1,
+    "num_papers": 1
+  },
+  "enrich": {
+    "semantic_scholar": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "completed",
+    "question": "What is the key contribution?",
+    "subquestions": [
+      "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')"
+    ],
+    "sub_answers": [
+      {
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "- Summary of what the provided tables cover\n  - Table C1 (zero marginal costs), continued across pages 7 and 9: profits relative to BSP for various Taste distributions and Pricing Schemes, across Distributions K, UP, CP, PB, MB. Includes Lognormal(+) and Lognormal(-) and Normal variants. CP and PB often sit at 1.000 across entries; K/UP tend to be below 1 in many cases. (Used: page 7, words 0–178; page 9, words 0–178)\n  - Table C3 (positive and unequal marginal costs, 0.5), continued across pages 17 and 19: similar structure as C1 but with a marginal-cost perturbation; includes Lognormal(+), Lognormal(-), Normal(v+), Normal(v-), and Normal(+/-) cases. CP/PB frequently near baseline 1.000; K/UP values show more variation. (Used: page 17, words 0–181; page 19, words 0–181)\n  - Table C5 (zero marginal costs with capacity constraints), continued across pages 27 and 29: profits relative to BSP under capacity constraints; again includes Lognormal and Normal variants with zero marginal costs; CP/PB often at 1.000 baseline; K/UP/MB show broader variation. (Used: page 27, words 0–181; page 29, words 0–181)\n\n- Key patterns to note\n  - Across tables, CP and PB frequently equal 1.000 (baseline) in many rows; K and UP show more variability.\n  - Several distribution/taste combinations appear (Lognormal(+), Lognormal(-), Normal(v+), Normal(v-), Normal(+/-)) indicating robustness checks across different stochastic assumptions.\n  - The qualitative effect of introducing positive/unequal marginal costs (0.5) or capacity constraints tends to preserve some baseline structure (CP/PB near 1) but introduces more variation in K/UP/MB.\n\n- If you want, I can extract specific numeric ranges or create a compact summary table per scenario. (Cited: Tables C1 on pages 7–9; Tables C3 on pages 17–19; Tables C5 on pages 27–29)"
+      }
+    ],
+    "final_answer": "- Key contribution\n  - A robustness-focused comparison of profits relative to BSP across multiple taste/distribution assumptions and three economic scenarios, organized in Tables C1, C3, and C5.\n    - C1: zero marginal costs (continued across pages 7–9) summarizing profits relative to BSP for various Taste distributions and Pricing Schemes (CP, PB, K, UP, MB; Lognormal and Normal variants). CP/PB often at baseline 1.000; K/UP more variable. (Used: page 7, words 0–178; page 9, words 0–178) \n    - C3: positive/unequal marginal costs (0.5) (continued across pages 17–19) with the same structure as C1; CP/PB frequently near 1.000, K/UP more variation. (Used: page 17, words 0–181; page 19, words 0–181)\n    - C5: zero marginal costs with capacity constraints (continued across pages 27–29); CP/PB near baseline 1.000; K/UP/MB show broader variation under capacity limits. (Used: page 27, words 0–181; page 29, words 0–181)\n\n- What the patterns imply\n  - CP and PB frequently align with the BSP baseline (1.000) across scenarios.\n  - K and UP display greater variability, indicating sensitivity to distribution/taste assumptions.\n  - Across the stochastic variants (Lognormal+, Lognormal-, Normal(v+), Normal(v-), Normal(+/-)) results are broadly robust, but marginal costs (0.5) and capacity constraints introduce additional variation in non-baseline schemes (notably K/UP/MB).\n\n- Optional next step (from the sub-answer): I can extract precise numeric ranges or produce a compact per-scenario summary table if you’d like. (Cited: Tables C1 on pages 7–9; C3 on pages 17–19; C5 on pages 27–29)",
+    "report_questions_enabled": true,
+    "report_questions_set": "both",
+    "report_questions": [
+      {
+        "id": "A01",
+        "category": "A) Research question / contribution",
+        "question": "What is the main research question of the paper?",
+        "answer": "- Main research question: Does bundle-size pricing approximate mixed bundling, and how can we identify and estimate the corresponding demand system from observed bundle choices and prices (using TheatreWorks data). [Cited: page 1, title and opening note about identification of the demand system]"
+      },
+      {
+        "id": "A02",
+        "category": "A) Research question / contribution",
+        "question": "What is the paper's primary contribution relative to the existing literature?",
+        "answer": "- It introduces and justifies using Bundle-Size Pricing (BSP) as a tractable approximation to mixed bundling, together with a full identification analysis of the underlying demand system. (Cited: page 1, \"Identification of estimated demand system\"; pricing variation discussed in page 2.)\n- It shows how the variance-covariance structure of tastes (Σ) jointly identified from bundle choices and pricing, plus exogenous pricing variation (e.g., the discounted 3-play bundle), identifies price sensitivity α and market size M, with supply-side pricing constraints crucial for identifying M. (Cited: page 1–2 for identification and pricing variation; page 4 for the identification via pricing constraints.)\n- It highlights the role of covariance in tastes to explain differences in popularity between single-ticket buyers and multi-play buyers, thereby providing a flexible framework that reconciles different ranking patterns across consumer segments. (Cited: page 4–5.)\n- It emphasizes robust identification by integrating over unobserved demand components to address endogeneity concerns, and asserts the absence of bundle-specific error terms in the model. (Cited: page 2.)"
+      },
+      {
+        "id": "A03",
+        "category": "A) Research question / contribution",
+        "question": "What is the central hypothesis being tested?",
+        "answer": "- Central hypothesis: Incorporating supply-side (optimal pricing) constraints identifies the market size M and allows the model to fit demand moments while generating reasonable predicted prices. This constraint is what enables identification of M and credible prediction, beyond what demand moments alone can provide. (page 4, words 0-349)\n\n- Supporting nuance: While demand moments alone do not identify α and M, the model’s functional form allows α and M to be separately identified when the pricing constraint is imposed. (page 4, words 300-460)"
+      },
+      {
+        "id": "A04",
+        "category": "A) Research question / contribution",
+        "question": "What are the main outcomes of interest (dependent variables)?",
+        "answer": "- Main dependent variable: Profits, reported as profits relative to BSP profits (i.e., the ratio of a firm's profits to BSP profits). The tables present the 1st, 50th, and 99th percentiles of these relative profits. [Context: page 5, \"1st, 50th, and 99th percentile of profits (as a ratio of BSP profits)\"; page 9 onward headings \"Profits relative to BSP\", and similarly in later tables]."
+      },
+      {
+        "id": "A05",
+        "category": "A) Research question / contribution",
+        "question": "What are the key treatment/exposure variables (independent variables)?",
+        "answer": "- Bundle size (number of plays in a bundle) as an independent variable. Pricing varies by bundle size (larger bundles have discounts), helping identify demand response to bundle size. (Provenance: page 1, “pricing involves discounts for larger bundles”; page 2 context) \n\n- Per-play price across bundles (price level variation) as an independent variable. Variation in per-play prices across bundles identifies price sensitivity α. (Provenance: page 1, “The degree of price sensitivity, α, is identified by variation in per-play prices across bundles.”)\n\n- Discount status of bundles (presence/absence of discounts), especially the discounted 3-play bundle vs non-discounted bundles. This exogenous discount provides variation to identify demand responses beyond taste distribution. (Provenance: page 2, “one specific 3-play bundle is offered at a discount ($36.20 per play) while all other 3-play combinations have no discount ($40.80 per play).” and “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”)\n\n- Overall pricing scheme tied to bundle size (with one exception: one discounted 3-play bundle) to ensure price variation is informative for α. (Provenance: page 2, descriptions of the pricing rule and the exogenous discount)"
+      },
+      {
+        "id": "A06",
+        "category": "A) Research question / contribution",
+        "question": "What setting/context does the paper study (country, market, period)?",
+        "answer": "- Country/setting: United States; a local theatre market (TheatreWorks) in Palo Alto–Mountain View, California. Evidence: TheatreWorks mentioned; population reference to Palo Alto and Mountain View. (Cited: page 2, words 0-349; page 4, words 300-460)\n- Market: Local theatre market served by TheatreWorks in the Palo Alto–Mountain View area. (Cited: page 2, words 0-349; page 4, words 300-460)\n- Period: One theatre season (season-long context; distinction between full-season buyers and single-ticket buyers). (Cited: page 4, words 0-349)"
+      },
+      {
+        "id": "A07",
+        "category": "A) Research question / contribution",
+        "question": "What is the main mechanism proposed by the authors?",
+        "answer": "- The main mechanism is using bundle-size pricing (discounts for larger bundles) as an empirical way to approximate mixed bundling and identify the underlying demand system. This leverages price variation across bundle sizes to reveal consumer valuations and substitution patterns. (cite: page 1 0-276; page 2 0-349)\n\n- Specific exogenous variation: a discounted 3-play bundle ($36.20 per play) versus non-discounted 3-play bundles ( $40.80) identifies price sensitivity α beyond taste distributions. (cite: page 2 0-349)\n\n- Identification targets enabled by this mechanism:\n  - Price sensitivity α via bundle-price variation; (cite: page 2 0-349)\n  - Market size M via supply-side pricing constraints; (cite: page 3 0-349)\n  - Variances/covariances in tastes via single-play vs. multi-play bundle choices; (cite: page 1-2; page 3)\n\n- Overall framing: bundle-size pricing serves as a practical instrument to recover valuations, dispersion, and correlation structures in a mixed-bundling demand model. (cite: page 1 0-276)"
+      },
+      {
+        "id": "A08",
+        "category": "A) Research question / contribution",
+        "question": "What alternative mechanisms are discussed?",
+        "answer": "- Unobserved competition: If there is competition not captured by the model, it would depress prices; ignoring this would overstate consumers’ price sensitivity. (page 4, footnote 3)\n\n- Covariance in tastes across buyers (Σ terms): Covariance in tastes allows the model to explain differences in play popularity between non-subscribers (single-pass buyers) and subscribers (multi-pass buyers), by capturing how pairings and cross-taste correlations affect demand. (page 4)"
+      },
+      {
+        "id": "A09",
+        "category": "A) Research question / contribution",
+        "question": "What are the main policy implications claimed by the paper?",
+        "answer": "- Use of supply-side pricing constraints to identify market size (M) and to fit demand moments while producing reasonable predicted prices. Policy implication: pricing and regulatory analyses should rely on such constraints to obtain credible market-size estimates and price predictions. (page 4, words 0-349)\n\n- The discounted 3-play bundle provides exogenous variation that helps identify demand and price sensitivity; policy implication: promotions or targeted discounts can serve as natural experiments to uncover consumer tastes and the true price response. (page 2, words 0-349)\n\n- α and M can be separately identified from demand moments under the model’s functional form; policy implication: model-based policy analysis that relies on demand moments can distinguish size effects from price-sensitivity effects, given the right functional form. (page 4, words 300-460)\n\n- Differences in play popularity between non-subscribers and subscribers are driven by variance and covariance in tastes; policy implication: pricing/marketing strategies should account for heterogeneity across customer types and play pairings. (page 4, words 0-180)\n\n- Endogeneity concerns are addressed by integrating over unobserved demand components, implying robust inference about price effects; policy implication: empirical pricing policies or welfare analyses should control for unobserved demand shifters to avoid biased conclusions. (page 2, words 0-349)\n\n- The analysis assumes no unobserved competition; policy caveat: if competition is present, price-sensitivity may be biased upward, affecting market-size estimates and recommended pricing; policy should consider competitive landscapes. (page 4, words 300-460)"
+      },
+      {
+        "id": "A10",
+        "category": "A) Research question / contribution",
+        "question": "What is the welfare interpretation (if any) of the results?",
+        "answer": "- The excerpts report profits relative to BSP under various taste-based pricing schemes and marginal-cost settings, but do not provide any welfare (total surplus, consumer surplus, etc.) interpretation. (Context: Table C1, page 9, words 0-178)\n\n- Additional tables (C2–C4) likewise present profits relative to BSP across different marginal-cost structures, with no explicit welfare discussion. (Context: Table C2, page 14, words 0-180; Table C3, page 18, words 0-181; Table C4, pages 23–24, words 0-181)\n\n- Conclusion: There is no welfare interpretation contained in the provided text; to discuss welfare, one would need a definition of BSP and a welfare metric, which are not given here. (Cited across all relevant tables: C1 on page 9, C2 on page 14, C3 on page 18, C4 on pages 23–24)"
+      },
+      {
+        "id": "A11",
+        "category": "A) Research question / contribution",
+        "question": "What are the main limitations acknowledged by the authors?",
+        "answer": "- Endogeneity concerns and exogeneity of the discounted bundle: they integrate over unobserved demand components and treat the discount as exogenous variation, but this rests on no bundle-specific error terms; if such errors exist or correlate with bundle size, estimates could be biased. (Page 2, approx. 0-170; \"The discounted 3-play bundle...\" to \"...bundle-specific error terms\")\n\n- No bundle-specific errors assumption: they explicitly assume no bundle-specific error terms; endogeneity would be a concern only if such errors vary with bundle size. This is a potential limitation if the assumption fails. (Page 2, approx. 120-170)\n\n- No unobserved competition assumption: they assume the firm faces no unobserved competition; violating this would overstate price sensitivity and bias M upward. They defend their M estimate as conservative, but the assumption remains a limitation. (Page 4, approx. 320-360; \"We assume the firm faces no unobserved competition\" and \"upward bias in the estimated market size\")\n\n- Identification of α and M: α and M are not identified from demand moments alone; identification relies on functional-form and, in practice, on supply-side (price) constraints. This dependence on model form is a limitation. (Page 3, 0-60; \"The supply-side price constraints provide identification of the market size, M\" and Page 4, 300-360; \"α and M are not separately identified from demand moments alone... Formally, however...\")\n\n- Assumption of no complementarities in demand: they assume no complementarities between particular plays; if this is violated, it could bias estimates of demand/taste parameters. (Page 2, approx. 60-100)\n\n- Practical sensitivity to market size and α: small changes in α and M are not expected to drastically alter profitability rankings, but this reliance on specific parameter values remains a modeling limitation. (Page 4, 420-460)\n\n- Model misspecification risk: the approach depends on correctly specifying taste distributions and their covariance; misspecification could bias results, though they attempt to control for these via Σ and separate distributions. (Page 2-4; general discussion of taste/covariance, e.g., Page 2, 200-240 and Page 4, 350-420)"
+      },
+      {
+        "id": "A12",
+        "category": "A) Research question / contribution",
+        "question": "What does the paper claim is novel about its data or identification?",
+        "answer": "- Uses exogenous price variation from TheatreWorks’ bundle pricing, specifically a discounted 3-play bundle, as a novel source to identify price sensitivity α. [Context: Identification section; “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”, page 2]\n\n- Identifies covariance in tastes (Σ) from observed bundle choices by multi-play buyers (e.g., pick-5 subscribers), which is a novel way to capture how plays co-vary in desirability. [Context: Identification section; “The covariance terms themselves are identified by the bundle combinations chosen by multi-play buyers, such as the pick-5 subscribers.”, page 1]\n\n- Introduces identification of market size (M) via supply-side price constraints, not relying solely on demand-side moments, ensuring reasonable predicted prices and enabling estimation of M. [Context: Identification section; “The supply-side price constraints provide identification of the market size, M.”, page 3]\n\n- Demonstrates that the data allow explaining differences in play popularity between subscribers and non-subscribers through variance versus covariance structure, highlighting a novel use of the data to reconcile segment-specific rankings. [Context: Identification section; “the rank-ordering of play popularity is different for non-subscribers ... versus subscribers ... Our specification can explain this difference …”; page 4]"
+      },
+      {
+        "id": "B01",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the identification strategy (in one sentence)?",
+        "answer": "- Identification is achieved by using exogenous bundle-price variation and observed bundle choices to identify the taste variance–covariance matrix Σ and price sensitivity α, while features distinguishing theater-lovers (λ) and the bimodality of subscription sizes (θ̄) are identified by the relative frequencies of multi-play buyers versus non-subscribers, and the market size M is identified via supply-side price constraints. (page 1, words 0-276; page 2, words 0-349; page 3, words 0-349; page 4, words 0-349)"
+      },
+      {
+        "id": "B02",
+        "category": "B) Identification strategy / causal design",
+        "question": "Is the design experimental, quasi-experimental, or observational?",
+        "answer": "- Classification: Observational study with quasi-experimental identification.\n- Why:\n  - The data come from a real-world setting (TheatreWorks), not a randomized experiment. [Context, page 1, mentioning TheatreWorks]\n  - They use exogenous pricing variation (notably a discounted 3-play bundle) to identify demand params, treating that pricing variation as exogenous. [Context, page 2, “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”]\n  - They note there are no bundle-specific error terms and they integrate over unobserved demand components, which is typical of observational studies using natural variation for identification. [Context, page 2, surrounding discussion]"
+      },
+      {
+        "id": "B03",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the source of exogenous variation used for identification?",
+        "answer": "- The exogenous variation comes from a specific 3-play bundle that is offered at a discount (36.20 per play) while all other 3-play bundles have no discount (40.80 per play). This discount is treated as exogenous variation for identification.\n- This exogenous price variation helps identify the price sensitivity parameter α (by measuring demand for the discounted bundle beyond what the taste distribution would predict).\n\nSource: Web Appendix, page 2, the discussion around the discounted 3-play bundle being exogenous variation."
+      },
+      {
+        "id": "B04",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the treatment definition and timing?",
+        "answer": "- Not present in the provided excerpts. The pages show tables of profits relative to BSP across factors (Taste, Pricing Schemes, Distribution, K, marginal-cost scenarios) but do not define any treatment or its timing. (Cited: Table C1 on page 9, words 0–178; Table C2 on page 14, words 0–180; Table C3 on page 19, words 0–181; Table C4 on pages 22–24, words 0–181; Table C5 on page 29, words 0–181)"
+      },
+      {
+        "id": "B05",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the control/comparison group definition?",
+        "answer": "- The control/comparison group is BSP (baseline benchmark). Profits are reported relative to BSP, indicating BSP as the reference group.\n  - Source: Table C1, “Profits relative to BSP” (page 9, page 9 words 0-178) [Context: page 9].\n  - Also shown in Table C3/C4 sections as the baseline when discussing other marginal-cost scenarios like 0.5 and 0.8 (e.g., “Profits relative to BSP, positive and unequal marginal costs (0.5)” on page 17; “... (0.8)” on page 23) [Context: page 17-19 and page 23-24]."
+      },
+      {
+        "id": "B06",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the estimating equation / baseline regression specification?",
+        "answer": "- Baseline estimating equation (structural demand):\n  - Observed market shares across bundle sizes and pricing schemes are matched to model-implied shares obtained from a random-coefficients demand model.\n  - Model-implied shares are computed by integrating over the unobserved taste distribution (i.e., integrate out all demand shocks)\n  - No remaining error term is left in the price-demand equation; estimation uses the integrated shares as moments.\n\n- Formal form (conceptual):\n  - For each pricing/configuration b, observed share S_obs,b is matched to:\n    S_model,b(Θ) = ∫ D_b(v; p_b, Σ, θ̄, α, M) f(v; Σ, θ̄) dv\n    where:\n    - D_b(·) is the purchase indicator for bundle b given tastes v and prices p_b\n    - f(v; Σ, θ̄) is the taste distribution with mean θ̄ and covariance Σ\n    - Θ = {α, M, θ̄, Σ} are the structural parameters\n\n- Estimation approach:\n  - Minimize a distance between observed shares and model-implied shares (i.e., demand moments) across bundles/pricing:\n    Min_{Θ} [S_obs − S_model(Θ)]′ W [S_obs − S_model(Θ)]\n  - This is implemented as demand-moment/GMM-type estimation rather than a standard OLS regression.\n\n- Identification specifics from the text:\n  - The discounted 3-play bundle provides exogenous variation that identifies α (the price-sensitivity component) by comparing observed demand for that bundle to demand implied by the taste distribution alone. (page 2)\n  - Supply-side pricing constraints are used to identify market size M, by linking predicted optimal prices to observed prices. (page 4)\n  - θ̄ and λ (related to the mean of tastes) are identified from demand moments under the assumed functional form; separate identification requires rich variation. (page 4)\n\n- Key provenance:\n  - Integrated/unobserved demand components and exogenous discount for identification: page 2 (par. discussing α identification and exogenous variation)\n  - Demand moments, identification of α and M, and the role of the pricing constraint: page 2–4 (especially the discussion around M, θ̄/λ, and the need for functional form)\n  - Tables illustrating demand/moment rationale and cross-group (subscribers vs. non-subscribers) support the moment-based estimation framing: page 4."
+      },
+      {
+        "id": "B07",
+        "category": "B) Identification strategy / causal design",
+        "question": "What fixed effects are included (unit, time, two-way, higher dimensional)?",
+        "answer": "- Not specified in the provided excerpt. There is no description of fixed effects (unit, time, two-way, or higher-dimensional) in the tables shown. Evidence: Tables C1 (pages 6–7), C3 (pages 16–17), and C4 (pages 21–22) present profits but do not state FE details. (Table C1, page 6; Table C3, page 16; Table C4, page 21)\n- To know the exact fixed effects, refer to the Methods/Empirical Design section of the full document. (General guidance based on absence in the provided tables)"
+      },
+      {
+        "id": "B08",
+        "category": "B) Identification strategy / causal design",
+        "question": "What standard errors are used (robust, clustered; at what level)?",
+        "answer": "- Not specified in the provided excerpts. There is no mention of standard errors (robust or clustered) or the level at which they are computed. The tables report percentile profits relative to BSP under various cost/taste setups, not standard errors. (Used context: Page 5, words 0-61)\n- The table captions and contents shown (e.g., Table C1, C3) do not include SEs, nor any note about robust/clustered SEs or the aggregation level. (Used context: Page 7, words 0-178; Page 16, words 0-180)\n- Conclusion: Unable to determine from these excerpts; consult the methods section for SE details if available. (Used context: Page 21-22, words 0-181)"
+      },
+      {
+        "id": "B09",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the key identifying assumption (parallel trends, exclusion restriction, ignorability)?",
+        "answer": "- The key identifying assumption is that the discount on the specific 3-play bundle is exogenous with respect to unobserved demand shifters (i.e., there are no bundle-specific error terms). In other words, observed prices are not endogenous to unobserved demand, once we integrate over demand components. This is an ignorability/exogeneity-type assumption. (Context: page 2, words 0-349; relevant line: “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes. Stated differently, we assume there are no bundle-specific error terms.”)"
+      },
+      {
+        "id": "B10",
+        "category": "B) Identification strategy / causal design",
+        "question": "What evidence is provided to support the identifying assumption?",
+        "answer": "- Variance terms (Σ(k,k)) are tied to falls in relative market shares; covariance terms allow observed shares to diverge from simple variance rankings. Evidence: high-share plays must have higher variances, but covariance also affects probabilities, so identification relies on both variances and covariances. (page 1)\n\n- Covariance terms identified by bundle choices of multi-play buyers (e.g., pick-5 subscribers). Pairs chosen together more often imply positive covariances. Assumes same taste covariance for theater-lovers and non-theater-lovers. (page 1)\n\n- Price sensitivity α identified from variation in per-play prices across bundles, notably the discount on one specific 3-play bundle (discounted 3-play vs. non-discounted ones). This exogenous pricing variation helps identify α. Also, observed demand is integrated over unobserved demand components, reducing endogeneity concern. (page 2)\n\n- Endogeneity evidence: there is no remaining bundle-specific error term; the discount is exogenous variation for purposes of identification; unobserved demand components are integrated out. (page 2)\n\n- Identification of θ̄ and λ supported by data features: the substantial share of 5-play and 8-play subscribers helps identify θ̄ and λ; the ratio of subscribers (5/8-play buyers) to non-subscribers identifies λ; θ̄ helps explain bimodality beyond correlation structure. (page 3)\n\n- Market size M identified via supply-side price constraints: without price constraints, demand moments fit would predict prices that are too low, implying mis-specified α; adjusting M changes α and reconciles moments with observed prices. (page 3-4)\n\n- Sub- and non-subscription rankings differ, and the model’s inclusion of covariance is essential to explain this; variance terms explain single-ticket buyer popularity, while covariance explains pairings among multi-buyers, reconciling different rankings. (page 4)\n\n- Overall, evidence for the identifying assumptions relies on (i) cross-play variance and (ii) cross-play covariance tied to bundle choices, (iii) exogenous pricing variation (the discounted bundle), and (iv) supply-side constraints to pin down market size. (pages 1–4)"
+      },
+      {
+        "id": "B11",
+        "category": "B) Identification strategy / causal design",
+        "question": "Are there event-study or pre-trend tests? What do they show?",
+        "answer": "- No event-study or pre-trend tests are reported in the provided text.\n- The identification relies on exogenous price variation (a discounted 3-play bundle) and the absence of bundle-specific error terms, not on pre-trend analyses. Specifically:\n  - “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.” (page 2, words 0-349)\n  - “There is no remaining error term that may be correlated with observed prices.” (page 2, words 0-349)\n  - “We assume there are no bundle-specific error terms.” (page 2, words 0-349)\n- They also use supply-side pricing constraints to help identify price sensitivity and market size, rather than event-study pre-trend tests. (page 2, words 0-349)\n\nSource: Bundile-Size Pricing as an Approximation to Mixed Bundling, Web Appendix (page 2, lines 0-349)."
+      },
+      {
+        "id": "B12",
+        "category": "B) Identification strategy / causal design",
+        "question": "What instruments are used (if IV)? Define instrument and first stage.",
+        "answer": "- IV usage: None. The paper does not employ instrumental variables in the estimation.\n  - They rely on exogenous price variation (a specific discounted bundle) for identification, not an IV strategy. (Web Appendix, page 2: “one specific 3-play bundle is offered at a discount … The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”)\n  - They also state there is no remaining error term correlated with observed prices due to integrating over unobserved demand components and the supply-side pricing constraints. (Web Appendix, page 2: “There is no remaining error term that may be correlated with observed prices.”; “we integrate over all unobserved demand components.”)\n\n- Instrument defined? Not defined in the IV sense.\n  - If forced to map to IV language, the discount on the 3-play bundle is described as exogenous variation used to identify price sensitivity (α), but the paper does not present a separate first-stage regression or treat this as a formal instrument. (Web Appendix, page 2: discussion of the discounted bundle as exogenous variation.)\n\n- First stage? Not applicable.\n  - No first-stage regression is described; prices are treated with supply-side constraints and exogenous variation rather than as endogeneous regressor requiring an instrument. (Web Appendix, page 1-2: notes on supply-side pricing constraints and exogeneity.)"
+      },
+      {
+        "id": "B13",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the first-stage strength (F-stat, partial R^2, relevance evidence)?",
+        "answer": "- Not reported in the provided text. There are no F-statistics, partial R^2, or instrument-relevance discussions in these excerpts.\n- Where to look (in the provided context): discussion of demand-system identification and pricing constraints (pages 1–4) and subsequent profit tables (pages 17–21)—no IV/first-stage metrics appear.\n- References to the excerpts used:\n  - Identification of estimated demand system (page 1, words 0–276; page 2)\n  - Pricing constraint discussion (page 4, words 0–349)\n  - Tables C3/C4 with profits (page 17 and page 21)"
+      },
+      {
+        "id": "B14",
+        "category": "B) Identification strategy / causal design",
+        "question": "If RDD: what is the running variable and cutoff? bandwidth choice?",
+        "answer": "- Running variable: Not specified in the provided context.\n  - Evidence: Tables C2 (page 14) and C5 (pages 26–30) show profits by pricing schemes, not any RDD running variable.\n\n- Cutoff: Not specified in the provided context.\n  - Evidence: Same as above; no explicit threshold or discontinuity rule is shown.\n\n- Bandwidth choice: Not specified in the provided context.\n  - Evidence: No mention of bandwidth, trimming, or bandwidth selection in these excerpts.\n\nIf you have other sections of the document that discuss the RDD design, share them and I can extract the running variable, cutoff, and bandwidth from those."
+      },
+      {
+        "id": "B15",
+        "category": "B) Identification strategy / causal design",
+        "question": "If DiD: what is the timing variation (staggered adoption)? estimator used?",
+        "answer": "- Timing variation (DiD, staggered adoption): Not discussed in the provided material. The appendix focuses on identifying a structural demand system using pricing/bundle variation, not a DiD design. (cite: page 1, “Identification of estimated demand system”)\n\n- Estimator used:\n  - Nature of model: Structural demand estimation with a random-taste distribution (variance/covariance Σ) estimated by integrating over unobserved components. (cite: page 1, “The variance terms, Σ(k, k) … are identified”)\n  - Identification via exogenous price variation: Uses price variation from bundle discounts, notably a discounted 3-play bundle, to identify price sensitivity α. (cite: page 2, “Besides quantity discounts, an additional source of pricing variation … the discounted 3-play bundle … α is identified by the extent to which demand for the discounted 3-play bundle exceeds …”)\n  - Endogeneity handling: Endogeneity concerns are mitigated by integrating over all unobserved demand components and by not allowing bundle-specific errors; the discounted bundle variation is treated as exogenous for identification. (cite: page 2, “The fact that this specific bundle is offered at a discount is exogenous variation … We integrate over all unobserved demand components.”)\n  - Role of supply-side constraints: Supply-side pricing constraints are used to identify market size M, enabling the model to fit demand moments with reasonable predicted prices. (cite: page 4, “the supply-side pricing constraints provide identification of the market size, and allow us to fit the demand moments while generating reasonable predicted prices.”)\n  - What’s estimated/measured: Variances and covariances of the taste distribution (Σ) are estimated; demand moments are used; the parameters θ̄ and λ are identified via the model’s functional form (with α and M playing key roles). (cite: page 1, “How do the data identify θ̄ and λ?” and page 4, “We estimate the variances and covariances of the taste distribution … demand moments.”)\n\nIf you need, I can extract the exact passages for each bullet."
+      },
+      {
+        "id": "C01",
+        "category": "C) Data, sample, and measurement",
+        "question": "What dataset(s) are used? (name sources explicitly)",
+        "answer": "- TheatreWorks dataset (data from TheatreWorks) [Context: page 1, words 0-276]"
+      },
+      {
+        "id": "C02",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the unit of observation (individual, household, firm, county, transaction, product)?",
+        "answer": "- Unit of observation: product (the plays) in TheatreWorks.\n  - Variance terms Σ(k,k) are identified by the plays’ relative market shares (i.e., by the plays themselves) [page 1, 0–276].\n  - Covariance terms are identified by bundle combinations chosen by multi-play buyers (e.g., pick-5 subscribers), i.e., by how plays are bundled together [page 1, 0–276]."
+      },
+      {
+        "id": "C03",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample period and geographic coverage?",
+        "answer": "- Sample period: Not specified in the provided excerpt. The data come from TheatreWorks (the firm studied). [Source: page 1, words 0-40]\n\n- Geographic coverage: Palo Alto and Mountain View (the text cites the combined adult populations of these two cities). [Source: page 4, words 0-349]"
+      },
+      {
+        "id": "C04",
+        "category": "C) Data, sample, and measurement",
+        "question": "What are the sample restrictions / inclusion criteria?",
+        "answer": "- Not specified in the provided excerpts. The text focuses on identification and estimation approaches (e.g., supply-side constraints, market size) rather than data inclusion rules. (Context: page 3, words 300-400)\n\n- Tables illustrating profits under various schemes show results but do not specify sample restrictions or inclusion criteria. (Context: page 9, words 0-178; page 17, words 0-181)\n\n- Overall, sample restrictions/inclusion criteria cannot be determined from the given context. (Context: pages 27-29 also present results without data-selection details)"
+      },
+      {
+        "id": "C05",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample size (N) in the main analysis?",
+        "answer": "- Not specified in the provided excerpts. The text discusses model parameters and market size (M) but does not state the sample size N.\n\n- Supporting evidence:\n  - Mentions M = 36,055 as the market size (page 4, words 0-349).\n  - Discusses identification and demand moments (pages 2–4), but no N is reported (e.g., page 2, words 0-349; page 3, words 0-349)."
+      },
+      {
+        "id": "C06",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is the key outcome measured? Any transformations (logs, z-scores, indices)?",
+        "answer": "- Key outcome measure: Profits relative to BSP (a dimensionless ratio with BSP profits as the baseline, e.g., BSP = 1.000). This is stated directly in the table captions as “Profits relative to BSP.” (page 7; also shown across Tables C2–C4 with the same phrase) [e.g., page 7, page 12, page 16, page 21–22].\n\n- Transformations of the outcome: No additional transformations (logs, z-scores, or index construction) are described for the profit measure itself; the values presented are raw relative profits (ratios to BSP). The presence of entries like 1.000 indicates normalization to the BSP baseline. (page 7; page 12; page 16; page 21–22)\n\n- What the extra labels refer to: Terms like Lognormal(+), Lognormal(-), Logit, Exponential, Normal denote distributions or specifications for taste/price schemes in the scenario, not transformations of the profit outcome itself. They appear in the tables alongside the profit entries. (page 7; page 16; page 21–22)"
+      },
+      {
+        "id": "C07",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is treatment/exposure measured? Any constructed variables?",
+        "answer": "- Treatment/exposure as used in the study\n  - The “treatment” is the discount on a specific 3-play bundle (36.20 per play) versus all other 3-play bundles with no discount (40.80 per play). This discounted bundle provides exogenous variation used to identify price sensitivity. [Context: page 2, around the sentence noting the discounted 3-play bundle and its exogenous variation; “one specific 3-play bundle is offered at a discount …” and “The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”]\n  - Exposure to price variation across bundles (per-play price differences) drives identification of α (price sensitivity). [Context: page 1, “The degree of price sensitivity, α, is identified by variation in per-play prices across bundles.”]\n\n- Constructed/used variables related to treatment/exposure\n  - Per-play price for each bundle (constructed from the listed bundle prices, including the discounted 3-play bundle). This variation across bundles is the source of exposure. [Context: page 1, “variation in per-play prices across bundles.”]\n  - Indicator or construct for the discounted 3-play bundle (the explicit discount is the treatment). [Context: page 2, description of the specific discounted bundle versus others.]\n  - Bundle size K (number of plays in a bundle) used in the analysis and shown in the tables (e.g., K = 2, 3, 4, 5). This organizes exposure by bundle size. [Context: tables labeled “K” and discussion of larger bundle discounts; page 1/Table C1/C3 excerpts.]\n  - Bundle composition identifiers (which plays are in each bundle) to define the different bundle configurations whose prices vary. [Context: implicit in discussion of “bundle combinations” and the pick-5 subscribers; page 1.]\n\n- Additional modeling/assumptions related to measurement\n  - They assume no bundle-specific error terms; endogeneity concerns are mitigated by integrating over unobserved demand components. [Context: page 2, “Stated differently, we assume there are no bundle-specific error terms.” and “There is no remaining error term that may be correlated with observed prices.”]\n  - Pricing discounts for larger bundles are a deliberate source of variation used to identify price sensitivity. [Context: page 1, “pricing involves discounts for larger bundles.”]\n\nSources used:\n- Price sensitivity identification and bundle-price variation: page 1, “The degree of price sensitivity, α, is identified by variation in per-play prices across bundles. Because TheatreWorks’ pricing involves discounts for larger bundles…” (approx. first 60 words). \n- Discounted 3-play bundle as exogenous variation and no bundle-specific errors: page 2, “one specific 3-play bundle is offered at a discount … The fact that this specific bundle is offered at a discount is exogenous variation for our purposes. Stated differently, we assume there are no bundle-specific error terms. … There is no remaining error term that may be correlated with observed prices.”"
+      },
+      {
+        "id": "C08",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there key covariates/controls? Which ones are always included?",
+        "answer": "- Yes. The key covariates/controls are:\n  - Observed play qualities (control for the qualities of these plays) to account for valuation differences. (cite: page 2, words 0-349)\n  - Consumers’ tendency to bundle specific plays together (control for bundling propensity) to capture covariances in tastes. (cite: page 2, words 0-349)\n  - Covariance terms identified via bundle combinations chosen by multi-play buyers (e.g., pick-5 subscribers). (cite: page 1, words 0-276)\n\n- Are they always included? Yes—the text states these controls are used in estimation/identification:\n  - “we control for the qualities of these plays, and we control for the tendency of consumers to want to bundle these particular plays together.” (cite: page 2, words 0-349)\n  - Covariances are identified specifically through observed bundling (cite: page 1, words 0-276)."
+      },
+      {
+        "id": "C09",
+        "category": "C) Data, sample, and measurement",
+        "question": "How are missing data handled (dropping, imputation, weighting)?",
+        "answer": "- Not described in the provided text. There is no explicit mention of dropping, imputing, or weighting for missing data. (Cited: page 2, words 0-349)\n- The sections instead discuss handling unobserved demand components via integration over latent tastes and addressing endogeneity, not a missing-data method. (Cited: page 2, words 0-349; page 4, words 0-349)\n- Therefore, based on the given excerpts, missing data handling cannot be determined from the material."
+      },
+      {
+        "id": "C10",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are weights used (survey weights, propensity weights)? How?",
+        "answer": "- No survey or propensity weights are mentioned. The text does not describe any weighting scheme for observations. (Page 2, discussion of integrating over unobserved demand components and no remaining error term correlated with prices)\n\n- How identification occurs without weights:\n  - They “integrate over all unobserved demand components,” so observed prices aren’t assumed uncorrelated errors (no bundle-specific errors) in the estimation. (Page 2)\n  - Price variation across bundles identifies the price-sensitivity parameter α: “The degree of price sensitivity, α, is identified by variation in per-play prices across bundles.” (Page 1)\n  - An exogenous price variation comes from the discounted 3-play bundle vs. other 3-play bundles, used to pinpoint α beyond taste distribution alone. (Page 2)\n\n- Additional note:\n  - Differences in popularity between single-ticket buyers and multi-play buyers are explained by variance and covariance terms in the taste distribution, not by weighting observations. (Page 4, section describing Σ and covariance terms)\n\nCited sources:\n- Page 2: “We estimate the variances and covariances of the taste distribution… The fact that this specific bundle is offered at a discount is exogenous variation for our purposes.”; “There is no remaining error term that may be correlated with observed prices.”\n- Page 1: “The degree of price sensitivity, α, is identified by variation in per-play prices across bundles.” \n- Page 4: Discussion of Σ and covariance terms explaining different popularity across buyer types."
+      },
+      {
+        "id": "C11",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are data linked/merged across sources? How is linkage performed?",
+        "answer": "- No explicit data-linking/merging across sources is described in the provided text. The appendix states the analysis uses data from TheatreWorks (single data source). (Page 1)\n- The discussion centers on identifying demand using TheatreWorks data and within-sample pricing variation (e.g., bundle discounts) rather than linking multiple data sources. (Page 2)\n- Therefore, based on these excerpts, data linkage across sources is not described or performed. (Page 1; Page 2)"
+      },
+      {
+        "id": "C12",
+        "category": "C) Data, sample, and measurement",
+        "question": "What summary statistics are reported for main variables?",
+        "answer": "- They report three percentile statistics for profits: the 1st percentile, the 50th percentile (median), and the 99th percentile.\n- Profits are expressed as a ratio to BSP profits (i.e., profits relative to BSP profits).\n- These statistics are shown across different taste distributions and numbers of products (K). \n  - (Source: page 5, lines noting \"1st, 50th, and 99th percentile of profits (as a ratio of BSP profits)\"; and table context on page 7.)"
+      },
+      {
+        "id": "C13",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there descriptive figures/maps that establish baseline patterns?",
+        "answer": "- No descriptive figures or maps are described in the provided excerpts. The material focuses on tables of numerical results (Tables C1–C5) rather than visual figures. (Cite: page 5, “2 Additional tables based on numerical experiments Tables C1 through C5 report…”)\n- The closest elements are continued tables showing profit percentiles across distributions and cost assumptions (e.g., Table C1 continued; Tables C3–C5). These are tabular, not descriptive figures/maps. (Cite: page 7 for Table C1 continued; page 17 for Table C3; page 22 for Table C4; page 27 for Table C5)"
+      },
+      {
+        "id": "D01",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the headline main effect estimate (sign and magnitude)?",
+        "answer": "- Not specified in the provided excerpts. The material discusses α, M, and pricing but does not report a single “headline main effect estimate” value.\n\n- Context references:\n  - Page 4 (discussion of α, M, and pricing), which notes that optimal prices depend on α but not M. (Context: page 4, 0-349)\n  - Pages 16-17 and 21-22 (Tables C3 and C4 of profits), which present detailed pricing results but do not give a headline main effect estimate. (Context: page 16, 0-180; page 21, 0-180)"
+      },
+      {
+        "id": "D02",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the preferred specification and why is it preferred?",
+        "answer": "- The provided excerpts do not explicitly designate a single “preferred specification.” The tables present several specifications (C1–C5) without a stated winner. (See Table C1/C2/C4/C5 captions.)\n\n- If one were to infer a preferred one from realism, Table C5 looks most comprehensive: zero marginal costs with capacity constraints. It explicitly adds capacity constraints to a zero-cost baseline, which is a common real-world feature. (Cited: Table C5, page 28.)\n\n- Why this might be preferred (inference):\n  - Combines zero marginal costs with a constraint that captures capacity limitations.\n  - Results are shown across multiple taste distributions (Normal(+), Normal(-), Normal(v), Normal(+/-)) suggesting robustness. (Cited: Table C5 heading on page 28.)\n\n- Alternative specifications listed for comparison:\n  - Positive and equal marginal costs (Table C2). (Cited: page 13-14.)\n  - Positive and unequal marginal costs (Table C4). (Cited: page 23.)\n\n- Bottom line: There is no explicit stated preference in the provided text; Table C5 is the most feature-rich and arguably most realistic, but the excerpt does not confirm it as “the” preferred specification. (Cited: C5 heading, page 28; plus mentions of other specs in C2 and C4, pages 13-14 and 23.)"
+      },
+      {
+        "id": "D03",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How economically meaningful is the effect (percent change, elasticity, dollars)?",
+        "answer": "- How effect is measured\n  - Profits are reported as a ratio to BSP profits (profits relative to BSP). They present the 1st, 50th, and 99th percentiles of this ratio across taste distributions and number of products (K). (page 5)\n\n- Magnitude you can interpret from the tables\n  - Typical (median) impact is modest, often around 0.9–1.0 relative to BSP (i.e., −10% to almost no change in profit compared with BSP).\n  - Some scenarios yield noticeably higher profits than BSP, up to roughly 1.2–1.26 (i.e., +20% to +26% relative to BSP; e.g., a 1.260 entry appears in Table C4). (page 16; page 21)\n  - Some scenarios yield lower profits than BSP, with ratios down to about 0.6–0.8 in the 1st percentile range. (page 16)\n\n- Elasticity and dollars\n  - The materials provided report only profit ratios (no explicit price elasticities or dollar profit figures). Therefore you cannot read elasticity directly from these numbers, nor convert to dollars without BSP-profit benchmarks. (page 5)\n  - The baseline “BSP” profits are not given in the excerpt, so absolute dollar impacts cannot be computed from these tables alone. (page 5)\n\n- Additional context relevant to interpretation\n  - The results are shown across different cost settings (e.g., 0.5, 0.8) and taste distributions (Exponential, Logit, Lognormal, Normal variants), illustrating that the economic significance of the pricing schemes varies with costs and demand structure. Some cells show substantial relative gains under some combinations and reductions under others. (Tables C3–C4; page 16, 21)\n  - The paper notes that small perturbations in α and M do not dramatically change relative profitability, which supports the robustness of the relative-profit comparisons. (page 4)\n\nCited provenance\n- “Tables C1 through C5 ... profits (as a ratio of BSP profits)” (page 5)\n- Example high/low relative profits (up to about 1.26 and as low as ~0.6–0.8) in Table C3/C4 (page 16, 21)\n- Baseline context and parameters (e.g., M = 36,055; no unobserved competition) (page 4)"
+      },
+      {
+        "id": "D04",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the key robustness checks and do results survive them?",
+        "answer": "- What robustness checks were performed\n  - Cost structure variations:\n    - Zero marginal costs (Table C1). See page 7–8. [Cited: zero-MC results]\n    - Positive but equal marginal costs (Table C2). See page 12. [Cited: equal-MC results]\n    - Positive and unequal marginal costs at 0.5 (Table C3). See page 17. [Cited: unequal MC = 0.5]\n    - Positive and unequal marginal costs at 0.8 (Table C4). See page 22. [Cited: unequal MC = 0.8]\n  - Taste/dispersion assumptions:\n    - Lognormal distributions with various tweaks (e.g., Lognormal(+), Lognormal(-)) (appear across C1–C4; e.g., Lognormal(+) in C1 page 7–8 and in C2–C4 pages 12, 17, 22).\n    - Normal distributions and variants (Normal, Normal(+), Normal(-), Normal(v)) (appear across C1–C4; e.g., Normal in C1 page 7–8; Normal in C2 page 12; Normal(+/−/v) in C3–C4 pages 17, 22).\n\n- Do results survive the checks\n  - Across zero, equal, and unequal cost regimes, profits relative to BSP remain broadly around the same scale (roughly near 1 in many configurations), with the 1st/50th/99th percentiles reported in the tables showing little systematic deterioration or reversal across distributions and K (2–5). Examples in the tables continue to show values clustering near 1, indicating robustness to cost changes.\n  - Across different taste distributions (Lognormal, Normal and their variants), the qualitative conclusion that BSP-proxy profits are not dramatically driven by the specific distribution holds; the relative profitability remains stable across K and pricing schemes.\n  - Some extreme corners (e.g., high degrees of asymmetry in costs) exhibit more variation, but there is no wholesale break in the pattern of results.\n\n- Sources referenced\n  - Robustness design and what is varied: cost assumptions and table setup (Tables C1–C5) — page 5, words 0–61. [Context: general robustness plan]\n  - Zero marginal costs results and distributions: Table C1, “Profits relative to BSP, zero marginal costs” — pages 7–8. [Evidence: zero-MC results across distributions]\n  - Positive equal marginal costs results: Table C2 — page 12. [Evidence: equal-MC results across distributions]\n  - Positive unequal marginal costs (0.5) results: Table C3 — page 17. [Evidence: unequal-MC 0.5]\n  - Positive unequal marginal costs (0.8) results: Table C4 — page 22. [Evidence: unequal-MC 0.8]"
+      },
+      {
+        "id": "D05",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What placebo tests are run and what do they show?",
+        "answer": "- No placebo tests are described in the provided excerpts. The text focuses on numerical experiments and tables of profits relative to BSP, not placebo checks. (Cited: page 5, words 0–61)\n\n- What the tables actually show:\n  - Tables C1–C5 report the 1st, 50th, and 99th percentile of profits (as a ratio to BSP profits) for different taste distributions and numbers of products K. (Cited: page 5, words 0–61)\n  - Each table corresponds to a different assumption about costs (e.g., zero marginal costs, positive/unequal, positive/equal, etc.). (Cited: page 5, words 0–61; page 8, words 0–178)\n\n- Examples of the variants covered (from the provided pages):\n  - Zero marginal costs with distributions Normal(+), Normal(–), Normal(v), Normal(+/–) (Table C1). (Cited: page 8, words 0–178; page 9, words 0–178)\n  - Positive and equal marginal costs (Table C2) and positive but unequal/more complex cost settings (Table C3). (Cited: page 14, words 0–180; page 19, words 0–181)\n  - Positive and unequal marginal costs (0.8) (Table C4). (Cited: page 24, words 0–181)\n  \nIf you want, I can extract a concise summary of where each cost/distribution case appears and the general behavior across K for those cases, but there are no explicit placebo-test results in these excerpts."
+      },
+      {
+        "id": "D06",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What falsification outcomes are tested (unaffected outcomes)?",
+        "answer": "- No falsification or unaffected-outcome tests are mentioned in the provided excerpts. The text focuses on identifying market size (M) via supply-side pricing constraints, the role of α, ranking differences in play popularity, and numerical experiments in Tables C1–C5, but does not describe any falsification outcomes. (Cited evidence: page 4, words 0–61; Tables C1–C5 discussed across pages 9, 12, 17, and 21)."
+      },
+      {
+        "id": "D07",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What heterogeneity results are reported (by income, size, baseline exposure, region)?",
+        "answer": "- No heterogeneity results are reported by income, size, baseline exposure, or region in the provided excerpt.\n  - The appendix focuses on heterogeneity in tastes across plays via variance and covariance terms, not demographic groups. (Variance Σ(k,k) identified by relative market shares; covariances identified by which bundles are chosen together; same covariance across theater-lovers and non-theater-lovers.) [Page 1]\n\n  - Price sensitivity heterogeneity (α) is identified from variation in bundle pricing, including a discounted 3-play bundle, and is not framed by demographic subgroups. [Page 2]\n\n  - The discussion of how bundle size interacts with taste correlation (θ̄ and λ) also centers on taste heterogeneity, not income/region segments. [Page 2]\n\n- What heterogeneity is reported elsewhere in the appendix:\n  - Tables C3 and C4 report profits relative to BSP across different taste distributions and bundle counts (K = 2–5), showing how profits vary with distribution type (Exponential, Logit, Lognormal) and price scenarios. This is not demographic heterogeneity but variation across taste distributions and bundle configurations. [Pages 16, 21]\n\n- Summary: The excerpt does not report heterogeneity results by income, size, baseline exposure, or region; it reports heterogeneity in taste (variances/covariances) and price sensitivity, with quantitative results shown only for different taste distributions and bundle counts in Tables C3–C4. [Pages 1–2; 16–21]"
+      },
+      {
+        "id": "D08",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What mechanism tests are performed and what do they imply?",
+        "answer": "- Mechanism tests for identification and exogeneity\n  - Identification of variance and covariance terms\n    - Variances (Σ(k,k)) identified from relative market shares; covariances identified from bundle choices (e.g., pick-5 subscribers). Implication: the model can separate taste dispersion from how plays co-occur in bundles. (page 1, words 0-61)\n  - Price variation as a mechanism to identify price sensitivity\n    - α (price sensitivity) is identified by variation in per-play prices across bundles, especially discounts for larger bundles. Implication: observed shifts in demand across bundle prices reveal α. (page 2, words 0-349)\n  - Discounted bundle as exogenous variation\n    - A specific 3-play bundle is offered at a discount; this exogenous pricing variation helps isolate price effects beyond taste. (page 2)\n  - No bundle-specific error terms; endogenous concerns\n    - They integrate over unobserved demand components; there is no remaining bundle-specific error term that could correlate with observed prices. Endogeneity is only a concern if bundle-specific errors vary with bundle size (mitigated here by pricing depending on total plays). Implication: reduced bias in α and other parameters. (page 2)\n  - Supply-side pricing constraint\n    - Imposing the supply-side pricing condition aids in obtaining a reasonable estimate of price sensitivity. Implication: improves robustness of α identification. (page 2)\n  - No complementarities assumption\n    - They assume no complementarities between these plays, helping to attribute excess demand for the discounted bundle to price sensitivity rather than interaction effects. (page 2)\n  - Identification of θ̄ and λ; interpretation of bundle-size effects\n    - How θ̄ and λ are identified: if θ̄ = 0 (λ = 0), the relation between bundle size and market share depends on taste correlations in a particular way. This tests how bundle-size effects arise from taste structure rather than other factors. (page 2)\n\n- Implications of these mechanism tests\n  - Validates that BSP-style pricing variation, especially the discounted bundle, can identify price sensitivity separately from tastes.\n  - Supports that variances and covariances can be learned from observed shares and bundle-pairing patterns, not just from prices.\n  - Suggests endogeneity concerns are mitigated under their integration over unobservables and the exogeneity of the discounted bundle.\n  - Provides a framework to interpret how bundle size interacts with market shares under different taste-covariance structures (θ̄/λ) rather than relying on defaults. (All cited: page 1; page 2)"
+      },
+      {
+        "id": "D09",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How sensitive are results to alternative samples/bandwidths/controls?",
+        "answer": "- The excerpts do not report an explicit sensitivity analysis to alternative samples, bandwidths, or controls.\n  - Evidence of robustness checks is shown for alternative taste-distributions and marginal-cost settings, not for sampling bandwidths or control specifications. (Cite: Table C1 on page 9)\n- Robustness across distributional assumptions is shown via multiple taste distributions:\n  - Normal (v+ / v− / ±), Lognormal ( + / − ), Normal(+/−) variants, etc. (Cite: page 9, page 14, page 17)\n- Robustness across marginal-cost settings is shown via different cost levels:\n  - 0, 0.5, 0.8 (in Tables C1–C4). (Cite: pages 9, 14, 17, 24)\n- Inferred sensitivity:\n  - Profits relative to BSP generally stay within a similar range across these distributional/marginal-cost variations, suggesting limited sensitivity to those alternative samples in aggregate.\n  - Some cells exhibit more extreme values (e.g., very low or very high numbers in certain parameter combinations), indicating possible sensitivity in specific cases.\n- No explicit bandwidth or control-variable sensitivity is described in the provided text; additional details would be needed to assess that dimension. (Cite: all referenced pages)"
+      },
+      {
+        "id": "D10",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the main takeaways in the conclusion (bullet summary)?",
+        "answer": "- The actual conclusion text isn’t provided in the supplied context; only the numerical result tables are (no explicit concluding statements). (Context: page 5, words 0-61)\n\n- Across zero marginal costs, profits relative to BSP are generally around 0.9–1.0 for K = 2–5 across several taste distributions (e.g., Table C1 content). This suggests BSP-comparable profits under no marginal-cost distortions. (Context: page 9, words 0-178)\n\n- Introducing positive but unequal marginal costs (e.g., 0.5) reduces profits relative to BSP and adds dispersion; many entries fall below 1 and show wider spread across schemes, distributions, and K. (Context: page 18, words 0-181)\n\n- With higher marginal costs (0.8), profits relative to BSP tend to be even lower and more dispersed, indicating stronger negative impact of substantial marginal-cost differences on BSP-relative profits. (Context: page 23, words 0-181)\n\n- The results vary by taste distribution and the Normal-type specification (Normal(+), Normal(-), Normal(+/-), Normal(v), Normal(v+) etc.), indicating sensitivity to the assumed demand/taste distribution when comparing to BSP. (Context: multiple sections: page 9; page 18-19; page 23-24)\n\n- The number of products K (2–5) also affects the relative profits, with the patterns above observed across different K values; the tables present the full set of K across the same pricing schemes and distributions. (Context: page 9; page 18-19)\n\n- If you want a concise, table-by-table synthesis of the takeaways (e.g., which pricing scheme consistently performs best under each cost scenario), I can extract and summarize those directly from the tables. (Context: all cited sections)\n\nWould you like me to compile a compact, table-driven summary of the patterns observed across C1–C5?"
+      },
+      {
+        "id": "P01",
+        "category": "P) Previous questions",
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "- Summary of what the provided tables cover\n  - Table C1 (zero marginal costs), continued across pages 7 and 9: profits relative to BSP for various Taste distributions and Pricing Schemes, across Distributions K, UP, CP, PB, MB. Includes Lognormal(+) and Lognormal(-) and Normal variants. CP and PB often sit at 1.000 across entries; K/UP tend to be below 1 in many cases. (Used: page 7, words 0–178; page 9, words 0–178)\n  - Table C3 (positive and unequal marginal costs, 0.5), continued across pages 17 and 19: similar structure as C1 but with a marginal-cost perturbation; includes Lognormal(+), Lognormal(-), Normal(v+), Normal(v-), and Normal(+/-) cases. CP/PB frequently near baseline 1.000; K/UP values show more variation. (Used: page 17, words 0–181; page 19, words 0–181)\n  - Table C5 (zero marginal costs with capacity constraints), continued across pages 27 and 29: profits relative to BSP under capacity constraints; again includes Lognormal and Normal variants with zero marginal costs; CP/PB often at 1.000 baseline; K/UP/MB show broader variation. (Used: page 27, words 0–181; page 29, words 0–181)\n\n- Key patterns to note\n  - Across tables, CP and PB frequently equal 1.000 (baseline) in many rows; K and UP show more variability.\n  - Several distribution/taste combinations appear (Lognormal(+), Lognormal(-), Normal(v+), Normal(v-), Normal(+/-)) indicating robustness checks across different stochastic assumptions.\n  - The qualitative effect of introducing positive/unequal marginal costs (0.5) or capacity constraints tends to preserve some baseline structure (CP/PB near 1) but introduces more variation in K/UP/MB.\n\n- If you want, I can extract specific numeric ranges or create a compact summary table per scenario. (Cited: Tables C1 on pages 7–9; Tables C3 on pages 17–19; Tables C5 on pages 27–29)"
+      }
+    ],
+    "report_questions_error": null,
+    "citations_enabled": false,
+    "citations_preview": [],
+    "citations_error": null
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 33.0,
+    "max_chunks": 33,
+    "min_chunks": 33
+  },
+  "finished_at": "2026-02-06T19:24:38.230136+00:00"
+}

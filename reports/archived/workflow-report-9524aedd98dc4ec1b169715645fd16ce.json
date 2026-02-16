@@ -1,0 +1,3575 @@
+{
+  "run_id": "9524aedd98dc4ec1b169715645fd16ce",
+  "started_at": "2026-02-07T05:10:14.497844+00:00",
+  "papers_dir": "\\papers",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 3,
+    "max_words": 20000,
+    "chunk_words": 275,
+    "chunk_overlap": 60,
+    "top_k": 8,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "4b8dc7b3269dd085079d45ff36ee37c49867e16fb9a477ecd70c653c2fbfcb29",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 3,
+      "max_words": 20000,
+      "chunk_words": 275,
+      "chunk_overlap": 60,
+      "top_k": 8,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.4,
+      "reranker_model": "gpt-5-nano",
+      "rerank_top_n": 40,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5-nano",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\sqlite\\ragonometrics_token_usage.sqlite",
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 3,
+      "total_size_bytes": 25102711,
+      "corpus_hash": "b7da815edd38d6fb6a40360a2982d16efa1c11d4dcb280d5cdc353530829b7f6",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-9524aedd98dc4ec1b169715645fd16ce.json"
+  },
+  "ingest": {
+    "num_pdfs": 3,
+    "num_papers": 3
+  },
+  "enrich": {
+    "openalex": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "completed",
+    "question": "What is the key contribution?",
+    "question_tokens_estimate": 7,
+    "subquestions": [
+      "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')"
+    ],
+    "sub_answers": [
+      {
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "- Deobfuscation pipeline to improve ML performance: language classification, dictionary mapping of obfuscated terms, symbol removal, leetspeak normalization; note that some out-of-corpus terms like “yt” were not transformed due to context; [Context: page 22, words 215-415]\n\n- Modeling stack used after deobfuscation: sentiment with DistilBERT (fine-tuned on SST-2), misogyny with a fine-tuned BERT model (Attanasio et al., 2022), toxicity with ToxiGen Roberta (Hartvigsen et al., 2022); also re-created Wu (2020) word-count measures; [Context: page 23, words 0-274]\n\n- Toxicity findings: share of toxic posts is about 10% over time, with mild seasonality; toxicity concentration per IP is higher than for all posts; [Context: page 38, words 215-424]\n\n- Figures illustrating toxicity results: Figure 19 (share of toxic posts over time, measured by ToxiGen Roberta); Figure 20 (toxic and misogynous posts by forum group); Figure 22 (toxic posts by university and forum group); Figure 23 (linguistic patterns of EJMR contributing IPs) [Context: Figure captions cited across pages 39, 41, 43, 45; specific captions: page 39, words 0-30; page 42, words 0-34; page 44, words 0-37; page 45, words 0-117]\n\n- Note on data limitations: exact post times are not displayed by EJMR; the team acknowledges this time-stamp limitation in their methodology; [Context: page 23, words 0-274]",
+        "question_tokens_estimate": 19
+      }
+    ],
+    "final_answer": "- Key contribution: A deobfuscation-first analytic pipeline for online discourse that enables reliable ML-based toxicity, misogyny, and sentiment detection on obfuscated posts, complemented by IP- and forum-level linguistic analysis. (Context: page 22, 215-415)\n\n- Deobfuscation specifics: language classification, dictionary mapping of obfuscated terms, symbol removal, and leetspeak normalization; note that some out-of-corpus terms (e.g., “yt”) may remain untransformed due to context. (Context: page 22, 215-415)\n\n- Modeling stack after deobfuscation: sentiment via DistilBERT fine-tuned on SST-2; misogyny via a fine-tuned BERT model (Attanasio et al., 2022); toxicity via ToxiGen Roberta (Hartvigsen et al., 2022); plus replication of Wu (2020) word-count measures. (Context: page 23, 0-274)\n\n- Empirical toxicity findings: share of toxic posts ≈10% over time with mild seasonality; toxicity concentration per IP is higher than for all posts. (Context: page 38, 215-424)\n\n- Visual evidence (figures): Figure 19–23 illustrate toxicity dynamics and linguistic patterns—Figure 19 (toxic share over time via ToxiGen Roberta); Figure 20 (toxic/misogynous posts by forum group); Figure 22 (toxic posts by university and forum group); Figure 23 (linguistic patterns of EJMR contributing IPs). (Context: Figure captions across pages 39, 41, 43, 45; specific citations: page 39, 0-30; page 42, 0-34; page 44, 0-37; page 45, 0-117)\n\n- Data limitations: exact post timestamps are not displayed by EJMR, acknowledged as a methodological limitation. (Context: page 23, 0-274)",
+    "report_questions_enabled": true,
+    "report_questions_set": "structured",
+    "report_questions": [
+      {
+        "id": "A01",
+        "category": "A) Research question / contribution",
+        "question": "What is the main research question of the paper?",
+        "answer": "Whether the authors can recover and attribute EJMR posts to the posters’ IP addresses using the username-based hashing scheme, i.e., determine which IP addresses were responsible for most posts and analyze posting patterns.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "abstract",
+        "confidence": "low",
+        "confidence_score": 0.3318464730084092,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 242,
+            "section": "Abstract",
+            "note": "Main research question stated in abstract."
+          }
+        ],
+        "quote_snippet": "Using only publicly available data we show that the statistical properties of the scheme by which these usernames were generated allows the IP addresses from which most posts were made to be determined with high probability.",
+        "table_figure": null,
+        "data_source": "Public EJMR posts and usernames (public data).",
+        "assumption_flag": true,
+        "assumption_notes": "The main conclusion rests on the assumption that the username hashing scheme enables reliable recovery of IP addresses from posts.",
+        "related_questions": []
+      },
+      {
+        "id": "A02",
+        "category": "A) Research question / contribution",
+        "question": "What is the paper's primary contribution relative to the existing literature?",
+        "answer": "The paper's primary contribution is showing that the anonymity scheme used by EJMR allows the IP addresses of posters to be recovered with high probability, yielding 47,630 distinct IP addresses and enabling 66.1% of posts to be assigned to these IPs, which in turn enables analysis of posting behavior, geography, and toxicity across academia.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "empirical methodological contribution",
+        "confidence": "low",
+        "confidence_score": 0.33265969267292517,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 215,
+            "end_word": 480,
+            "section": "Methods/Results",
+            "note": "States recovery of 47,630 IP addresses and assignment of 66.1% of posts to these IPs."
+          },
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 242,
+            "section": "Abstract",
+            "note": "Describes the main contribution: using publicly available data to determine IPs from anonymous usernames."
+          }
+        ],
+        "quote_snippet": "Using only publicly available data we show that the statistical properties of the scheme by which these usernames were generated allows the IP addresses from which most posts were made to be determined with high probability.",
+        "table_figure": null,
+        "data_source": "EJMR postings dataset (anonymous usernames)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A03",
+        "category": "A) Research question / contribution",
+        "question": "What is the central hypothesis being tested?",
+        "answer": "{\n  \"answer\": \"The central hypothesis is that certain IP addresses have nonzero activity (πa > 0) across topics; i.e., some IPs are active in posting, which can be detected via a Poisson-binomial test.\",\n  \"evidence_type\": \"statistical hypothesis and method description\",\n  \"confidence\": \"high\",\n  \"citation_anchors\": [\n    {\"page\": 15, \"start_word\": 0, \"end_word\": 274, \"section\": \"Model and hypothesis\", \"note\": \"Under the null hypothesis that πa = 0 and Poisson-binomial testing discussed.\"},\n    {\"page\": 15, \"start_word\": 215, \"end_word\": 469, \"section\": \"Algorithmic approach\", \"note\": \"Describes the p-value based assignment and hypothesis testing framework.\"},\n    {\"page\": 17, \"start_word\": 0, \"end_word\": 274, \"section\": \"Post-IP assignment procedure\", \"note\": \"Counts and p-values for IP addresses; central testing of activity.\"}\n  ],\n  \"quote_snippet\": \"Under the null hypothesis that πa = 0, this expression simplifies to m \u0012 Y \u00131−yt \u0012 \u0013yt P r(y a ) = q(kt ) (1 − q(kt )) . (3)\",\n  \"table_figure\": null,\n  \"data_source\": null,\n  \"assumption_flag\": null,\n  \"assumption_notes\": null,\n  \"related_questions\": []\n}",
+        "question_tokens_estimate": 11,
+        "evidence_type": "unspecified",
+        "confidence": "low",
+        "confidence_score": 0.3020066803386828,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 16,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          }
+        ],
+        "quote_snippet": "the observed yt , we have m \u0012 Y \u00131−yt \u0012 \u0013yt P r(y a ) = (1 − πa )q(kt ) πa + (1 − πa )(1 − q(kt )) . (2) t=1 Under the null hypothesis that πa = 0, this expression simplifies to m \u0012 Y \u00131−yt \u0012 \u0013yt P r(",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A04",
+        "category": "A) Research question / contribution",
+        "question": "What are the main outcomes of interest (dependent variables)?",
+        "answer": "Main outcomes are toxicity-related measures, specifically the share of toxic posts on EJMR across time and institutions.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "Toxicity measures described in the toxicity section; share of toxic posts measured by a classifier (ToxiGen Roberta) with cross-institution comparisons.",
+        "confidence": "low",
+        "confidence_score": 0.2593275680917324,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 38,
+            "start_word": 215,
+            "end_word": 424,
+            "section": "3.5.2 Toxicity",
+            "note": "Defines toxicity outcome and reports share of toxic posts measured by ToxiGen Roberta."
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Discusses heterogeneity in the share of toxic posts across universities."
+          }
+        ],
+        "quote_snippet": "Figure 19 reports the share of toxic posts on EJMR over time as measured by the ToxiGen Roberta",
+        "table_figure": "Figure 19",
+        "data_source": "EJMR dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A05",
+        "category": "A) Research question / contribution",
+        "question": "What are the key treatment/exposure variables (independent variables)?",
+        "answer": "The key treatment/exposure (independent) variables are the IP addresses (a) that could have generated posts. For each topic t and username u, the analysis considers the exposure set A(t,u) of about 65,536 IPs, with the post having a probability πa of coming from IP a. The exposure is encoded via yt, a binary indicator of whether IP a is observed for topic t, and the counts na tally how often IP a appears across topics. Posts are assigned to IPs by comparing p-values across IPs (the IP with the lowest p-value is chosen if its p-value is below p*). The study also uses time-windowed analyses (7-, 31-, and 91-day windows) to capture varying posting patterns, with p* thresholds determined per window.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.23870695335711953,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "u) combinations across the site",
+            "note": "Definition of A(t,u) and the ~65k IPs per (t,u) exposure"
+          },
+          {
+            "page": 14,
+            "start_word": 430,
+            "end_word": 541,
+            "section": "p14",
+            "note": " yt = u∈Ut 1(a ∈ A(t,u)) denotes the binary observation indicator for topic t"
+          },
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "p15",
+            "note": "Algorithmic approach; estimate p-values for each a and assign IP with lowest p-value if below p*"
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "p16",
+            "note": "Introduction to time-window approach for exposure and assignments"
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "p17",
+            "note": "Counts follow Poisson binomial; daily processing; p-value-based assignment; 7-day window"
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "p17",
+            "note": "Additional 31- and 91-day windows; p* thresholds for windows"
+          },
+          {
+            "page": 21,
+            "start_word": 430,
+            "end_word": 558,
+            "section": "p21",
+            "note": "Maximal window exposure effects on assignments"
+          }
+        ],
+        "quote_snippet": "\"Consider a post on EJMR. Like all other posts, we know from our enumeration procedure that this post has about 65k IP addresses from which it might have originated.\"",
+        "table_figure": null,
+        "data_source": "EJMR dataset (topic-username IP mappings)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A06",
+        "category": "A) Research question / contribution",
+        "question": "What setting/context does the paper study (country, market, period)?",
+        "answer": "An online forum for the academic economics job market (EJMR), studied across geolocated IP addresses with posts predominantly from the United States, covering the period December 17, 2010 to May 10, 2023.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "summary_from_paper",
+        "confidence": "low",
+        "confidence_score": 0.3377176809856769,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 242,
+            "section": "Abstract",
+            "note": "EJMR is an online forum and clearing house for information about the academic job market for economists."
+          },
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Descriptive Statistics",
+            "note": "Data includes 7,098,111 posts between December 17, 2010 and May 10, 2023."
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.3 Geographical Distribution",
+            "note": "The vast majority of EJMR posts originate from IP addresses located in the United States."
+          },
+          {
+            "page": 27,
+            "start_word": 215,
+            "end_word": 480,
+            "section": "3.3 Geographical Distribution",
+            "note": "Country-level distribution details showing US dominance (and other countries)."
+          },
+          {
+            "page": 30,
+            "start_word": 0,
+            "end_word": 199,
+            "section": "Figure 11 / Country distribution",
+            "note": "Figure 11 and accompanying text show shares by country, including United States (~42%)."
+          }
+        ],
+        "quote_snippet": "EJMR is an online forum and clearing house for information about the academic job market for economists.",
+        "table_figure": "Figure 11; Table 1",
+        "data_source": "EJMR posts (7,098,111 posts) and IP geolocation data (IP2Location).",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A07",
+        "category": "A) Research question / contribution",
+        "question": "What is the main mechanism proposed by the authors?",
+        "answer": "An IP-address assignment procedure based on sparsity: assign each post to the smallest set of IPs that can explain it within a rolling time window, using a Poisson-binomial p-value threshold (p*) derived from SHA-1 hash noise modeling to decide assignments.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual evidence from the assignment methodology described in the paper (sections on 2.4 and related hashing noise modeling).",
+        "confidence": "low",
+        "confidence_score": 0.30163183517783987,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Assignment of Posts to IP Addresses",
+            "note": "Describes the sparsity-based rule to assign posts to the smallest set of IPs that can explain them within a time window."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Threshold determination and noise modeling",
+            "note": "Details how p-values are computed and how p* is chosen using SHA-1 hash noise via position shifts."
+          }
+        ],
+        "quote_snippet": "we adopt a simple rule by which we choose to assign posts to the smallest set of IP addresses that can explain them in a given window of time.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Sparsity assumption: not many humans post extensively; 20% of users often produce 80% of the content, which motivates assigning posts to a small explanatory set of IP addresses (principal assumption underlying the mechanism).",
+        "related_questions": []
+      },
+      {
+        "id": "A08",
+        "category": "A) Research question / contribution",
+        "question": "What alternative mechanisms are discussed?",
+        "answer": "They discuss two alternative mechanisms: (1) an algorithmic approach for assigning posts to the smallest explaining set of IP addresses, and (2) a hierarchical Bayesian model as an alternative to that simple rule.",
+        "question_tokens_estimate": 10,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.27103094486692814,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "2.3",
+            "note": "Introduces the algorithmic approach and its use for IP assignment."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4",
+            "note": "Describes the alternative hierarchical Bayesian model as a practical, though imperfect, approach."
+          }
+        ],
+        "quote_snippet": "We denote this first approach the “algorithmic” approach",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A09",
+        "category": "A) Research question / contribution",
+        "question": "What are the main policy implications claimed by the paper?",
+        "answer": "The paper argues that anonymity on EJMR can be undermined: the IP addresses of posters can be determined with high probability from the usernames, enabling a large fraction of posts (about two-thirds) to be tied to specific IPs and geolocated, which has implications for privacy and monitoring of online toxic speech.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "Privacy and anonymity implications from IP de-anonymization",
+        "confidence": "low",
+        "confidence_score": 0.3009644887928361,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 40,
+            "end_word": 90,
+            "section": "Abstract",
+            "note": "IP addresses can be determined; anonymity compromised."
+          },
+          {
+            "page": 27,
+            "start_word": 215,
+            "end_word": 275,
+            "section": "3 Results",
+            "note": "66.1% of posts assigned to IP addresses; geolocation results."
+          }
+        ],
+        "quote_snippet": "Using only publicly available data we show that the statistical properties of the scheme by which these usernames were generated allows the IP addresses from which most posts were made to be determined with high probability.",
+        "table_figure": null,
+        "data_source": "EJMR posts data (publicly available) and derived IP geolocation analyses",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A10",
+        "category": "A) Research question / contribution",
+        "question": "What is the welfare interpretation (if any) of the results?",
+        "answer": "The provided text does not offer a welfare interpretation of the results; it reports IP-address attribution results and posting characteristics (e.g., 66.1% of posts assigned to IPs, and that over 10% of posts originate from universities) but does not translate these findings into welfare implications.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "absence_of_welfare_analysis_in_context",
+        "confidence": "low",
+        "confidence_score": 0.312921638325848,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 215,
+            "end_word": 480,
+            "section": "Results: IP attribution and geographic origin",
+            "note": "States that 66.1% of posts are assigned to IP addresses and that over 10% originate from universities."
+          },
+          {
+            "page": 16,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Describes sparsity and concentration (e.g., 20% of users produce 80% of content); methodological approach but no welfare interpretation."
+          }
+        ],
+        "quote_snippet": "Over 10% of posts originate from universities including all top-ranked universities in the United States. A substantial number of posts also come from government agencies, companies, and non-profit organizations employing economists.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A11",
+        "category": "A) Research question / contribution",
+        "question": "What are the main limitations acknowledged by the authors?",
+        "answer": "The authors acknowledge several key limitations: (1) they lack a precise hierarchical Bayesian model for IP-address attribution and instead use a practical, threshold-based approach that is likely under-specified and beyond their current modeling abilities; (2) their assignment can misattribute posts when highly active IPs 'steal' posts from the true posting IP, though this error is estimable and considered rare, with the rate depending on the window size; (3) not all posts are assigned to IP addresses, reflecting limitations in the attribution procedure; and (4) EJMR does not display exact post times, complicating precise time-based analyses. They also note that the error rate is influenced by the chosen window size and that their estimates of error are rough rather than exact.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "methodology limitations in IP attribution and timestamping",
+        "confidence": "low",
+        "confidence_score": 0.2801684513216176,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4",
+            "note": "Acknowledgement that a Bayesian model would be appropriate but is beyond their abilities; they opt for a practical approach."
+          },
+          {
+            "page": 21,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "2.4/2.5",
+            "note": "Describes an estimable error where high-activity IPs may steal posts; discusses threshold and window-size effects on error rate."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.7",
+            "note": "Time stamps limitation: EJMR does not display exact post times."
+          }
+        ],
+        "quote_snippet": "A proper hierarchical Bayesian model for doing so would likely describe humans, some of whom are economists, probabilistically acquiring and releasing IP addresses.",
+        "table_figure": null,
+        "data_source": "EJMR post data; IP-address windowing approach; IP2Location geolocation data",
+        "assumption_flag": true,
+        "assumption_notes": "Sparsity-based assumption that a small subset of IP addresses explains most posts.",
+        "related_questions": []
+      },
+      {
+        "id": "A12",
+        "category": "A) Research question / contribution",
+        "question": "What does the paper claim is novel about its data or identification?",
+        "answer": "The paper claims the novelty lies in identifying EJMR posters using publicly available data by exploiting the username-generation scheme to determine IP addresses with high probability, recovering 47,630 distinct IPs and matching them to about 66% of posts.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "novel data/identification method",
+        "confidence": "medium",
+        "confidence_score": 0.3780015750322484,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 242,
+            "section": "Abstract",
+            "note": "Core claim about novelty in data/identification via public data and username scheme."
+          }
+        ],
+        "quote_snippet": "Using only publicly available data we show that the statistical properties of the scheme by which these usernames were generated allows the IP addresses from which most posts were made to be determined with high probability.",
+        "table_figure": null,
+        "data_source": "Public EJMR postings data and the username-generation scheme described in the paper",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B01",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the identification strategy (in one sentence)?",
+        "answer": "An algorithmic identification approach that assigns each post to the IP address with the lowest Poisson-binomial p-value within a rolling time window, using a threshold p* to limit assignments.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "methodology description",
+        "confidence": "medium",
+        "confidence_score": 0.3590806933756182,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "2.3 Probabilistic Identification (Algorithmic approach)",
+            "note": "Describes the algorithmic approach and assigning posts to the IP with the lowest p-value below p*."
+          }
+        ],
+        "quote_snippet": "Concretely, the algorithmic approach requires that we estimate the p-values for each a in a set A(t,u) and for each (t, u) assign the IP address with the lowest p-value if that p-value is below a threshold p∗.",
+        "table_figure": null,
+        "data_source": "EJMR dataset (posts, topic-username mappings, IPs)",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes an algorithmic rule that assigns posts to the smallest set of IPs that can explain them within a time window and uses calibrated p-value thresholds (p*) to control false positives.",
+        "related_questions": []
+      },
+      {
+        "id": "B02",
+        "category": "B) Identification strategy / causal design",
+        "question": "Is the design experimental, quasi-experimental, or observational?",
+        "answer": "observational",
+        "question_tokens_estimate": 16,
+        "evidence_type": "observational (non-experimental) study design",
+        "confidence": "low",
+        "confidence_score": 0.255963132434445,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 16",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "describes assignment procedure and observational data use"
+          }
+        ],
+        "quote_snippet": "we adopt a simple rule by which we choose to assign posts to the smallest set of IP addresses that can explain them in a given window of time.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset (topic-username-IP data)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B03",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the source of exogenous variation used for identification?",
+        "answer": "The exogenous variation comes from a noise model built by shifting the SHA-1 hash window used to derive usernames, i.e., using a different hash substring (positions 11-14 instead of 10-13) to calibrate p*, providing an exogenous variation for identification.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "methodology",
+        "confidence": "low",
+        "confidence_score": 0.31219735862768516,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 17",
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Hash-based noise model",
+            "note": "Exogenous variation created by shifting the hash substring to model noise for p* calibration."
+          }
+        ],
+        "quote_snippet": "the noise by “shifting” the characters from which the EJMR username is drawn in the SHA-1 hash. Instead of using positions 10-13 of the hash, we use positions 11-14",
+        "table_figure": null,
+        "data_source": "EJMR data; hashing of usernames (SHA-1) and IP-address assignments",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B04",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the treatment definition and timing?",
+        "answer": "Treatment is the assignment of each post to the IP address with the lowest p-value below threshold p*, performed on a daily basis using a rolling one-week window around each target day.",
+        "question_tokens_estimate": 11,
+        "evidence_type": "Method description of treatment assignment and timing",
+        "confidence": "low",
+        "confidence_score": 0.16289953150343214,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "Algorithmic approach",
+            "note": "Discusses p-values, multiple testing, and choosing a conservative p* threshold; outlines the treatment concept via assignment when p* is met."
+          },
+          {
+            "page": 16,
+            "start_word": 430,
+            "end_word": 514,
+            "section": "Assignment windowing and daily processing",
+            "note": "Describes daily processing and collecting a week’s worth of posts for assignment."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Per-day assignment",
+            "note": "States: for each post on the target day, assign to the IP with the lowest p-value if below p*; then move to next day."
+          }
+        ],
+        "quote_snippet": "for each post on the target day, we assign the post to the IP address with the lowest p-value, but only if that p-value is below some threshold p∗ , which is determined in a manner we describe shortly.",
+        "table_figure": null,
+        "data_source": "EJMR posts; IP addresses obtained from hash inversion; time stamps from EJMR RSS feed and Wayback Machine",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B05",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the control/comparison group definition?",
+        "answer": "The provided context does not define a control/comparison group; it uses a null hypothesis (πa = 0) as a baseline for testing rather than a separate control group.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual evidence from document",
+        "confidence": "low",
+        "confidence_score": 0.1540934069774865,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Null hypothesis and Poisson-binomial formulation",
+            "note": "Mentions the null hypothesis πa = 0 and its implications; no explicit 'control group' is defined."
+          },
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "Algorithmic approach",
+            "note": "Discusses p-values, multiple testing, and threshold p*, with no reference to a traditional control group."
+          }
+        ],
+        "quote_snippet": "Under the null hypothesis that πa = 0, this expression simplifies to",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B06",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the estimating equation / baseline regression specification?",
+        "answer": "The estimating equation is Pr(y_a) = (1 − π_a) q(k_t) π_a + (1 − π_a)(1 − q(k_t)) (Equation (2) in the text). Under the null hypothesis π_a = 0, this simplifies to Pr(y_a) = q(k_t)(1 − q(k_t)) (Equation (3)). The distribution of the observed counts na across topics is given by a Poisson-binomial form (Equation (4)).",
+        "question_tokens_estimate": 17,
+        "evidence_type": "Equation-based model of IP-address attribution (Equations (2)-(4))",
+        "confidence": "low",
+        "confidence_score": 0.31998518066791637,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "14",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "(2) Probability expression for y_a",
+            "note": "Defines Pr(y_a) as a mixture involving π_a and q(k_t)"
+          },
+          {
+            "page": "14",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "(3) Under null π_a = 0",
+            "note": "Special case simplifying Pr(y_a) to q(k_t)(1 − q(k_t))"
+          },
+          {
+            "page": "15",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "(4) Distribution of na",
+            "note": "Poisson-binomial form for the count of IP observations across topics"
+          }
+        ],
+        "quote_snippet": "Pr(y_a) = (1 − π_a) q(k_t) π_a + (1 − π_a)(1 − q(k_t)).",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Relies on a uniform hashing property: the probability of being in a given Au,t set is roughly 1/216 (1/κ). Also uses a hypergeometric formulation to model non-observation and noise in posting, and uses SHA-1 hash shifting to model noise.",
+        "related_questions": []
+      },
+      {
+        "id": "B07",
+        "category": "B) Identification strategy / causal design",
+        "question": "What fixed effects are included (unit, time, two-way, higher dimensional)?",
+        "answer": "Not specified in the provided context.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "No explicit mention of fixed effects in the supplied excerpts.",
+        "confidence": "low",
+        "confidence_score": 0.2725077126921746,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 13,
+            "start_word": 430,
+            "end_word": 525,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 14,
+            "start_word": 430,
+            "end_word": 541,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 23,
+            "start_word": 215,
+            "end_word": 446,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 29,
+            "start_word": 0,
+            "end_word": 88,
+            "section": null,
+            "note": null
+          }
+        ],
+        "quote_snippet": "for every topic t, we have mt distinct usernames.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B08",
+        "category": "B) Identification strategy / causal design",
+        "question": "What standard errors are used (robust, clustered; at what level)?",
+        "answer": "Not specified in the provided context.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "not_specified",
+        "confidence": "low",
+        "confidence_score": 0.29461405875256264,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "references",
+            "note": null
+          }
+        ],
+        "quote_snippet": "For each window (7, 31, and 91 days) we are conducting approximately 7 million × 65k ≈ half a trillion hypothesis tests.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B09",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the key identifying assumption (parallel trends, exclusion restriction, ignorability)?",
+        "answer": "Ignorability.",
+        "question_tokens_estimate": 23,
+        "evidence_type": "textual evidence from context supporting a noise-based identifiability assumption.",
+        "confidence": "low",
+        "confidence_score": 0.30510907991487585,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "page 13",
+            "note": "References uniformity property of the hashing process used to attribute IPs; implies exogenous noise enabling identification."
+          }
+        ],
+        "quote_snippet": "the uniformity property holds in expectation",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Assumes IP attribution is ignorable with respect to topic postings once the hash-based noise model (uniformity) is accounted for; enables identification of πa via the Poisson-binomial framework.",
+        "related_questions": []
+      },
+      {
+        "id": "B10",
+        "category": "B) Identification strategy / causal design",
+        "question": "What evidence is provided to support the identifying assumption?",
+        "answer": "The evidence comes from the sparsity-based assignment rule and its validation: (1) a rule to assign each post to the smallest set of IP addresses that can explain it within a time window; (2) a p-value threshold p* calibrated by comparing correct vs incorrect hash positions, showing that for incorrect hash none of the posts would be assigned while for the correct hash a majority would; (3) a bogon test showing zero assignments to reserved IP addresses; (4) the reported result that windowing reduces incorrect assignments to zero.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "Experimental validation of the identifying assumption via sparsity-based IP attribution, p-value calibration, and bogon-address checks.",
+        "confidence": "low",
+        "confidence_score": 0.31181674411940263,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Describes the rule to assign posts to the smallest set of IP addresses that can explain them in a given window of time."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Discusses hashing position shifts and how p* is determined by comparing correct vs incorrect hashing positions."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "P-value thresholds are very small due to multiple testing; describes thresholds and their implications for assignments."
+          },
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Bogon-address test: zero assignments to bogons; discusses error types and overall claims."
+          }
+        ],
+        "quote_snippet": "we adopt a simple rule by which we choose to assign posts to the smallest set of IP addresses that can explain them in a given window of time",
+        "table_figure": "Figure 4",
+        "data_source": "EJMR post/IP address data analyzed in the document",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes sparsity of activity (few IPs explain many posts); uses windowing to isolate sources; uses p-value thresholds to control false attributions; validates by bogon-test showing zero assignments to reserved IPs.",
+        "related_questions": []
+      },
+      {
+        "id": "B11",
+        "category": "B) Identification strategy / causal design",
+        "question": "Are there event-study or pre-trend tests? What do they show?",
+        "answer": "No. The provided excerpts do not report any event-study or pre-trend tests; they discuss p-value thresholds, time windows, and descriptive time-pattern analyses without mentioning such tests.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual evidence from results/methods sections",
+        "confidence": "low",
+        "confidence_score": 0.32677889400268273,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "18",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3 Results",
+            "note": "Discusses p-value thresholds and multiple testing; no event-study/pre-trend tests mentioned."
+          },
+          {
+            "page": "20",
+            "start_word": 0,
+            "end_word": 165,
+            "section": "3 Results",
+            "note": "Describes post assignment and p*; no event-study."
+          },
+          {
+            "page": "24",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3 Results",
+            "note": "Beginning of results; descriptive statistics; no event-study/pre-trend tests mentioned."
+          }
+        ],
+        "quote_snippet": "3 Results In this section we describe the results. 3.1 Descriptive Statistics We obtained EJMR content from both http://www.econjobrumors.com and http://arch ive.org.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B12",
+        "category": "B) Identification strategy / causal design",
+        "question": "What instruments are used (if IV)? Define instrument and first stage.",
+        "answer": "The provided text does not mention any instrumental variables (IV) or an IV first stage.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "not_discussed",
+        "confidence": "low",
+        "confidence_score": 0.14009181983493157,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 5,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Introduction / IP concepts",
+            "note": "No instrumental variables or IV methodology mentioned; discusses IP addresses and mapping."
+          }
+        ],
+        "quote_snippet": "Before we describe how to map usernames to IP addresses, we provide a short introduction to a few concepts that may be unfamiliar to readers trained in economics.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B13",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the first-stage strength (F-stat, partial R^2, relevance evidence)?",
+        "answer": "Not reported in the provided context.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "not_present_in_context",
+        "confidence": "low",
+        "confidence_score": 0.2873613174053283,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Algorithmic approach",
+            "note": "No first-stage strength metrics (F-stat, partial R^2) are discussed in this excerpt."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methodology: IP address identification",
+            "note": "No discussion of first-stage strength metrics."
+          }
+        ],
+        "quote_snippet": "We denote this first approach the “algorithmic” approach and explain it in detail in the remaining part of this section.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B14",
+        "category": "B) Identification strategy / causal design",
+        "question": "If RDD: what is the running variable and cutoff? bandwidth choice?",
+        "answer": "The provided context does not specify an RDD running variable, a cutoff, or bandwidth. It instead describes an IP-address assignment approach using p-value thresholds (p*) across time windows for posts on EJMR.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "Lacks RDD details; discusses p*-thresholds and time-window based IP assignment (not a regression discontinuity design).",
+        "confidence": "low",
+        "confidence_score": 0.28940898599610554,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 17",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Discusses p*-thresholds and time-window based assignment; no RDD running variable or bandwidth mentioned."
+          },
+          {
+            "page": "page 18",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Continues discussion of p-value thresholds for IP assignment."
+          },
+          {
+            "page": "page 13",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.3 Probabilistic Identification of IP Addresses",
+            "note": "Describes probabilistic identification of IPs; no RDD detail."
+          }
+        ],
+        "quote_snippet": "How should we determine p∗ ? In other words, how can we know when an IP address is overrepresented in a particular window of time...",
+        "table_figure": null,
+        "data_source": "EJMR IP-address assignment study (sections 2.3–2.4)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B15",
+        "category": "B) Identification strategy / causal design",
+        "question": "If DiD: what is the timing variation (staggered adoption)? estimator used?",
+        "answer": "The provided context does not discuss a Difference-in-Differences (DiD) estimator or any staggered adoption timing variation. Therefore the estimator and timing variation used for DiD cannot be determined from the given excerpts.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "not_discussed",
+        "confidence": "low",
+        "confidence_score": 0.3336306957908915,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Describes windowing and p-values; no DiD discussion."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment / Method overview",
+            "note": "Further discussion of p-values and time windows; no DiD estimator mentioned."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.6 Geolocation / 2.7 Time Stamps",
+            "note": "Time-stamps and geolocation sections; no DiD method."
+          },
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3 Results",
+            "note": "Results section; no DiD timing variation discussed."
+          }
+        ],
+        "quote_snippet": "To solve this issue, we window the data in the different time intervals.",
+        "table_figure": null,
+        "data_source": "EJMR post dataset (Economic Job Market Rumors)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C01",
+        "category": "C) Data, sample, and measurement",
+        "question": "What dataset(s) are used? (name sources explicitly)",
+        "answer": "EJMR dataset (Economics Job Market Rumors forum) with 5,184,896 topic-username combinations; geolocation data from IP2Location; Stanford Sentiment Treebank (for sentiment model); ToxiGen (toxicity/hate speech dataset) used to train toxicity model.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "dataset listing",
+        "confidence": "medium",
+        "confidence_score": 0.3511171282340197,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Data description",
+            "note": "Describes m topics, mt usernames per topic, and 5,184,896 topic-username combinations observed on EJMR."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.6 Geolocation of IP Addresses",
+            "note": "IP2Location geolocation used for IP addresses."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Model selection for sentiment/toxicity",
+            "note": "DistilBERT fine-tuned for sentiment on Stanford Sentiment Treebank."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "References",
+            "note": "ToxiGen dataset cited for toxicity/hate speech detection."
+          }
+        ],
+        "quote_snippet": "\"5,184,896 topic-username combinations observed on EJMR\"",
+        "table_figure": null,
+        "data_source": "EJMR dataset; IP2Location geolocation database; Stanford Sentiment Treebank; ToxiGen",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C02",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the unit of observation (individual, household, firm, county, transaction, product)?",
+        "answer": "an individual post",
+        "question_tokens_estimate": 23,
+        "evidence_type": "Methodology / observation unit: post-level data",
+        "confidence": "low",
+        "confidence_score": 0.2938189448005023,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 215,
+            "end_word": 480,
+            "section": "Methods",
+            "note": "The text discusses processing per post and narrowing IPs; references 'For each post'."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods",
+            "note": "Key sentence assigns each post to an IP; post-level observation."
+          }
+        ],
+        "quote_snippet": "For each post on the target day, we assign the post to the IP address with the lowest p-value",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C03",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample period and geographic coverage?",
+        "answer": "Sample period: December 17, 2010 to May 10, 2023; Geographic coverage: EJMR posts geolocated via IP addresses, with the vast majority originating from the United States (66.1% assignable; 61.9% US among geolocated posts; other countries include Canada, United Kingdom, Australia, Germany, Hong Kong, Italy, France, etc.).",
+        "question_tokens_estimate": 12,
+        "evidence_type": "dataset_description",
+        "confidence": "low",
+        "confidence_score": 0.30068060659868745,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 24 words 0-274",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.1 Descriptive Statistics",
+            "note": "Sample period and total post count: 'In total, our data included 7,098,111 posts ... between December 17, 2010 and May 10, 2023.'"
+          },
+          {
+            "page": "page 27 words 0-274",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.3 Geographical Distribution",
+            "note": "Geographic coverage: 'The vast majority of EJMR posts originates from IP addresses located in the United States.'"
+          },
+          {
+            "page": "page 27 words 215-480",
+            "start_word": 215,
+            "end_word": 480,
+            "section": "3.3 Geographical Distribution",
+            "note": "Geographic details: 'Among posts with geolocated IP addresses, 61.9% originate from the United States with Canada (8.3%) and the United Kingdom (5.5%) ...'"
+          }
+        ],
+        "quote_snippet": "In total, our data included 7,098,111 posts from 695,364 topics on EJMR between December 17, 2010 and May 10, 2023.",
+        "table_figure": null,
+        "data_source": "EJMR (econjobrumors.com)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C04",
+        "category": "C) Data, sample, and measurement",
+        "question": "What are the sample restrictions / inclusion criteria?",
+        "answer": "Inclusion restrictions for the sample include: (1) only posts that have both a topic ID (t) and a username (u) are eligible for IP-address assignment; posts with missing topic ID or username are excluded (e.g., 185,338 posts cannot be assigned to IPs); (2) analysis uses a rolling 7-day window around each day (a day plus three days before and after) to collect posts; this 7-day window is the primary unit of analysis, with supplemental 31- and 91-day windows used to capture longer posting patterns; (3) IPs are identified only if they post across more than about a dozen topics within a week; (4) the assignment procedure is run using three hash positions (9, 10, and 11) to determine p-value thresholds for post-to-IP assignments; (5) most assignments come from the 7-day window, and the study region includes data from roughly 47,630 distinct IP addresses.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.24712264404881376,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 430,
+            "end_word": 514,
+            "section": "Methods - Data collection window",
+            "note": "Definition of the 7-day weekly post window around a day."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "IP assignment and p-value threshold",
+            "note": "For each post on the target day, assign to the IP with the lowest p-value below p*; weekly window usage described."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Sample size / exclusions",
+            "note": "Approximately 47,630 distinct IPs; 185,338 posts have no topic ID or username and cannot be assigned to IPs."
+          },
+          {
+            "page": 18,
+            "start_word": 430,
+            "end_word": 536,
+            "section": "Sample exclusions",
+            "note": "Excludes posts lacking topic ID or username from IP-address assignment; mentions IPs posting on >~12 topics per week."
+          }
+        ],
+        "quote_snippet": "185,338 posts that have either no topic ID or no username. These cannot be assigned to IP addresses.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C05",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample size (N) in the main analysis?",
+        "answer": "47,630",
+        "question_tokens_estimate": 12,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.27997925228827764,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 18,
+            "start_word": 430,
+            "end_word": 536,
+            "section": "IP address sampling and sample size",
+            "note": "Explicit statement: 'from just 47,630 distinct IP addresses.'"
+          }
+        ],
+        "quote_snippet": "from just 47,630 distinct IP addresses.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C06",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is the key outcome measured? Any transformations (logs, z-scores, indices)?",
+        "answer": "The key outcome is measured as the minimum p-value for each post (the lowest p-value across candidate IP addresses under the Poisson-binomial model), and then summarized weekly by calculating the mean of these minimum p-values across all posts in that week. A threshold p* is applied to decide assignments.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "statistical-measurement",
+        "confidence": "low",
+        "confidence_score": 0.27597030894100727,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "IP-address assignment and minimum p-value",
+            "note": "Defines the two-step procedure: for each post, find the IP with the lowest p-value (minimum p-value) and then compute the mean of these minimum p-values over posts in a week."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Hashing and p* determination",
+            "note": "Discusses using different hash positions and the p*-threshold to determine assignments."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "P-value thresholds and multiple tests",
+            "note": "Explains very small p*-thresholds due to multiple hypothesis testing and the scale of tests."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "Figure 4 and p* threshold",
+            "note": "Describes the minimum p-value concept and the p*-threshold (~1e-11); notes that a weekly mean of minimum p-values is used."
+          }
+        ],
+        "quote_snippet": "First, we find the IP address that has the lowest p-value for a given post and henceforth refer to this p-value as the minimum p-value of a post.",
+        "table_figure": "Figure 4: Cumulative distribution functions of the minimum p-value of posts for different hash positions.",
+        "data_source": "EJMR posts; Poisson-binomial model; hash-based IP attribution.",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C07",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is treatment/exposure measured? Any constructed variables?",
+        "answer": "Treatment/exposure is measured at the IP-address level. Each IP is treated as a potential exposure source that may generate a post with probability πa. They estimate πa for all IPs. For each post on a target day they assign it to the IP with the lowest p-value (if that p-value < p*), effectively constructing a post→IP exposure assignment. They define na as the number of times IP a appears in A(t,u) across Ut; they primarily use a 7-day window (with 31- and 91-day windows to capture longer patterns). The exposure model is built with a Poisson-binomial framework to model counts of IPs explaining topic–username combinations.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "IP-based exposure measurement (Methods) described in the EJMR post dataset analysis",
+        "confidence": "low",
+        "confidence_score": 0.282915998478828,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods (IP-based exposure)",
+            "note": "Definition of exposure via IP and πa; assignment of posts to IPs based on p-values"
+          },
+          {
+            "page": 18,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Methods (Time windows and assignment)",
+            "note": "Time windows (7-day primary, plus 31- and 91-day) and post-to-IP assignment details"
+          }
+        ],
+        "quote_snippet": "we consider each IP generating a post (e.g., a username in a topic) with probability πa . Empirically, we would like to estimate πa for all a.",
+        "table_figure": "Figure 4",
+        "data_source": "EJMR post dataset (topic IDs, usernames, IP addresses)",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes posts per IP follow a Poisson-binomial process; uses a p-value threshold p* for assignment and a noise model to estimate p-values; relies on time-window-based exposure construction",
+        "related_questions": []
+      },
+      {
+        "id": "C08",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there key covariates/controls? Which ones are always included?",
+        "answer": "There are no standard covariates/controls described beyond the topic dimension. The model uses per-topic indicators and treats topics as independent; time-windowing is used for robustness rather than fixed covariates. Thus, the primary constant is the topic index t, not additional covariates.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual evidence from methods describing covariates/controls",
+        "confidence": "low",
+        "confidence_score": 0.27451324436045094,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 13",
+            "start_word": 215,
+            "end_word": 489,
+            "section": " Topic and per-topic indicators",
+            "note": "Describes m topics, per-topic usernames, and yt as a binary indicator for IP presence within a topic"
+          },
+          {
+            "page": "page 14",
+            "start_word": 430,
+            "end_word": 541,
+            "section": "Independence and joint likelihood",
+            "note": "States that the joint likelihood treats each topic as independent"
+          },
+          {
+            "page": "page 16",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Time-windowing",
+            "note": "Discusses windowing data into different time intervals (7-, 31-, 91-day windows) for robustness"
+          }
+        ],
+        "quote_snippet": "If we observe the IP address a exactly na times across these topics, we can define the probability of this state of the world using a joint likelihood that treats each topic as independent.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes independence across topics in the joint likelihood; uses per-topic binary indicators (yt) and topic-specific post/IP dynamics; time windows used for robustness rather than fixed covariates.",
+        "related_questions": []
+      },
+      {
+        "id": "C09",
+        "category": "C) Data, sample, and measurement",
+        "question": "How are missing data handled (dropping, imputation, weighting)?",
+        "answer": "Missing data are handled primarily through temporal windowing rather than imputation or dropping. The authors window the data into multiple time intervals (7-day, plus two longer windows of 31 and 91 days) to recover IP addresses that post infrequently in a short window, reducing misassignments. They also explicitly ignore repeated posts by the same username, treating them as a single data point rather than duplicating observations.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "temporal windowing and preprocessing actions to address sparse data and duplicates",
+        "confidence": "low",
+        "confidence_score": 0.2789237837573945,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Assignment of Posts to IP Addresses",
+            "note": "Describes 7-day window and additional 31- and 91-day windows to handle sparse posting over time."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.3/2.4 Assignment of Posts to IP Addresses",
+            "note": "States windowing approach and mentions reducing incorrect assignments to zero."
+          },
+          {
+            "page": 13,
+            "start_word": 430,
+            "end_word": 525,
+            "section": "Data preprocessing",
+            "note": "Notes that repeated posts on a thread by the same username are ignored as a single data point."
+          }
+        ],
+        "quote_snippet": "To recover IP addresses that do not post as frequently during our relatively short 7-day window but still post regularly over a longer time periods our procedure considers two additional time windows of 31 and 91 days.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset (topic-username IP address observations)",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes that repeated posts by the same username are a single data point; uses this simplification in the aggregation of observations.",
+        "related_questions": []
+      },
+      {
+        "id": "C10",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are weights used (survey weights, propensity weights)? How?",
+        "answer": "No. The provided text does not mention or use survey weights or propensity weights; the methodology relies on Poisson-binomial models, p-values, a threshold p*, and hash-based noise modeling to identify IP addresses.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "absence of weights described in the provided excerpts",
+        "confidence": "low",
+        "confidence_score": 0.3088956034363285,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 14,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Estimation of π_a; data generating process",
+            "note": "Discussion of estimation procedures and probabilistic modeling; no weights mentioned"
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Algorithmic approach; multiple testing; p*",
+            "note": "Emphasizes p-values, threshold p*, and false positives; no weights mentioned"
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Assignment of Posts to IP Addresses; time windows",
+            "note": "Describes assigning posts to IPs without weights; uses p* and hashing-based noise"
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Time windows; hashing; p-value thresholds",
+            "note": "Details time-window approach and p-value thresholding; no weights mentioned"
+          }
+        ],
+        "quote_snippet": "How should we determine p∗ ? In other words, how can we know when an IP address is overrepresented in a particular window of time and that its observed explanatory power does not arise by chance in the noise component of equation (3)?",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C11",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are data linked/merged across sources? How is linkage performed?",
+        "answer": "Yes. Data are linked/merged across sources by associating EJMR posts with IP addresses and then integrating that IP-based information with geolocation and topic signals. Linkage is performed by (1) assigning posts to a small set of IP addresses that can explain their activity within a moving time window (sparsity rule), (2) modeling the joint likelihood of IPs across multiple topics, and (3) constructing a network of IPs based on co-posting in the same topics and geolocating IPs via IP2Location.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "methodology and data integration description",
+        "confidence": "low",
+        "confidence_score": 0.25658229712887515,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 5,
+            "start_word": 430,
+            "end_word": 491,
+            "section": "IP-based linkage",
+            "note": "The ability to link several posts coming from the same IP address reveals information about the persons posting content and potential identification."
+          },
+          {
+            "page": 16,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "IP assignment rule",
+            "note": "We adopt a simple rule to assign posts to the smallest set of IP addresses that can explain them in a given window of time."
+          },
+          {
+            "page": 13,
+            "start_word": 430,
+            "end_word": 525,
+            "section": "Topic-IP mapping",
+            "note": "Definitions of A(t,u), Ut, na and the notion of IPs generating posts across topic-username combinations."
+          },
+          {
+            "page": 14,
+            "start_word": 430,
+            "end_word": 541,
+            "section": "Joint likelihood across topics",
+            "note": "Introduce the joint likelihood treating each topic as independent and using binary indicators for IP observations across topics."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Geolocation and models",
+            "note": "Geolocation of IP addresses using IP2Location and related data sources to enrich linkage."
+          },
+          {
+            "page": 46,
+            "start_word": 0,
+            "end_word": 167,
+            "section": "IP interaction network",
+            "note": "Figure 24 shows IP-to-IP interactions via edges representing co-posting in the same topics."
+          }
+        ],
+        "quote_snippet": "The ability to link several posts coming from the same IP address reveals additional information about the persons posting content on EJMR and in some cases can allow for the identification of specific individuals.",
+        "table_figure": "Figure 24: Interactions between IP addresses",
+        "data_source": "EJMR post corpus; IP2Location geolocation data; topic-username mappings",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes posts can be explained by a small set of IP addresses within a time window (sparsity rule); ignores repeated posts within a thread; treats topics as independent for the joint likelihood; uses a threshold to select candidate IPs; acknowledges potential collisions (two IPs sharing a username) but is ignored in the current setup.",
+        "related_questions": []
+      },
+      {
+        "id": "C12",
+        "category": "C) Data, sample, and measurement",
+        "question": "What summary statistics are reported for main variables?",
+        "answer": "The summary statistics reported are total counts: 7,098,111 posts, 695,364 topics, and 47,630 distinct IP addresses.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "descriptive_statistics",
+        "confidence": "low",
+        "confidence_score": 0.298656610896862,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Descriptive Statistics",
+            "note": "Counts of posts, topics, and IP addresses reported."
+          }
+        ],
+        "quote_snippet": "In total, our data included 7,098,111 posts from 695,364 topics on EJMR between December 17, 2010 and May 10, 2023. From these data we recover 47,630 distinct IP addresses.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset (econjobrumors.com)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C13",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there descriptive figures/maps that establish baseline patterns?",
+        "answer": "Yes. The paper presents descriptive figures that establish baseline patterns, including Figure 4 for the distribution of minimum p-values across posts, Figure 18 showing the relation between IP poster rank and post count, Figure 23 illustrating linguistic clustering of contributing IPs, and Figure 24 depicting interactions between IP addresses.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "Descriptive figures / visualizations establishing baseline patterns",
+        "confidence": "low",
+        "confidence_score": 0.3013740633910534,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 18,
+            "start_word": 215,
+            "end_word": 230,
+            "section": "Results: p-value based assignment",
+            "note": "Figure 4 plots the cumulative distribution functions of the minimum p-values of the posts for"
+          },
+          {
+            "page": 35,
+            "start_word": 215,
+            "end_word": 230,
+            "section": "Results: IP contribution patterns",
+            "note": "Mentions Figure 18 plotting IP rank vs number of posts."
+          },
+          {
+            "page": 45,
+            "start_word": 0,
+            "end_word": 25,
+            "section": "Linguistic patterns",
+            "note": "Figure 23: Linguistic patterns of EJMR contributing IPs."
+          },
+          {
+            "page": 46,
+            "start_word": 0,
+            "end_word": 15,
+            "section": "IP interaction graph",
+            "note": "Figure 24: Interactions between IP addresses."
+          }
+        ],
+        "quote_snippet": "Figure 4 plots the cumulative distribution functions of the minimum p-values of the posts for",
+        "table_figure": "Figure 4; Figure 18; Figure 23; Figure 24",
+        "data_source": "EJMR posts dataset with IPs and topics",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D01",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the headline main effect estimate (sign and magnitude)?",
+        "answer": "Not available in the provided excerpt.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "not_in_context",
+        "confidence": "low",
+        "confidence_score": 0.3189450225008326,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 39",
+            "start_word": 0,
+            "end_word": 30,
+            "section": "Figure 19 caption",
+            "note": "Source for quote_snippet"
+          }
+        ],
+        "quote_snippet": "Figure 19: Share of toxic posts over time. The figure reports the share of toxic posts on EJMR over time as measured by the ToxiGen Roberta (Hartvigsen et al., 2022).",
+        "table_figure": "Figure 19",
+        "data_source": "EJMR posts dataset (EconJobRumors / EJMR data collection)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D02",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the preferred specification and why is it preferred?",
+        "answer": "The preferred specification is to use the SHA-1 username hashing starting at position 10 (i.e., use the 10th–13th characters of the hash), because EJMR usernames started at position 10 for most of the site's history, and the analysis shows the position-10 p-values are lowest, indicating stronger explanatory power and historical consistency as a baseline.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual evidence from hash-position analysis",
+        "confidence": "low",
+        "confidence_score": 0.21392239192995555,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 17",
+            "start_word": "orange",
+            "end_word": "history.",
+            "section": "Hash position analysis",
+            "note": "The orange line showing the position-10 p-values is toward the bottom of the graph because EJMR usernames started at position-10 for most of the website’s history."
+          }
+        ],
+        "quote_snippet": "The orange line showing the position-10 p-values is toward the bottom of the graph because EJMR usernames started at position-10 for most of the website’s history.",
+        "table_figure": null,
+        "data_source": "EJMR username hashing analysis (sections on hash positions and p-values)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D03",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How economically meaningful is the effect (percent change, elasticity, dollars)?",
+        "answer": "The provided context does not report any economically meaningful effect size (percent change, elasticity, or dollars). It focuses on p-value thresholds and posting counts, with no explicit economic magnitude given.",
+        "question_tokens_estimate": 20,
+        "evidence_type": "No economic magnitude reported; analysis discusses p-values and posting statistics rather than economic effect sizes.",
+        "confidence": "low",
+        "confidence_score": 0.313309586369085,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 120,
+            "section": "3 Results; 3.1 Descriptive Statistics",
+            "note": "Data description and descriptive stats; no economic effect size reported."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 270,
+            "section": "The p-value thresholds above",
+            "note": "Discusses p-value thresholds; not magnitudes such as percent change or dollars."
+          }
+        ],
+        "quote_snippet": "The p-value thresholds above are clearly very small.",
+        "table_figure": null,
+        "data_source": "EJMR data: 7,098,111 posts from 695,364 topics (Dec 17, 2010 – May 10, 2023).",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D04",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the key robustness checks and do results survive them?",
+        "answer": "Key robustness checks include: (1) re-running the IP-inference with three alternative hash starting positions (9, 10, and 11); (2) using bogon IP addresses as a negative control, which yielded zero false assignments; (3) evaluating across three time windows (7, 31, 91 days) with p-value thresholds (p*) to control for multiple testing; and (4) noting that using the incorrect position-11 hashing would yield zero assignments, confirming specificity. Do results survive them? Yes. With the correct hash positions, about 66.1% of posts have minimum p-values below p*, the bogon control yields zero assignments, and the approach remains conservative across windows, supporting the main finding that post-to-IP assignments are robust to these checks.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "Robustness checks and validation of IP-address inference",
+        "confidence": "low",
+        "confidence_score": 0.3044667942715398,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Hash position robustness",
+            "note": "Three different starting hash positions (9, 10, and 11) used; robustness check described."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Multiple testing and thresholds",
+            "note": "P-value thresholds p* and correction for roughly half-a-trillion tests across windows."
+          },
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Bogon controls and assignments",
+            "note": "Bogon IPs yield zero assignments; 6,912,773 posts context; 66.1% below p* under correct hash."
+          }
+        ],
+        "quote_snippet": "We completed the assignment procedure using three different starting positions of the hash (9, 10, and 11).",
+        "table_figure": "Figure 3",
+        "data_source": "EJMR post dataset; IP-to-location mapping; p-value based IP assignment",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D05",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What placebo tests are run and what do they show?",
+        "answer": "They run placebo tests by (1) using an incorrect hash position (position-11) to create a null distribution and set p* thresholds so that zero IP-address assignments would be expected, and (2) checking assignments against bogon (reserved) IP addresses to gauge false positives; in both tests, results show no or near-zero assignments under the placebo (zero bogon assignments, zero assignments under position-11) and many posts have p-values below the threshold under the correct hash, supporting the validity of their IP-attribution method.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "placebo tests; null distribution; bogon IP check",
+        "confidence": "low",
+        "confidence_score": 0.1826480236441317,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Hash-position placebo test",
+            "note": "Describes repeating hash inversion using position-11 to create a placebo scenario and calculating p* so that zero assignments would occur."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "Figure 4 and p*-threshold",
+            "note": "Shows p*-thresholds and explains that for position-11 none of the posts would be assigned to an IP address under the placebo."
+          },
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Bogon IPs as placebo test",
+            "note": "Details testing assignments against bogon addresses; reports zero assignments to bogons, indicating low false positives."
+          }
+        ],
+        "quote_snippet": "We repeat the entire hash inversion as if the EJMR username was drawn from positions 11-14 and then repeat the post-IP assignment.",
+        "table_figure": "Figure 4",
+        "data_source": "EJMR post/IP attribution dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D06",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What falsification outcomes are tested (unaffected outcomes)?",
+        "answer": "They test whether any posts are assigned to bogon (reserved-use) IP addresses; the test outcome reported is zero assignments to bogon IPs.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.24345652086077055,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "21",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "bogon addresses validation",
+            "note": "Mentions bogon addresses and reports zero posts assigned to bogons"
+          }
+        ],
+        "quote_snippet": "Out of the 4,692,946 posts to which we assigned IP addresses, the number of posts our procedure assigned to bogons is zero.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D07",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What heterogeneity results are reported (by income, size, baseline exposure, region)?",
+        "answer": "Heterogeneity is observed regionally and in posting volume by IP address. The vast majority of EJMR posts come from IPs in the United States (≈61.9% of geolocated posts), with substantial shares from other countries. A small minority of IP addresses generate most activity: about 5% of IPs produce over 50% of posts and 20% produce roughly 80%. There is also city-level concentration (e.g., Chicago accounts for many posts). The provided context does not report heterogeneity by income or baseline exposure.",
+        "question_tokens_estimate": 21,
+        "evidence_type": "Geographical distribution and IP-address concentration",
+        "confidence": "low",
+        "confidence_score": 0.3257873180843226,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 27",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.3 Geographical Distribution",
+            "note": "The vast majority of EJMR posts originates from IP addresses located in the United States; 61.9% originate from the United States among geolocated posts."
+          },
+          {
+            "page": "page 27",
+            "start_word": 215,
+            "end_word": 480,
+            "section": "3.3 Geographical Distribution",
+            "note": "Geographic distribution with US dominance and city-level pattern (e.g., Chicago)."
+          },
+          {
+            "page": "page 35",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "IP Address Concentration",
+            "note": "Figure 16 and accompanying text show that a very large fraction of posts come from a small set of IP addresses."
+          },
+          {
+            "page": "page 35",
+            "start_word": 215,
+            "end_word": 333,
+            "section": "IP Address Concentration",
+            "note": "Discussion of concentration across IPs, including the idea that many IPs have few posts while a few account for the majority."
+          }
+        ],
+        "quote_snippet": "The vast majority of EJMR posts originates from IP addresses located in the United States.",
+        "table_figure": "Figure 16; Figure 17",
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D08",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What mechanism tests are performed and what do they imply?",
+        "answer": "They perform Poisson-binomial hypothesis tests to determine whether an IP address (πa) is overrepresented among posts, and use a two-pronged approach: (1) an algorithmic method that assigns each post to the IP with the lowest p-value if that p-value is below a threshold p*, and (2) a direct estimation of πa. To avoid false positives across many tests, they adjust for multiple testing (Hochberg/Benjamini-Hochberg) and determine p* by simulating null hashing with an incorrect hash position so that zero assignments would occur. P-values are computed across time windows (7, 31, 91 days) and across roughly half a trillion tests, leading to very small p* values. They validate the p* thresholds by comparing hash positions (e.g., position-10 vs position-11) and show that the thresholds are designed to minimize erroneous assignments, implying that genuinely overrepresented IPs can be identified with high confidence while maintaining conservatism against false positives.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "statistical methodology",
+        "confidence": "low",
+        "confidence_score": 0.18649835353579608,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Algorithmic approach and Poisson-binomial tests",
+            "note": "Introduces Poisson-binomial tests for πa>0 and the two analysis avenues."
+          },
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "Algorithmic approach and p-value assignment",
+            "note": "Describes the p-value threshold p* and the multiple testing concern."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Determining p* and hash-position",
+            "note": "Explains determining p* by comparing position-10 vs position-11 and how to set thresholds to avoid false positives."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "p-value thresholds and multiple testing",
+            "note": "States thresholds are very small because p* accounts for ~ half a trillion tests; mentions three hash starts."
+          },
+          {
+            "page": 9,
+            "start_word": 215,
+            "end_word": 314,
+            "section": "Hash position and shift",
+            "note": "Notes the 'shifted' left hash position and the WayBack Machine reference."
+          }
+        ],
+        "quote_snippet": "First, we can consider hypothesis tests of whether πa > 0, using a Poisson-binomial test, and adjusting appropriately for multiple tests.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D09",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How sensitive are results to alternative samples/bandwidths/controls?",
+        "answer": "Results show sensitivity to bandwidth/window choice and hash-based sampling. Robustness checks using three time windows (7, 31, and 91 days) and three hash starting positions (9, 10, and 11) reveal that correctly calibrated windows and hash positions matter: with the incorrect position (hash position-11) none of the posts are assigned to an IP address, whereas with the correct hash (position-9/10) a large share of posts have p-values below the threshold. The thresholds are extremely small (to control a huge number of tests), and larger windows raise the risk of “stealing” posts by highly active IPs, though bogon addresses produce zero assignments. Overall, results are robust across the tested bandwidths when hashing is correct, but are sensitive to the hash choice and especially to window size that can inflate certain errors if not properly accounted for.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "robustness_checks",
+        "confidence": "low",
+        "confidence_score": 0.3296107987525035,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Hash robustness / p* calibration",
+            "note": "Describes using different hash positions (9, 10, 11) to determine p* and calibrate assignments."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods / Hash-based attribution",
+            "note": "Explains post assignment, 7-day window, and the shift to 31 and 91-day windows; introduces position-11 vs position-10/9 comparison."
+          },
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Robustness / Validation",
+            "note": "Discusses potential errors (bogons, high-posting IPs stealing posts) and sensitivity to window size."
+          }
+        ],
+        "quote_snippet": "We complete the assignment procedure using three different starting positions of the hash (9, 10, and 11).",
+        "table_figure": null,
+        "data_source": "EJMR dataset: 7,098,111 posts from 695,364 topics; 47,630 IPs recovered.",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes the noise model via SHA-1 hash shifting; calibrates p* using multiple hash positions and windows (7, 31, 91 days) to control for multiple testing and false assignments.",
+        "related_questions": []
+      },
+      {
+        "id": "D10",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the main takeaways in the conclusion (bullet summary)?",
+        "answer": "Conclusion not included in the provided excerpts.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "No explicit conclusion section is present in the supplied context.",
+        "confidence": "low",
+        "confidence_score": 0.22669746048787967,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 215,
+            "end_word": 480,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 12,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 12,
+            "start_word": 215,
+            "end_word": 489,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": null
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "references",
+            "note": null
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "references",
+            "note": null
+          }
+        ],
+        "quote_snippet": "The IP enumeration task is “embarrassingly parallel” because topics can be enumerated independently.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E01",
+        "category": "E) Citations and related literature",
+        "question": "What are the most important prior papers cited and why are they central here?",
+        "answer": "The most important prior papers cited are: (1) Guo et al. 2009, which empirically shows that online contributions are highly concentrated (20% of users produce 80% of content), providing the sparsity rationale for attributing posts to a small set of IP addresses; (2) Guo et al. 2008/2009, which document heavy-tailed patterns in internet/media access, supporting the idea that a few actors dominate activity; (3) Biscarri et al. 2018, which provides a simple and fast method for computing the Poisson binomial distribution, enabling the p-value based IP assignment and the thresholding approach; (4) Clauset et al. 2009, which formalizes power-law distributions in empirical data and offers a theoretical backdrop for the observed concentration of activity; and (5) Tang & Tang 2023 (The Poisson Binomial Distribution—Old & New), which contextualizes recent treatments of the Poisson binomial distribution relevant to the statistical framing used here.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "summary of key prior papers and why central",
+        "confidence": "low",
+        "confidence_score": 0.34412530348254927,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": "Guo et al. 2009: 20% of users produce 80% of content; motivates sparsity in IP-address attribution."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": null,
+            "note": "Poisson binomial distribution and FFT-based PMF approximation; core to p-value based IP assignment; Biscarri et al. 2018."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Clauset, Shalizi, Newman 2009: power-law distributions; background for heavy-tailed activity patterns."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Guo et al. 2008/2009 references; distribution of internet/media access patterns; supports concentration of activity."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Tang & Tang 2023: The Poisson Binomial Distribution—Old & New; contextualizes distribution treatment."
+          }
+        ],
+        "quote_snippet": "20% of users often produce 80% of the content (Guo et al., 2009).",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Relies on a sparsity assumption: a small subset of IP addresses explains most posts within a time window; uses a threshold p* to distinguish overrepresented IPs; operates on day-by-day windows (3-day before/after).",
+        "related_questions": []
+      },
+      {
+        "id": "E02",
+        "category": "E) Citations and related literature",
+        "question": "Which papers does this work most directly build on or extend?",
+        "answer": "The work most directly builds on the empirical finding that online contributions are highly concentrated, specifically the 20% of users generating 80% of content (Guo et al., 2009). It extends this sparsity idea into an IP-address attribution rule that assigns posts to the smallest set of IPs that can explain them within a time window.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual evidence referencing Guo et al. (2009) and sparsity argument",
+        "confidence": "low",
+        "confidence_score": 0.33696290816760244,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "IP attribution sparsity argument",
+            "note": "Cites Guo et al. 2009; mentions 20% of users produce 80% of content"
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Overview of windowing and IP-address assignment approach",
+            "note": "Describes the sparsity-based approach to assign posts to IPs within a time window"
+          }
+        ],
+        "quote_snippet": "20% of users often produce 80% of the content (Guo et al., 2009).",
+        "table_figure": null,
+        "data_source": "EJMR posts and IP-address data",
+        "assumption_flag": true,
+        "assumption_notes": "Relies on sparsity/concentration of activity (the 20/80 rule) observed in Guo et al. 2009; also assumes a sparsity-based IP attribution rule within time windows.",
+        "related_questions": []
+      },
+      {
+        "id": "E03",
+        "category": "E) Citations and related literature",
+        "question": "Which papers are used as benchmarks or comparisons in the results?",
+        "answer": "DistilBERT (Sanh et al., 2019) for sentiment; a BERT model for misogyny (Attanasio et al., 2022); and ToxiGen Roberta (Hartvigsen et al., 2022) are used as benchmark/comparison models in the results.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "model benchmarks",
+        "confidence": "low",
+        "confidence_score": 0.3412270794380687,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods - Model Benchmarks",
+            "note": "DistilBERT (Sanh et al., 2019); misogyny detector (Attanasio et al., 2022); ToxiGen Roberta (Hartvigsen et al., 2022)"
+          }
+        ],
+        "quote_snippet": "For sentiment detection, we selected the default Huggingface sentiment model. This is a checkpoint of DistilBERT (Sanh et al., 2019) fine-tuned for sentiment detection (Hugging Face, 2023) on the Stanford Sentiment Treebank (Socher et al., 2013). We selected a similar fine-tuned BERT model for detecting misogyny (Attanasio et al., 2022). For toxicity we selected ToxiGen Roberta (Hartvigsen et al., 2022).",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E04",
+        "category": "E) Citations and related literature",
+        "question": "What data sources or datasets are cited and how are they used?",
+        "answer": "The study cites EJMR posts as the primary dataset, uses IP2Location for IP geolocation, and relies on several established datasets/models for text analysis: the Stanford Sentiment Treebank (for sentiment with DistilBERT), a misogyny-detection model (Attanasio et al., 2022), and the ToxiGen dataset for toxicity detection; it also re-creates word-count measures from Wu (2020) as a baseline.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "primary-source",
+        "confidence": "medium",
+        "confidence_score": 0.351239333229774,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.6 Geolocation of IP Addresses",
+            "note": "Cites use of IP2Location geolocation data for IP metadata."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Sentiment detection data sources",
+            "note": "DistilBERT fine-tuned for sentiment detection on the Stanford Sentiment Treebank."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "References",
+            "note": "Cites ToxiGen dataset for toxicity detection and related NLP models (DistilBERT, RoBERTa) referenced for analysis."
+          }
+        ],
+        "quote_snippet": "We use the commercial IP2Location database to obtain country, city, latitude-longitude, zip code, ISP, and domain information for all the IP addresses we identify.",
+        "table_figure": null,
+        "data_source": "EJMR posts (primary dataset); IP2Location geolocation data; Stanford Sentiment Treebank; ToxiGen dataset; misogyny-detection model (Attanasio et al., 2022); Wu (2020) word-count measures.",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E05",
+        "category": "E) Citations and related literature",
+        "question": "What methodological or econometric references are cited (e.g., DiD, IV, RDD methods)?",
+        "answer": "There are no explicit econometric methods such as DiD, IV, or RDD cited in the provided context. The methodological references listed are primarily statistical/bibliographic in nature (e.g., false discovery rate control and Poisson binomial distribution), not standard econometric identification strategies.",
+        "question_tokens_estimate": 21,
+        "evidence_type": "bibliography / references",
+        "confidence": "medium",
+        "confidence_score": 0.4038702664404044,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 47",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Benjamini, Hochberg (1995) Controlling the false discovery rate: a practical and powerful approach to multiple testing"
+          },
+          {
+            "page": "page 47",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Biscarri et al. (2018) A simple and fast method for computing the Poisson binomial distribution function"
+          },
+          {
+            "page": "page 47",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Clauset, Shalizi, and Newman (2009) Power-law distributions in empirical data"
+          },
+          {
+            "page": "page 49",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "section references",
+            "note": "Tang & Tang (2023) The Poisson Binomial Distribution—Old & New"
+          }
+        ],
+        "quote_snippet": "Controlling the false discovery rate: a practical and powerful approach to multiple testing.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E06",
+        "category": "E) Citations and related literature",
+        "question": "Are there any seminal or classic references the paper positions itself against?",
+        "answer": "No explicit stance against seminal or classic references is evident in the provided text. The paper cites foundational works in its references (e.g., Benjamini & Hochberg 1995; Clauset et al. 2009; Cormen et al. 2022; Nakamoto 2008) but does not position itself in opposition to them.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "textual_analysis of references",
+        "confidence": "low",
+        "confidence_score": 0.31589118723139115,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 10,
+            "section": "References",
+            "note": "Benjamini & Hochberg (1995) on false discovery rate"
+          },
+          {
+            "page": 47,
+            "start_word": 60,
+            "end_word": 70,
+            "section": "References",
+            "note": "Cormen et al. Introduction to Algorithms (2022)"
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 8,
+            "section": "References",
+            "note": "Nakamoto (2008) Bitcoin: A Peer-to-Peer Electronic Cash System"
+          },
+          {
+            "page": 47,
+            "start_word": 15,
+            "end_word": 25,
+            "section": "References",
+            "note": "Clauset, Shalizi, Newman (2009) Power-law distributions in empirical data"
+          }
+        ],
+        "quote_snippet": "Benjamini, Yoav and Yosef Hochberg, “Controlling the false discovery rate: a practical and powerful approach to multiple testing,” Journal of the Royal statistical society: series B (Methodological), 1995, 57 (1), 289–300.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E07",
+        "category": "E) Citations and related literature",
+        "question": "Are there citations to code, data repositories, or appendices that are essential to the claims?",
+        "answer": "Yes. The claims rely on citations to code/data repositories: Mochimo GitHub Repository (code), IP2Location geolocation data (IP2Location database), and the ToxiGen dataset (dataset for adversarial hate speech).",
+        "question_tokens_estimate": 23,
+        "evidence_type": "code and data repository citations",
+        "confidence": "low",
+        "confidence_score": 0.33819631058055566,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 23",
+            "start_word": 0,
+            "end_word": 30,
+            "section": "2.6 Geolocation of IP Addresses",
+            "note": "IP geolocation data source (IP2Location)."
+          },
+          {
+            "page": "page 48",
+            "start_word": 0,
+            "end_word": 20,
+            "section": "ToxiGen dataset citation",
+            "note": "ToxiGen dataset citation."
+          },
+          {
+            "page": "page 49",
+            "start_word": 0,
+            "end_word": 20,
+            "section": "Mochimo GitHub Repository",
+            "note": "Code repository cited."
+          }
+        ],
+        "quote_snippet": "We use the commercial IP2Location database to obtain country, city, latitude-longitude, zip code, ISP, and domain information for all the IP addresses we identify.",
+        "table_figure": null,
+        "data_source": "IP2Location database; Mochimo GitHub Repository; ToxiGen dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E08",
+        "category": "E) Citations and related literature",
+        "question": "What gaps in the literature do the authors say these citations leave open?",
+        "answer": "They argue that a precise post-to-IP assignment is not resolved by current methods and that a proper hierarchical Bayesian model of how humans acquire/release IPs over time is under-specified and beyond their abilities.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "textual evidence from section 2.4",
+        "confidence": "low",
+        "confidence_score": 0.31561510672346993,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "states that a precise assignment to a particular IP is not provided and a hierarchical Bayesian approach is likely under-specified and beyond their abilities"
+          }
+        ],
+        "quote_snippet": "Such a model is likely under-specified and, for the moment, beyond our abilities.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F01",
+        "category": "F) Replication and transparency",
+        "question": "Are replication files or code provided? If so, where?",
+        "answer": "No replication files or code are provided in the excerpt. The text mentions reproducing work on AWS hardware and performing a hash inversion, but it does not indicate any shared replication files or source code or where they would be provided.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "No replication files or code are mentioned in the provided context; only a note about reproducing work on AWS hardware and the hash inversion process.",
+        "confidence": "low",
+        "confidence_score": 0.23034209957208043,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 12,
+            "start_word": 430,
+            "end_word": 510,
+            "section": "hash inversion/reproduction (Methods)",
+            "note": "Text describes reproducing the hash inversion on AWS hardware; no mention of replication files or code sharing."
+          }
+        ],
+        "quote_snippet": "reproduced for roughly $1,000 on an AWS P4d instance at the hourly on-demand price although, as we describe later, we repeated this hash inversion in triplicate for the purpose of our statistical analysis.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F02",
+        "category": "F) Replication and transparency",
+        "question": "Is there a pre-analysis plan or registered trial? Provide details if mentioned.",
+        "answer": "No pre-analysis plan or registered trial is mentioned. The only related detail is that the research was IRB-exempt (Yale University IRB, protocol 2000034072).",
+        "question_tokens_estimate": 19,
+        "evidence_type": "IRB exemption notice; no pre-analysis plan or trial registration mentioned",
+        "confidence": "low",
+        "confidence_score": 0.26417253872144386,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 18,
+            "section": "Abstract",
+            "note": "IRB exemption; protocol 2000034072"
+          }
+        ],
+        "quote_snippet": "The research described in this manuscript was determined to be exempt by the Yale University IRB, protocol 2000034072.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F03",
+        "category": "F) Replication and transparency",
+        "question": "Are data access constraints disclosed (restricted access, proprietary data, NDAs)?",
+        "answer": "No. Data access constraints (restricted access, proprietary data, NDAs) are not disclosed in the provided text.",
+        "question_tokens_estimate": 20,
+        "evidence_type": "absence_of_constraints_in_text",
+        "confidence": "low",
+        "confidence_score": 0.29617834512040275,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods",
+            "note": "Details on data handling and IP address recovery; no data access constraints mentioned."
+          },
+          {
+            "page": 4,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods",
+            "note": "Discussion of data sources and processing; no data access constraints mentioned."
+          }
+        ],
+        "quote_snippet": "To recover IP addresses from the observed usernames on EJMR, we employ a multi-step procedure.",
+        "table_figure": null,
+        "data_source": "EJMR posts; IP geolocation data via IP2Location.",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F04",
+        "category": "F) Replication and transparency",
+        "question": "Are key steps in data cleaning and construction documented?",
+        "answer": "Yes—key data cleaning and construction steps are documented, including pre-processing and deobfuscation of posts, IP geolocation, and time-stamp construction via RSS/Wayback with interpolation.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "methodology/documentation of data cleaning and construction",
+        "confidence": "low",
+        "confidence_score": 0.246720012899164,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 22,
+            "start_word": "2.5",
+            "end_word": "pre- processing.",
+            "section": "2.5 Linguistic Analysis",
+            "note": "Mentions pre-processing as part of cleaning."
+          },
+          {
+            "page": 22,
+            "start_word": "to deobfuscate such speech",
+            "end_word": "speech.",
+            "section": "2.5 Linguistic Analysis",
+            "note": "Describes deobfuscation steps to clean text data."
+          },
+          {
+            "page": 22,
+            "start_word": "2.6 Geolocation of IP Addresses",
+            "end_word": "addresses.",
+            "section": "2.6 Geolocation of IP Addresses",
+            "note": "IP geolocation and data enrichment."
+          },
+          {
+            "page": 22,
+            "start_word": "2.7 Time Stamps",
+            "end_word": "Time Stamps",
+            "section": "2.7 Time Stamps",
+            "note": "Time-stamp construction via RSS/Wayback data and interpolation."
+          }
+        ],
+        "quote_snippet": "We downloaded the RSS feed and the Wayback Machine for all the 642,247 topics giving us exact time stamps for a total of 3,689,727 posts.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset (IP addresses, timestamps) derived from EJMR site data, RSS feed, and Wayback Machine.",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F05",
+        "category": "F) Replication and transparency",
+        "question": "Are robustness and sensitivity analyses fully reported or partially omitted?",
+        "answer": "Not specified in the provided context.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "not_discussed",
+        "confidence": "low",
+        "confidence_score": 0.26471687715168857,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.5–2.6",
+            "note": "No explicit mention of robustness or sensitivity analyses in these sections."
+          },
+          {
+            "page": 38,
+            "start_word": 215,
+            "end_word": 424,
+            "section": "3.5.2 Toxicity",
+            "note": "Contains description of toxicity measurement methods but no robustness/sensitivity analyses discussed."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 30,
+            "section": "3.5.2 Toxicity figure caption",
+            "note": "No robustness/sensitivity analyses mentioned in caption text."
+          }
+        ],
+        "quote_snippet": "As described in Section 2.5 we deobfuscate the content and then used a number of transformer- based machine learning models to classify posts by sentiment, misogyny, and toxicity.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "G01",
+        "category": "G) External validity and generalization",
+        "question": "What populations or settings are most likely to generalize from this study?",
+        "answer": "Economists and academic-affiliated individuals who participate in anonymous online forums, particularly other EJMR-like platforms with institutional IP blocks; populations include university researchers (including top US universities), government agencies, and companies employing economists.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "Descriptive evidence about origins of posts and forum characteristics used to infer generalizability to similar academic-online settings.",
+        "confidence": "low",
+        "confidence_score": 0.26306287936902384,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 1,
+            "start_word": 0,
+            "end_word": 50,
+            "section": "Introduction/Abstract",
+            "note": "Defines EJMR as a forum for economists and discusses anonymity."
+          },
+          {
+            "page": 3,
+            "start_word": 215,
+            "end_word": 480,
+            "section": "Results/Geography of Posts",
+            "note": "States that over 10% of posts originate from universities, including all top-ranked US universities."
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Geolocation of IP Addresses",
+            "note": "Discusses IP-based attribution and relevance of university IP blocks for geolocation."
+          }
+        ],
+        "quote_snippet": "Over 10% of posts originate from universities including all top-ranked universities in the United States.",
+        "table_figure": null,
+        "data_source": "Public EJMR postings and IP data described in the paper.",
+        "assumption_flag": true,
+        "assumption_notes": "Generalization to other anonymous academic forums with institutional IP blocks; not explicitly stated in the text.",
+        "related_questions": []
+      },
+      {
+        "id": "G02",
+        "category": "G) External validity and generalization",
+        "question": "What populations or settings are least likely to generalize?",
+        "answer": "Results are least likely to generalize across universities and across forum groups (Off-Topic/Non-Econ vs Economics/Job Market Rumors), due to considerable heterogeneity in toxic-post shares by university and by forum type.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual_evidence",
+        "confidence": "low",
+        "confidence_score": 0.2520096297863376,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 41",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Heterogeneity of toxic-post share across universities suggests limited generalizability across university settings."
+          },
+          {
+            "page": "page 41",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Toxicity varies by forum group; Off-Topic/Non-Econ forums have higher toxicity than Economics or Job Market Rumors."
+          }
+        ],
+        "quote_snippet": "There is also considerable heterogeneity of the share of toxic posts across universities.",
+        "table_figure": null,
+        "data_source": "EJMR posts/IPs dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "G03",
+        "category": "G) External validity and generalization",
+        "question": "Do the authors discuss boundary conditions or scope limits?",
+        "answer": "Yes. The authors explicitly discuss boundary/scope limits in their modeling choices, such as using a practical model instead of a full hierarchical Bayesian model and restricting analysis to defined time windows.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual_evidence",
+        "confidence": "low",
+        "confidence_score": 0.2535245234416167,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "16",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Authors state that a full Bayesian model is likely under-specified and beyond their abilities, and they adopt a practical model instead."
+          },
+          {
+            "page": "16",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "They describe windowing the data (7-day, plus 31- and 91-day windows) to define the scope of analysis."
+          },
+          {
+            "page": "17",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "They outline a rule (lowest p-value below threshold p*) and thus delimit the inference to a controlled decision procedure."
+          },
+          {
+            "page": "13",
+            "start_word": 215,
+            "end_word": 489,
+            "section": "",
+            "note": "Notes that for a single topic, usernames exhaustively enumerate the IP space, indicating a bounded scope within topics."
+          }
+        ],
+        "quote_snippet": "In its stead, we present a model that is practical in the sense of being both intuitive and tractable for us.",
+        "table_figure": null,
+        "data_source": "EJMR dataset (Economics Job Market Rumors site)",
+        "assumption_flag": true,
+        "assumption_notes": "Acknowledgement that a full hierarchical Bayesian model is beyond their abilities; use of a practical, threshold-based, windowed approach to define scope.",
+        "related_questions": []
+      },
+      {
+        "id": "G04",
+        "category": "G) External validity and generalization",
+        "question": "How might the results change in different time periods or markets?",
+        "answer": "Across different time periods and markets, the study’s results could change in several ways. First, temporal dynamics matter: posting frequency and forum composition evolved from 2010–2014 and then shifted notably during the COVID-19 period, which was associated with a large rise in activity; such changes affect the power to detect IP overrepresentation and the observed p-value distributions. Second, the hash-position methodology and noise modeling can alter results if hashing details shift or differ by period or market (for example, an infamous 2013 shift in username hashing changed which position is used). Third, geographic and market structure matter: the geographic distribution by country and time-of-day patterns vary (time-of-day distributions by country), and IP retention or university-IP patterns differ across markets, influencing geolocation accuracy and the persistence of IP addresses. Fourth, the analysis depends on time-window choices (7-, 31-, 91-day windows) and the thresholds tied to those windows; markets with irregular posting rhythms could yield different minimum p-values and detection power. Finally, content characteristics such as the share of toxic posts can vary over time and across markets, potentially altering observed relationships. In short, stronger signals are more likely in periods with high activity and stable posting patterns, while shifts in hashing, geolocation, and market structure can modulate both the magnitude and significance of the inferred effects.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual analysis of provided context",
+        "confidence": "low",
+        "confidence_score": 0.3324113855534949,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3 Results",
+            "note": "Overview of results, Descriptive Statistics and Time Patterns, including the COVID-19 impact."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "2.6 Geolocation of IP Addresses & 2.7 Time Stamps",
+            "note": "Geolocation methods and timestamp handling; IP/geolocation accuracy and time-stamp issues."
+          },
+          {
+            "page": 23,
+            "start_word": 215,
+            "end_word": 446,
+            "section": "2.7 Time Stamps",
+            "note": "Details on time stamps and their limitations."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "p*-value thresholds",
+            "note": "Description of p-value thresholds and the hash-position noise modeling used to detect IP overrepresentation."
+          },
+          {
+            "page": 19,
+            "start_word": 0,
+            "end_word": 250,
+            "section": "Figure 3 & hashing",
+            "note": "Discussion of hash positions over time and the thresholds (e.g., none of the posts would be visible under position-11) and the time-based dynamics."
+          },
+          {
+            "page": 29,
+            "start_word": 0,
+            "end_word": 88,
+            "section": "Figures 9 & 10",
+            "note": "Time-of-day distribution by country; cross-market temporal patterns."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 30,
+            "section": "Figure 19",
+            "note": "Share of toxic posts over time, indicating content shifts across periods."
+          },
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 133,
+            "section": "Time Patterns",
+            "note": "Distributions of posts by grouped forums over time, showing period-specific changes in activity."
+          }
+        ],
+        "quote_snippet": "the posting intensity jumps to around 70,000 posts per month in March 2020 with the beginning of the COVID-19 pandemic",
+        "table_figure": "Figure 9 and Figure 10",
+        "data_source": "EJMR dataset (econjobrumors.com) spanning 2010–2023, with IP, geolocation, and timestamp data",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H01",
+        "category": "H) Measurement validity",
+        "question": "Are key variables measured directly or via proxies?",
+        "answer": "Key variables are measured via proxies, not directly observed. The study infers IP addresses by hashing username substrings and assigning posts to the IP with the lowest p-value within time windows, and geolocates these inferred IPs; exact post times are reconstructed from RSS data and post IDs, not directly observed times.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "proxy-based inference / measurement",
+        "confidence": "low",
+        "confidence_score": 0.2973773480123968,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "16",
+            "start_word": "To",
+            "end_word": "zero",
+            "section": "Assignment of Posts to IP Addresses",
+            "note": "IP addresses are treated as explanatory proxies rather than directly observed; the procedure reduces incorrect assignments to zero."
+          },
+          {
+            "page": "17",
+            "start_word": "For",
+            "end_word": "p-value,",
+            "section": "Assignment of Posts to IP Addresses",
+            "note": "Posts are assigned to the IP with the lowest p-value under a threshold, illustrating IPs are inferred."
+          },
+          {
+            "page": "23",
+            "start_word": "Geolocation",
+            "end_word": "identify.",
+            "section": "Geolocation of IP Addresses",
+            "note": "IP geolocation is performed on the identified (inferred) IPs."
+          },
+          {
+            "page": "3",
+            "start_word": "compute",
+            "end_word": "million",
+            "section": "IP enumeration",
+            "note": "Enumeration of IP combinations to explain posts indicates IPs are inferred proxies, not directly observed."
+          }
+        ],
+        "quote_snippet": "For each post on the target day, we assign the post to the IP address with the lowest p-value, but only if that p-value is below some threshold p∗ , which is determined in a manner we describe shortly.",
+        "table_figure": null,
+        "data_source": "SHA-1 hash-based IP inference; IP2Location geolocation; EJMR RSS feed and post IDs for timestamps",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes the true IP lies within a ~65k IP candidate set (position-10 set) per post and uses a threshold p∗ to filter; IPs are treated as explanatory proxies rather than directly observed.",
+        "related_questions": []
+      },
+      {
+        "id": "H02",
+        "category": "H) Measurement validity",
+        "question": "What measurement error risks are acknowledged or likely?",
+        "answer": "Acknowledged measurement error risks include misassignment of posts to IPs due to noise in the SHA-1 based username, potential 'stealing' of posts by highly active IPs, and additional risks from multiple hypothesis testing and window-size effects.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.29795645092600315,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "IP address assignment error - bogon checks",
+            "note": " discusses bogon addresses and that assignments to bogons were zero, illustrating a measured error context"
+          },
+          {
+            "page": 21,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Estimator error due to high-posting IP stealing",
+            "note": " introduces the significant but estimable error where high-activity IPs may steal posts from the true posting IP"
+          },
+          {
+            "page": 21,
+            "start_word": 430,
+            "end_word": 558,
+            "section": "Worst-case window size increase error",
+            "note": " explains that error is maximized with larger windows and provides a quantitative example (~0.2%)"
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "p-value thresholds and misassignment under incorrect hash",
+            "note": " describes thresholds p* and the scenario where incorrect hashing would yield zero assignments, illustrating a misassignment risk context"
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Multiple testing risk and overall small p-values",
+            "note": " notes the enormous number of tests and the resulting small p-value thresholds, implicating potential error rates"
+          }
+        ],
+        "quote_snippet": "This error arises from high-posting IP addresses “stealing” posts from the true posting IP address.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H03",
+        "category": "H) Measurement validity",
+        "question": "Are there validation checks for key measures?",
+        "answer": "Yes. They validate key measures by verifying SHA-1 uniformity with two experiments (chi-squared test cannot reject uniformity), calibrating p-value thresholds (p*) to control false post-IP assignments across 7-, 31-, and 91-day windows, modeling noise by shifting hash positions, comparing incorrect vs. correct hash positions (zero vs. nonzero assignments), and illustrating p-value distributions with figures (Figure 3 and Figure 4), while noting an expected misassignment rate of less than one.",
+        "question_tokens_estimate": 11,
+        "evidence_type": "experimental/methodological validation",
+        "confidence": "low",
+        "confidence_score": 0.2503375983360906,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 11,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Uniformity Validation",
+            "note": "SHA-1 uniformity tested; two experiments; chi-squared test cannot reject uniformity."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "p* Threshold Determination",
+            "note": "Discussion of determining p* by comparing position-10 vs position-11 hashing sets to calibrate thresholds."
+          },
+          {
+            "page": 17,
+            "start_word": 430,
+            "end_word": 542,
+            "section": "p* Threshold Values",
+            "note": "p-value thresholds found and applied (e.g., 1.37×10^-10, 2.51×10^-11, 1.39×10^-11) for correct hash positions."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Noise Modeling & Testing",
+            "note": "Large-scale hypothesis testing; misassignment rate expected to be less than one."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "Figure Illustrations",
+            "note": "Figure 4 illustrates p-value distributions and the p* threshold; mentions assignments for position-11 vs correct hash positions."
+          }
+        ],
+        "quote_snippet": "To verify that the SHA-1 hash is also uniform over these bytes, we conducted two experiments. In both cases we find the SHA-1’s uniformity to be preserved.",
+        "table_figure": "Figure 3; Figure 4",
+        "data_source": "EJMR posts dataset and SHA-1 hash analysis of EJMR usernames and IP mappings",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H04",
+        "category": "H) Measurement validity",
+        "question": "Do the authors discuss construct validity for core outcomes?",
+        "answer": "No.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "absence of discussion of construct validity for core outcomes in the provided excerpts",
+        "confidence": "low",
+        "confidence_score": 0.20351096257056076,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods (p-values, Poisson binomial, FFT)",
+            "note": "Discusses statistical modeling and thresholding, not construct validity for core outcomes."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Hash-based IP analysis",
+            "note": "Describes threshold determination and hashing shifts; no construct validity discussion."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Statistical thresholds and windows",
+            "note": "Details p* thresholds and multiple testing; no construct validity discussion."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Models and geolocation",
+            "note": "Mentions sentiment, misogyny, toxicity models and IP geolocation; no construct validity discussion."
+          },
+          {
+            "page": 38,
+            "start_word": 215,
+            "end_word": 424,
+            "section": "Results: Toxicity and posts over time",
+            "note": "Toxicity measure discussion; no construct validity discussion."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 30,
+            "section": "Figure 19 caption",
+            "note": "Caption for toxicity figure; no construct validity discussion."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "References",
+            "note": "References section; no construct validity discussion."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "References",
+            "note": "References section; no construct validity discussion."
+          }
+        ],
+        "quote_snippet": "\"Having attempted to assign all the posts on the target day, we move to the next day and repeat the procedure.\"",
+        "table_figure": "Figure 3",
+        "data_source": "EJMR posts; SHA-1 hash position sets; IP2Location geolocation data; sentiment/misogyny/toxicity models",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I01",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What policy counterfactuals are considered or implied?",
+        "answer": "There are no policy counterfactuals discussed or implied in the provided context.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "content-analysis",
+        "confidence": "low",
+        "confidence_score": 0.3008359999259061,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 40,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Describes windowing data to reduce incorrect IP-address assignments to zero."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 60,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Details p-value calculation for IP addresses, not policy counterfactuals."
+          },
+          {
+            "page": 21,
+            "start_word": 0,
+            "end_word": 60,
+            "section": "2.4 Assignment of Posts to IP Addresses",
+            "note": "Uses bogon addresses as negative controls; no policy discussion."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 60,
+            "section": "References",
+            "note": "Includes policy-related literature (e.g., tenure policies) in references, not analyzed here."
+          }
+        ],
+        "quote_snippet": "To solve this issue, we window the data in the different time intervals.",
+        "table_figure": null,
+        "data_source": "EJMR IP-address assignment methodology (this document)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I02",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What are the main welfare tradeoffs or distributional impacts discussed?",
+        "answer": "The main welfare tradeoffs are that EJMR provides valuable, up-to-date information about the economics job market and professional news, which can aid awareness and decision-making, but it also harbors toxic, discriminatory content that reinforces existing gender- and race-based inequalities in the profession. Toxicity is uneven: a small subset of IP addresses accounts for much of the toxic content, and posts from university IPs are, on average, less toxic than those from non-university IPs, though there is substantial heterogeneity across universities. Additionally, the ability to de-anonymize IPs from usernames raises privacy concerns that could deter participation. Overall, the platform can improve information access for some groups while simultaneously exacerbating discrimination and unequal participation for others, shaping distributional welfare in the economics field.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "qualitative and quantitative findings from EJMR study",
+        "confidence": "low",
+        "confidence_score": 0.27151891231303255,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 2,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Introduction",
+            "note": "EJMR described as a popular platform with harassment risks and misinformation concerns."
+          },
+          {
+            "page": 2,
+            "start_word": 215,
+            "end_word": 432,
+            "section": "Introduction",
+            "note": "EJMR perpetuates and amplifies gender- and race-based discrimination in the economics profession."
+          },
+          {
+            "page": 3,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods/Privacy",
+            "note": "Describes IP de-anonymization approach and privacy risks."
+          },
+          {
+            "page": 38,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5 Content of EJMR Posts",
+            "note": "3.5.1 Mentions of Universities; self-mentions; distribution patterns."
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Toxic posts concentrated among a small set of IPs; university IPs less toxic than non-university IPs; heterogeneity across universities."
+          }
+        ],
+        "quote_snippet": "Beyond its informational role, EJMR is also “a breeding ground for personal attacks of an abusive kind” and features widespread sexist speech.",
+        "table_figure": null,
+        "data_source": "EJMR study described in provided context",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I03",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "Are cost-benefit or incidence analyses provided?",
+        "answer": "Yes. The document provides incidence analyses of toxicity distribution across IP addresses and institutions (e.g., less than 5% of IP addresses generate over 60% of toxic posts; toxicity varies by forum and university), but it does not present a cost-benefit analysis.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "Incidence analysis of toxicity distribution across IPs and institutions",
+        "confidence": "low",
+        "confidence_score": 0.22625284988241143,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Figure 17 shows that less than 5% of IP addresses generate more than 60% of toxic posts."
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Figure 20 shows the share of toxic posts by forum groups."
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Figure 21 lists the share of toxic posts for each of the universities."
+          },
+          {
+            "page": 41,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "3.5.3 Network Relationships",
+            "note": "Figure 22 shows that posts from university IP addresses are less likely to be toxic."
+          }
+        ],
+        "quote_snippet": "Figure 17 shows that less than 5% of IP addresses generate more than 60% of toxic posts.",
+        "table_figure": "Figure 17; Figure 20; Figure 21; Figure 22",
+        "data_source": "EJMR posts dataset with IP attribution",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I04",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What policy recommendations are stated or implied?",
+        "answer": "Policy recommendation: urge the American Economic Association to create a moderated, well-functioning EJMR site to curb toxic content.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "policy_recommendation",
+        "confidence": "low",
+        "confidence_score": 0.2704572396917686,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 2,
+            "start_word": 215,
+            "end_word": 432,
+            "section": "Not specified",
+            "note": "Explicit call to create a moderated, well-functioning site."
+          }
+        ],
+        "quote_snippet": "urged the American Economic Association to create a moderated, well-functioning site",
+        "table_figure": null,
+        "data_source": "Provided document, page 2",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J01",
+        "category": "J) Data quality and integrity",
+        "question": "What missingness or attrition patterns are reported?",
+        "answer": "They report that missingness/attrition is addressed by using three time windows (7, 31, and 91 days) to capture IPs that post with varying frequency; they acknowledge a potential error where highly active IPs can steal posts from the true posting IP, and they estimate that the number of IP addresses that never posted but are mistakenly assigned to a post is less than one; they also note that exact post times are unavailable, so timestamps are inferred via an RSS feed and post IDs.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.31509685110115987,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 21,
+            "start_word": 215,
+            "end_word": 245,
+            "section": "Assignment error due to IP-post assignments",
+            "note": "Describes significant error where high-posting IPs can steal posts from the true posting IP."
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 25,
+            "section": "Low false positive rate for never-posting IPs",
+            "note": "States the number of IPs that never posted but are assigned to a post is, in expectation, less than one."
+          },
+          {
+            "page": 17,
+            "start_word": 130,
+            "end_word": 170,
+            "section": "Time-window based missingness/attrition handling",
+            "note": "Notes three time windows (7, 31, 91 days) to capture different posting patterns."
+          },
+          {
+            "page": 23,
+            "start_word": 230,
+            "end_word": 260,
+            "section": "Time stamps and data availability",
+            "note": "Explains lack of exact post times and use of RSS feed / post IDs to interpolate times."
+          }
+        ],
+        "quote_snippet": "The number of IP addresses that never posted to EJMR but that we mistakenly assign to a post is, in expectation, less than one.",
+        "table_figure": null,
+        "data_source": "EJMR posting data; IP-address assignments; time-window analysis",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J02",
+        "category": "J) Data quality and integrity",
+        "question": "How are outliers handled (winsorization, trimming, exclusions)?",
+        "answer": "The provided context does not describe any explicit handling of outliers via winsorization, trimming, or exclusions. Instead, it uses extremely small p-value thresholds (p*) derived from a hash-shift noise model and multiple time windows/hash positions to limit false assignments; it also reports a small estimated assignment error rate (about 0.2%).",
+        "question_tokens_estimate": 15,
+        "evidence_type": "methodology description",
+        "confidence": "low",
+        "confidence_score": 0.3161453003499684,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "18",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "P-value thresholds and hash-position calibration",
+            "note": "Describes p* determination and the use of hash-position shifts to calibrate thresholds; no explicit outlier handling."
+          },
+          {
+            "page": "22",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Assignment error rate",
+            "note": "Mentions a small error rate (~0.2%) in IP assignment and that most assignments come from a 7-day window."
+          }
+        ],
+        "quote_snippet": "We elected to use only the position-9 assignments prior to July 8, 2013 and only the position-10 assignments afterward.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": false,
+        "assumption_notes": "No explicit outlier handling (winsorization, trimming, or exclusions) described; analysis relies on p-value thresholds and noise-model calibration.",
+        "related_questions": []
+      },
+      {
+        "id": "J03",
+        "category": "J) Data quality and integrity",
+        "question": "Are there data audits or validation steps described?",
+        "answer": "Yes. The document describes multiple data audits and validation steps, including a verification video, administrator-posted screenshots, reproducible hashing verification, uniformity tests of the SHA-1 based username scheme, available source code for replication, p-value based validation with multiple testing corrections, discussion of potential errors, and validation of content analysis with machine learning models and geolocation data.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "data_audits_and_validation",
+        "confidence": "low",
+        "confidence_score": 0.2497113364587124,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 8,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "validation",
+            "note": "Cites three validation steps including a video demonstration and administrator-post screenshot verification."
+          },
+          {
+            "page": 11,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "uniformity_validation",
+            "note": "Describes experiments to verify SHA-1 uniformity over username-related hash bytes."
+          },
+          {
+            "page": 13,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "reproducibility",
+            "note": "Mentions source code availability for enumeration task to enable replication."
+          },
+          {
+            "page": 15,
+            "start_word": 215,
+            "end_word": 469,
+            "section": "statistical_validation",
+            "note": "Discusses p-values, multiple-hypothesis testing, and conservative thresholds for IP-address attribution."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "p_star_derivation",
+            "note": "Explains deriving p* using a shifted hash position to model noise and control false assignments."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "error_analysis",
+            "note": "Addresses small p-value thresholds and potential error varieties, with discussion of limitations."
+          },
+          {
+            "page": 23,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "deobfuscation_validation",
+            "note": "After deobfuscation, posts are analyzed with transformer models and geolocation data for validation."
+          }
+        ],
+        "quote_snippet": "we recorded a brief video in which we show how an EJMR username could be computed prior to posting on the site",
+        "table_figure": null,
+        "data_source": "EJMR posts, administrator posts, WayBack Machine, YouTube video, GitHub cuda-sha repository, IP2Location geolocation data, transformer-based ML models",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J04",
+        "category": "J) Data quality and integrity",
+        "question": "Is there evidence of reporting bias or selective sample inclusion?",
+        "answer": "Yes. The analysis notes that many IP addresses with only a few posts are not shown due to conservative thresholds, indicating selective sample inclusion and potential bias toward high-activity posters.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "Selective sampling / reporting bias due to threshold-based inclusion in IP-based post analysis",
+        "confidence": "low",
+        "confidence_score": 0.29327670054810095,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 35",
+            "start_word": 215,
+            "end_word": 333,
+            "section": "IP address contributions and sampling",
+            "note": "There are thus many more IP addresses with just a few posts each which are not shown in the figure."
+          },
+          {
+            "page": "page 18",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Error assessment and sampling bias in IP assignments",
+            "note": "Discusses potential errors in assigning posts to IP addresses, including 'stealing' of posts by high-posting IPs."
+          },
+          {
+            "page": "page 21",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "IP attribution thresholds",
+            "note": "Notes the reliance on thresholds (e.g., p-values) that determine which posts are attributed to IPs, implying selective inclusion."
+          }
+        ],
+        "quote_snippet": "There are thus many more IP addresses with just a few posts each which are not shown in the figure.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset; analysis described in the provided sections",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K01",
+        "category": "K) Model fit and diagnostics",
+        "question": "What goodness-of-fit or diagnostic metrics are reported?",
+        "answer": "The reported goodness-of-fit/diagnostic metrics are p-values and a p-value threshold used to assess overrepresentation: (1) the minimum p-value for each post and its weekly average (Figure 3), (2) the distribution of these minimum p-values across posts (CDFs in Figure 4), and (3) the approximate threshold p* ≈ 10−11 used to declare significance, plus an estimated misassignment error rate (about 0.2%).",
+        "question_tokens_estimate": 14,
+        "evidence_type": "statistical_pvalues",
+        "confidence": "low",
+        "confidence_score": 0.27345106137975456,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Methods/Statistical p-values",
+            "note": "Background on Poisson-binomial p-values and p*."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Results/Thresholds and Figure 3",
+            "note": "Figure 3 shows the average minimum p-value; p*-threshold logic."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "Results/Threshold p* and Figure 4",
+            "note": "Figure 4; p*-threshold ≈ 10−11; fraction of posts below threshold."
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Error rate discussion",
+            "note": "Estimated misassignment error rate (about 0.2%)."
+          }
+        ],
+        "quote_snippet": "The approximate p-value threshold p* ≈ 10−11 is represented by the dashed vertical line. In contrast, 66.1% of posts have minimum p-values below p∗.",
+        "table_figure": "Figure 3; Figure 4",
+        "data_source": "EJMR posts; Poisson-binomial p-values; minimum p-values per post; multiple-hypothesis testing thresholds",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K02",
+        "category": "K) Model fit and diagnostics",
+        "question": "Are functional form choices tested (logs, levels, nonlinearities)?",
+        "answer": "No. The context describes modeling counts with a Poisson-binomial distribution and using p-values to identify IP addresses; it does not report testing alternative functional forms such as logs, levels, or nonlinearities.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "modeling approach description (Poisson-binomial, p-values)",
+        "confidence": "low",
+        "confidence_score": 0.2505046941305403,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 15",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Statistical model",
+            "note": "Introduces Poisson-binomial distribution for counts; mentions mixture of binomials."
+          },
+          {
+            "page": "page 17",
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Algorithmic/IP address identification",
+            "note": "Describes p-values, Poisson-binomial PMF, and threshold p*, i.e., testing >0 via p-values."
+          },
+          {
+            "page": "page 13",
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Model setup",
+            "note": "Defines A(t,u) and πa for IPs within topic-user sets."
+          }
+        ],
+        "quote_snippet": "We approximate the Poisson binomial probability mass function for the counts just once per day using a fast Fourier transformation.",
+        "table_figure": null,
+        "data_source": "EJMR posts dataset",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K03",
+        "category": "K) Model fit and diagnostics",
+        "question": "Are residual checks or specification tests reported?",
+        "answer": "No. The provided context discusses Poisson-binomial hypothesis tests for IP addresses but does not mention residual checks or specification tests.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "absence of residual checks or specification tests in the excerpts; references to Poisson-binomial tests for IP addresses.",
+        "confidence": "low",
+        "confidence_score": 0.22451290230963863,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Algorithmic IP-address identification",
+            "note": "Discusses Poisson-binomial tests for detecting IPs; mentions hypothesis tests for πa > 0."
+          },
+          {
+            "page": 17,
+            "start_word": 215,
+            "end_word": 489,
+            "section": "Determining p* and hash-based testing",
+            "note": "Describes p* calculation using hash-based noise modeling; no residual/spec tests mentioned."
+          },
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "p-value thresholds and multiple testing",
+            "note": "Explains p-value thresholds; focuses on hypothesis testing structure rather than residual checks."
+          }
+        ],
+        "quote_snippet": "First, we can consider hypothesis tests of whether πa > 0, using a Poisson-binomial test, and adjusting appropriately for multiple tests.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K04",
+        "category": "K) Model fit and diagnostics",
+        "question": "How sensitive are results to alternative specifications or estimators?",
+        "answer": "Sensitivity analyses show robustness to time-windowing and to alternative hashing specifications: using three hash start positions (9, 10, 11) yields assignments only under the correct hash (66.1% of posts have minimum p-values below p*), while the incorrect position yields zero assignments; they also vary time windows (7, 31, 91 days) with very small p*-thresholds, and windowing reduces incorrect assignments to zero.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "sensitivity_analysis",
+        "confidence": "low",
+        "confidence_score": 0.3282504759339073,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 18,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Hash-position sensitivity",
+            "note": "Demonstrates sensitivity of assignment to hash start position; incorrect hash yields zero assignments."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 274,
+            "section": "Time-windowing robustness",
+            "note": "Notes windowing data in time intervals reduces incorrect assignments to zero."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 165,
+            "section": "Results: p-values distribution",
+            "note": "66.1% of posts have p-values below p* under correct hash."
+          }
+        ],
+        "quote_snippet": "We completed the assignment procedure using three different starting positions of the hash (9, 10, and 11).",
+        "table_figure": "Figure 3; Figure 4",
+        "data_source": "EJMR posts/IP-address dataset described in the text",
+        "assumption_flag": true,
+        "assumption_notes": "Assumes that correctly identifying the true hash position yields real IP-address assignments and that evaluating with incorrect hash yields no assignments; robustness checked across 7-, 31-, and 91-day windows.",
+        "related_questions": []
+      }
+    ],
+    "report_questions_error": null,
+    "citations_enabled": true,
+    "citations_preview": [],
+    "citations_error": null
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 67.66666666666667,
+    "max_chunks": 94,
+    "min_chunks": 50
+  },
+  "finished_at": "2026-02-07T05:18:02.487983+00:00"
+}

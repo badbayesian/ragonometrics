@@ -3,7 +3,7 @@ Ragonometrics - RAG pipeline for economics papers
 
 Overview
 --------
-Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes vectors in Postgres (`pgvector` + `pgvectorscale`) with FAISS fallback artifacts, and serves retrieval + LLM summaries via CLI and a Streamlit UI. External metadata is enriched via OpenAlex and CitEc when available, and DOI metadata can be fetched from Crossref and cached. Author display uses layered lookup (OpenAlex, PDF metadata, then first-page text parsing) to reduce `Unknown` results. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
+Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes vectors in Postgres (`pgvector` + `pgvectorscale`) with FAISS fallback artifacts, and serves retrieval + LLM summaries via CLI and a Streamlit UI. External metadata is enriched via OpenAlex and CitEc when available. Author display uses layered lookup (OpenAlex, PDF metadata, then first-page text parsing) to reduce `Unknown` results. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
 
 This repo is a combination of coding + vibe coding.
 
@@ -82,6 +82,12 @@ Example audit output from a real run:
 - [Audit workflow report (Markdown)](reports/audit-workflow-report-1308532de7a9446d813e57129826aa71.md)
 - [Audit workflow report (PDF)](reports/audit-workflow-report-1308532de7a9446d813e57129826aa71-latex.pdf)
 
+Regenerate audit LaTeX/PDF from markdown:
+
+```bash
+python tools/markdown_to_latex_pdf.py --input reports/audit-workflow-report-1308532de7a9446d813e57129826aa71.md
+```
+
 CLI Commands
 ------------
 - `ragonometrics workflow`: run the multi-step workflow (optionally agentic). `--agentic` enables sub-question planning and synthesis. `--agentic-citations` extracts citations from the PDF and injects a compact citations preview into the agentic context.
@@ -96,7 +102,7 @@ ragonometrics store-workflow-reports --reports-dir reports --recursive --meta-db
 ```
 - `ragonometrics index`: build Postgres vector index + metadata (and FAISS artifact fallback) for fast querying later.
 ```bash
-ragonometrics index --papers-dir papers/ --index-path vectors.index --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics"
+ragonometrics index --papers-dir papers/ --index-path vectors-3072.index --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics"
 ```
 - `ragonometrics query`: ask a question against a single PDF.
 ```bash
@@ -118,10 +124,12 @@ Docs
 Docs root: [docs/](https://github.com/badbayesian/ragonometrics/tree/main/docs)
 - [Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md): System design, tradeoffs, and reproducibility.
 - [Workflow Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md): Workflow steps, artifacts, and state.
+- [Pipeline Current-State Audit](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/pipeline-current-state-audit.md): Runtime flow inventory, persistence map, and essentialness matrix for simplification.
+- [Postgres Unification Plan](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/postgres-unification-plan.md): Target schema-by-stage design, DDL, and phased cutover.
 - [Configuration](https://github.com/badbayesian/ragonometrics/blob/main/docs/configuration/configuration.md): [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) + env override reference.
 - [Workflow and CLI](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/workflow.md): CLI commands and workflow usage.
 - [Docker](https://github.com/badbayesian/ragonometrics/blob/main/docs/deployment/docker.md): Compose usage and container notes.
-- [Indexing and Retrieval](https://github.com/badbayesian/ragonometrics/blob/main/docs/components/indexing.md): pgvector/pgvectorscale, FAISS fallback, Postgres metadata, DOI network, queueing.
+- [Indexing and Retrieval](https://github.com/badbayesian/ragonometrics/blob/main/docs/components/indexing.md): pgvector/pgvectorscale, FAISS fallback, Postgres metadata, queueing.
 - [Streamlit UI](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/ui.md): UI launch and behavior.
 - [Agentic workflow](https://github.com/badbayesian/ragonometrics/blob/main/docs/guides/agentic.md): Agentic mode overview and notes.
 - [Econ schema](https://github.com/badbayesian/ragonometrics/blob/main/docs/data/econ_schema.md): Time-series schema and econ data notes.

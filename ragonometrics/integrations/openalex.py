@@ -5,17 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
+import psycopg2
 
-from ragonometrics.core.config import SQLITE_DIR
-
-
-DEFAULT_CACHE_PATH = SQLITE_DIR / "ragonometrics_openalex.sqlite"
+DEFAULT_CACHE_PATH = Path("postgres_openalex_cache")
 DEFAULT_SELECT = ",".join(
     [
         "id",
@@ -32,18 +29,32 @@ DEFAULT_SELECT = ",".join(
 )
 
 
-def _connect(db_path: Path) -> sqlite3.Connection:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
-    conn.execute(
+def _database_url() -> str:
+    db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        raise RuntimeError("DATABASE_URL is required for OpenAlex cache persistence.")
+    return db_url
+
+
+def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    conn = psycopg2.connect(_database_url())
+    cur = conn.cursor()
+    cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
+    cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS openalex_cache (
+        CREATE TABLE IF NOT EXISTS enrichment.openalex_cache (
             cache_key TEXT PRIMARY KEY,
             work_id TEXT,
             query TEXT,
-            response TEXT,
-            fetched_at INTEGER
+            response JSONB NOT NULL,
+            fetched_at TIMESTAMPTZ NOT NULL
         )
+        """
+    )
+    cur.execute(
+        """
+        CREATE INDEX IF NOT EXISTS enrichment_openalex_cache_fetched_at_idx
+        ON enrichment.openalex_cache(fetched_at DESC)
         """
     )
     conn.commit()
@@ -73,15 +84,21 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
-        cur.execute("SELECT fetched_at, response FROM openalex_cache WHERE cache_key = ?", (cache_key,))
+        cur.execute(
+            "SELECT fetched_at, response FROM enrichment.openalex_cache WHERE cache_key = %s",
+            (cache_key,),
+        )
         row = cur.fetchone()
         if not row:
             return None
         fetched_at, response = row
-        if time.time() - int(fetched_at) > _cache_ttl_seconds():
+        fetched_epoch = int(fetched_at.timestamp()) if hasattr(fetched_at, "timestamp") else int(time.time())
+        if time.time() - fetched_epoch > _cache_ttl_seconds():
             return None
+        if isinstance(response, dict):
+            return response
         try:
-            return json.loads(response)
+            return json.loads(str(response))
         except Exception:
             return None
     finally:
@@ -101,16 +118,20 @@ def set_cached_metadata(
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT OR REPLACE INTO openalex_cache
+            INSERT INTO enrichment.openalex_cache
             (cache_key, work_id, query, response, fetched_at)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s::jsonb, NOW())
+            ON CONFLICT (cache_key) DO UPDATE SET
+                work_id = EXCLUDED.work_id,
+                query = EXCLUDED.query,
+                response = EXCLUDED.response,
+                fetched_at = EXCLUDED.fetched_at
             """,
             (
                 cache_key,
                 work_id,
                 query,
                 json.dumps(response, ensure_ascii=False),
-                int(time.time()),
             ),
         )
         conn.commit()

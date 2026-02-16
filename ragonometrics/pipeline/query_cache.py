@@ -1,34 +1,46 @@
-"""SQLite cache for question answers. Used by CLI and Streamlit to avoid recomputation across runs."""
+"""Postgres query cache for question answers."""
 
 from __future__ import annotations
 
 import hashlib
-import sqlite3
-from datetime import datetime, timezone
+import os
 from pathlib import Path
 from typing import Optional
 
+import psycopg2
 
-from ragonometrics.core.config import SQLITE_DIR
+# Kept for call-site compatibility; runtime persistence now uses Postgres.
+DEFAULT_CACHE_PATH = Path("postgres_query_cache")
 
 
-DEFAULT_CACHE_PATH = SQLITE_DIR / "ragonometrics_query_cache.sqlite"
+def _database_url() -> str:
+    db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        raise RuntimeError("DATABASE_URL is required for query cache persistence.")
+    return db_url
 
 
-def _connect(db_path: Path) -> sqlite3.Connection:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
-    conn.execute(
+def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    conn = psycopg2.connect(_database_url())
+    cur = conn.cursor()
+    cur.execute("CREATE SCHEMA IF NOT EXISTS retrieval")
+    cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS query_cache (
+        CREATE TABLE IF NOT EXISTS retrieval.query_cache (
             cache_key TEXT PRIMARY KEY,
             query TEXT,
             paper_path TEXT,
             model TEXT,
             context_hash TEXT,
             answer TEXT,
-            created_at TEXT
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
+        """
+    )
+    cur.execute(
+        """
+        CREATE INDEX IF NOT EXISTS retrieval_query_cache_created_at_idx
+        ON retrieval.query_cache(created_at DESC)
         """
     )
     conn.commit()
@@ -44,7 +56,7 @@ def get_cached_answer(db_path: Path, cache_key: str) -> Optional[str]:
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
-        cur.execute("SELECT answer FROM query_cache WHERE cache_key = ?", (cache_key,))
+        cur.execute("SELECT answer FROM retrieval.query_cache WHERE cache_key = %s", (cache_key,))
         row = cur.fetchone()
         return row[0] if row else None
     finally:
@@ -66,9 +78,16 @@ def set_cached_answer(
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT OR REPLACE INTO query_cache
+            INSERT INTO retrieval.query_cache
             (cache_key, query, paper_path, model, context_hash, answer, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (cache_key) DO UPDATE SET
+                query = EXCLUDED.query,
+                paper_path = EXCLUDED.paper_path,
+                model = EXCLUDED.model,
+                context_hash = EXCLUDED.context_hash,
+                answer = EXCLUDED.answer,
+                created_at = EXCLUDED.created_at
             """,
             (
                 cache_key,
@@ -77,7 +96,6 @@ def set_cached_answer(
                 model,
                 hashlib.sha256(context.encode("utf-8")).hexdigest(),
                 answer,
-                datetime.now(timezone.utc).isoformat(),
             ),
         )
         conn.commit()

@@ -4,7 +4,7 @@ This document describes the workflow subsystem: how it orchestrates multi-step r
 
 Overview
 --------
-The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) and persists state transitions to SQLite ([`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite)).
+The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) and persists state transitions to Postgres (`workflow.workflow_runs`, `workflow.workflow_steps`).
 
 Workflow Diagram
 ----------------
@@ -76,12 +76,12 @@ Step-by-Step Behavior
 
 Artifacts and State
 -------------------
-- Workflow state DB: [`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite)
-  - `workflow_runs` tracks run metadata and status.
-  - `workflow_steps` tracks step outputs, timestamps, status.
+- Workflow state tables (Postgres): `workflow.workflow_runs`, `workflow.workflow_steps`
+  - `workflow.workflow_runs` tracks run metadata and status.
+  - `workflow.workflow_steps` tracks step outputs, timestamps, status.
 - Prep manifest: [`reports/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
 - Report JSON: [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
-- Usage tracking: [`sqlite/ragonometrics_token_usage.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_token_usage.sqlite)
+- Usage tracking table (Postgres): `observability.token_usage`
 - Optional FAISS + metadata: [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index), [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes), Postgres tables.
 
 Report Schema Highlights

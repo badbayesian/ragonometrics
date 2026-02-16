@@ -5,33 +5,43 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 import xml.etree.ElementTree as ET
 
 import requests
+import psycopg2
 
-
-from ragonometrics.core.config import SQLITE_DIR
-
-
-DEFAULT_CACHE_PATH = SQLITE_DIR / "ragonometrics_citec.sqlite"
+DEFAULT_CACHE_PATH = Path("postgres_citec_cache")
 DEFAULT_BASE_URL = os.environ.get("CITEC_API_BASE", "http://citec.repec.org/api").rstrip("/")
 
 
-def _connect(db_path: Path) -> sqlite3.Connection:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
-    conn.execute(
+def _database_url() -> str:
+    db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        raise RuntimeError("DATABASE_URL is required for CitEc cache persistence.")
+    return db_url
+
+
+def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    conn = psycopg2.connect(_database_url())
+    cur = conn.cursor()
+    cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
+    cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS citec_cache (
+        CREATE TABLE IF NOT EXISTS enrichment.citec_cache (
             cache_key TEXT PRIMARY KEY,
             repec_handle TEXT,
-            response TEXT,
-            fetched_at INTEGER
+            response JSONB NOT NULL,
+            fetched_at TIMESTAMPTZ NOT NULL
         )
+        """
+    )
+    cur.execute(
+        """
+        CREATE INDEX IF NOT EXISTS enrichment_citec_cache_fetched_at_idx
+        ON enrichment.citec_cache(fetched_at DESC)
         """
     )
     conn.commit()
@@ -54,15 +64,21 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
-        cur.execute("SELECT fetched_at, response FROM citec_cache WHERE cache_key = ?", (cache_key,))
+        cur.execute(
+            "SELECT fetched_at, response FROM enrichment.citec_cache WHERE cache_key = %s",
+            (cache_key,),
+        )
         row = cur.fetchone()
         if not row:
             return None
         fetched_at, response = row
-        if time.time() - int(fetched_at) > _cache_ttl_seconds():
+        fetched_epoch = int(fetched_at.timestamp()) if hasattr(fetched_at, "timestamp") else int(time.time())
+        if time.time() - fetched_epoch > _cache_ttl_seconds():
             return None
+        if isinstance(response, dict):
+            return response
         try:
-            return json.loads(response)
+            return json.loads(str(response))
         except Exception:
             return None
     finally:
@@ -75,15 +91,18 @@ def set_cached_metadata(db_path: Path, *, cache_key: str, repec_handle: str, res
         cur = conn.cursor()
         cur.execute(
             """
-            INSERT OR REPLACE INTO citec_cache
+            INSERT INTO enrichment.citec_cache
             (cache_key, repec_handle, response, fetched_at)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s::jsonb, NOW())
+            ON CONFLICT (cache_key) DO UPDATE SET
+                repec_handle = EXCLUDED.repec_handle,
+                response = EXCLUDED.response,
+                fetched_at = EXCLUDED.fetched_at
             """,
             (
                 cache_key,
                 repec_handle,
                 json.dumps(response, ensure_ascii=False),
-                int(time.time()),
             ),
         )
         conn.commit()

@@ -44,7 +44,6 @@ ocr = [
 
 [project.scripts]
 ragonometrics = "ragonometrics.cli.entrypoints:main"
-ragonometrics-cli = "ragonometrics.cli.cli:main"
 
 [tool.setuptools]
 packages = { find = { where = ["."], include = ["ragonometrics*"] } }

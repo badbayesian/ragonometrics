@@ -1,0 +1,31 @@
+{
+  "run_id": "dea70b976c544f88ace2d796df47c2a4",
+  "created_at": "2026-02-15T20:42:01.152781+00:00",
+  "corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+  "hashing_enabled": true,
+  "validate_text": false,
+  "stats": {
+    "num_files": 1,
+    "total_size_bytes": 1059575,
+    "corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+    "hashing_enabled": true,
+    "validate_text": false,
+    "duplicate_count": 0,
+    "empty_file_count": 0,
+    "empty_text_count": 0,
+    "pdfinfo_available": true
+  },
+  "warnings": [],
+  "duplicates": [],
+  "empty_files": [],
+  "empty_text_files": [],
+  "files": [
+    {
+      "path": "papers\\alcott food deserts.pdf",
+      "size_bytes": 1059575,
+      "mtime": 1771182684.1171558,
+      "pages": 52,
+      "sha256": "258302c2ca13f15186788f2c586661bc6930a9e944d0a5f2009b69d956aa09d8"
+    }
+  ]
+}

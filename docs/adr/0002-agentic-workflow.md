@@ -13,11 +13,11 @@ optional asynchronous execution for long-running tasks.
 
 Decision
 --------
-Implement a SQLite-backed workflow state store and provide a multi-step runner
+Implement a Postgres-backed workflow state store and provide a multi-step runner
 with optional Redis/RQ execution.
 
 Consequences
 ------------
 - Reproducible workflow runs with per-step status and outputs.
 - Async execution via RQ for background indexing and evaluation.
-- Additional state DB file to manage in environments with strict persistence.
+- Unified operational storage in Postgres across workflow, retrieval cache, and observability.

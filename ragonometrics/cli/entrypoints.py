@@ -11,6 +11,7 @@ from openai import OpenAI
 
 from ragonometrics.eval.benchmark import bench_papers
 from ragonometrics.indexing.indexer import build_index
+from ragonometrics.indexing.paper_store import store_paper_metadata
 from ragonometrics.core.main import (
     embed_texts,
     load_papers,
@@ -24,6 +25,7 @@ from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_an
 from ragonometrics.integrations.openalex import format_openalex_context
 from ragonometrics.integrations.citec import format_citec_context
 from ragonometrics.pipeline.workflow import run_workflow
+from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
 
 
@@ -150,6 +152,45 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_store_metadata(args: argparse.Namespace) -> int:
+    """Store paper-level metadata in Postgres without building vector indexes."""
+    settings = load_settings()
+    papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
+    pdfs = sorted(papers_dir.glob("*.pdf"))
+    if args.limit and args.limit > 0:
+        pdfs = pdfs[: args.limit]
+    if not pdfs:
+        print("No PDFs found to store metadata.")
+        return 1
+    count = store_paper_metadata(paper_paths=pdfs, meta_db_url=args.meta_db_url, progress=True)
+    print(f"Stored metadata for {count} paper(s).")
+    return 0
+
+
+def cmd_store_workflow_reports(args: argparse.Namespace) -> int:
+    """Store workflow report JSON files in Postgres JSONB."""
+    settings = load_settings()
+    db_url = args.meta_db_url or (settings.config_effective or {}).get("database_url")
+    if not db_url:
+        print("No database URL configured. Pass --meta-db-url or set DATABASE_URL.")
+        return 1
+    reports_dir = Path(args.reports_dir)
+    stats = store_workflow_reports_from_dir(
+        reports_dir=reports_dir,
+        db_url=str(db_url),
+        recursive=bool(args.recursive),
+        limit=int(args.limit or 0),
+    )
+    if stats["total"] == 0:
+        print(f"No workflow report files found in {reports_dir}.")
+        return 1
+    print(
+        f"Stored {stats['stored']} workflow report(s) "
+        f"(scanned {stats['total']}, skipped {stats['skipped']})."
+    )
+    return 0
+
+
 def cmd_workflow(args: argparse.Namespace) -> int:
     """Run or enqueue the multi-step workflow.
 
@@ -171,6 +212,10 @@ def cmd_workflow(args: argparse.Namespace) -> int:
             agentic_model=args.agentic_model,
             agentic_citations=args.agentic_citations,
             report_question_set=args.report_question_set,
+            workstream_id=args.workstream_id,
+            arm=args.arm,
+            parent_run_id=args.parent_run_id,
+            trigger_source=args.trigger_source,
         )
         print(f"Enqueued workflow job: {job.id}")
         return 0
@@ -184,6 +229,10 @@ def cmd_workflow(args: argparse.Namespace) -> int:
         agentic_model=args.agentic_model,
         agentic_citations=args.agentic_citations,
         report_question_set=args.report_question_set,
+        workstream_id=args.workstream_id,
+        arm=args.arm,
+        parent_run_id=args.parent_run_id,
+        trigger_source=args.trigger_source,
     )
     print(f"Workflow run completed: {summary.get('run_id')}")
     print(f"Report: {summary.get('report_path')}")
@@ -201,7 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("index", help="Build Postgres/FAISS vector indexes from PDFs")
     s.add_argument("--papers-dir", type=str, default=None)
-    s.add_argument("--index-path", type=str, default="vectors.index")
+    s.add_argument("--index-path", type=str, default="vectors-3072.index")
     s.add_argument("--meta-db-url", type=str, default=None)
     s.add_argument("--limit", type=int, default=0)
     s.set_defaults(func=cmd_index)
@@ -224,6 +273,19 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--db-url", type=str, default=None)
     b.set_defaults(func=cmd_benchmark)
 
+    pm = sub.add_parser("store-metadata", help="Store paper metadata (authors/DOIs/etc.) in Postgres")
+    pm.add_argument("--papers-dir", type=str, default=None)
+    pm.add_argument("--meta-db-url", type=str, default=None)
+    pm.add_argument("--limit", type=int, default=0)
+    pm.set_defaults(func=cmd_store_metadata)
+
+    wr = sub.add_parser("store-workflow-reports", help="Store workflow report JSON files in Postgres JSONB")
+    wr.add_argument("--reports-dir", type=str, default="reports")
+    wr.add_argument("--meta-db-url", type=str, default=None)
+    wr.add_argument("--recursive", action="store_true")
+    wr.add_argument("--limit", type=int, default=0)
+    wr.set_defaults(func=cmd_store_workflow_reports)
+
     w = sub.add_parser("workflow", help="Run or enqueue a multi-step workflow")
     w.add_argument("--papers", type=str, default=None, help="PDF file or directory")
     w.add_argument("--papers-dir", dest="papers", type=str, help=argparse.SUPPRESS)
@@ -235,6 +297,10 @@ def build_parser() -> argparse.ArgumentParser:
     w.add_argument("--question", type=str, default=None, help="Main question for agentic workflow")
     w.add_argument("--agentic-model", type=str, default=None, help="Model override for agentic workflow")
     w.add_argument("--agentic-citations", action="store_true", help="Use citations API to enrich agentic context")
+    w.add_argument("--workstream-id", type=str, default=None, help="Logical workstream identifier for run grouping.")
+    w.add_argument("--arm", type=str, default=None, help="Variant arm label (for example: baseline, gpt-5-nano).")
+    w.add_argument("--parent-run-id", type=str, default=None, help="Optional parent/baseline run id.")
+    w.add_argument("--trigger-source", type=str, default=None, help="Run trigger source label (cli, queue, api, etc.).")
     w.add_argument(
         "--report-question-set",
         type=str,

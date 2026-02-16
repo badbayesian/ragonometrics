@@ -1,0 +1,81 @@
+{
+  "run_id": "55a6a9fdd6fb45daa618b34a346cbbc7",
+  "started_at": "2026-02-15T21:29:42.297358+00:00",
+  "papers_dir": "papers\\alcott food deserts.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@localhost:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5-nano",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5-nano",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_store": {
+    "database_url": true
+  },
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 1059575,
+      "corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-55a6a9fdd6fb45daa618b34a346cbbc7.json"
+  },
+  "finished_at": "2026-02-15T21:29:42.560591+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": true,
+    "status": "stored"
+  },
+  "audit_artifacts": {
+    "enabled": true,
+    "status": "partial",
+    "markdown": {
+      "status": "generated",
+      "path": "reports\\audit-workflow-report-55a6a9fdd6fb45daa618b34a346cbbc7.md"
+    },
+    "pdf": {
+      "status": "failed",
+      "exit_code": 1,
+      "stdout_tail": "",
+      "stderr_tail": "[error] Required executable 'pandoc' was not found in PATH.\n[hint] Install pandoc and ensure it is available in PATH (https://pandoc.org/installing.html).\n",
+      "path": "reports\\audit-workflow-report-55a6a9fdd6fb45daa618b34a346cbbc7-latex.pdf",
+      "tex_path": "reports\\audit-workflow-report-55a6a9fdd6fb45daa618b34a346cbbc7.tex"
+    }
+  }
+}
