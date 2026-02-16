@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 
+from ragonometrics.pipeline.run_records import ensure_run_records_table
+
 # Kept for call-site compatibility; runtime persistence now uses Postgres.
 DEFAULT_STATE_DB = Path("postgres_workflow_state")
 
@@ -38,105 +40,7 @@ def _to_iso(value: Any) -> str | None:
 
 def _connect(_db_path: Path) -> psycopg2.extensions.connection:
     conn = psycopg2.connect(_database_url())
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS workflow")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workflow.workstreams (
-            workstream_id TEXT PRIMARY KEY,
-            name TEXT,
-            objective TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workflow.workflow_runs (
-            run_id TEXT PRIMARY KEY,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            started_at TIMESTAMPTZ,
-            finished_at TIMESTAMPTZ,
-            status TEXT,
-            papers_dir TEXT,
-            config_hash TEXT,
-            workstream_id TEXT REFERENCES workflow.workstreams(workstream_id),
-            arm TEXT,
-            parent_run_id TEXT,
-            trigger_source TEXT,
-            git_sha TEXT,
-            git_branch TEXT,
-            config_effective_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            paper_set_hash TEXT,
-            question TEXT,
-            report_question_set TEXT,
-            metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb
-        )
-        """
-    )
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS workstream_id TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS arm TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS parent_run_id TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS trigger_source TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS git_sha TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS git_branch TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS config_effective_json JSONB NOT NULL DEFAULT '{}'::jsonb")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS paper_set_hash TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS question TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_runs ADD COLUMN IF NOT EXISTS report_question_set TEXT")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workflow.workstream_runs (
-            workstream_id TEXT NOT NULL REFERENCES workflow.workstreams(workstream_id) ON DELETE CASCADE,
-            run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-            arm TEXT,
-            source_bucket TEXT,
-            is_baseline BOOLEAN NOT NULL DEFAULT FALSE,
-            parent_run_id TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            PRIMARY KEY (workstream_id, run_id)
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workflow.workflow_steps (
-            run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-            step TEXT NOT NULL,
-            status TEXT,
-            step_attempt_id TEXT,
-            attempt_no INTEGER,
-            queued_at TIMESTAMPTZ,
-            started_at TIMESTAMPTZ,
-            finished_at TIMESTAMPTZ,
-            duration_ms INTEGER,
-            status_reason TEXT,
-            error_code TEXT,
-            error_message TEXT,
-            worker_id TEXT,
-            retry_of_attempt_id TEXT,
-            output_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            PRIMARY KEY (run_id, step)
-        )
-        """
-    )
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS step_attempt_id TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS attempt_no INTEGER")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS queued_at TIMESTAMPTZ")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS duration_ms INTEGER")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS status_reason TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS error_code TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS error_message TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS worker_id TEXT")
-    cur.execute("ALTER TABLE workflow.workflow_steps ADD COLUMN IF NOT EXISTS retry_of_attempt_id TEXT")
-    cur.execute("CREATE INDEX IF NOT EXISTS workflow_runs_workstream_idx ON workflow.workflow_runs(workstream_id)")
-    cur.execute("CREATE INDEX IF NOT EXISTS workflow_runs_created_at_idx ON workflow.workflow_runs(created_at DESC)")
-    cur.execute("CREATE INDEX IF NOT EXISTS workflow_workstream_runs_run_idx ON workflow.workstream_runs(run_id)")
-    conn.commit()
+    ensure_run_records_table(conn)
     return conn
 
 
@@ -164,66 +68,56 @@ def create_workflow_run(
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
-        if workstream_id:
-            cur.execute(
-                """
-                INSERT INTO workflow.workstreams (workstream_id, name, objective, created_at, metadata_json)
-                VALUES (%s, %s, %s, NOW(), %s::jsonb)
-                ON CONFLICT (workstream_id) DO UPDATE SET
-                    metadata_json = workflow.workstreams.metadata_json || EXCLUDED.metadata_json
-                """,
-                (
-                    workstream_id,
-                    workstream_id,
-                    None,
-                    json.dumps(
-                        {
-                            "trigger_source": trigger_source,
-                        },
-                        ensure_ascii=False,
-                    ),
-                ),
-            )
+        now = _utc_now()
         cur.execute(
             """
-            INSERT INTO workflow.workflow_runs
+            INSERT INTO workflow.run_records
             (
-                run_id, created_at, started_at, finished_at, status, papers_dir, config_hash,
+                run_id, record_kind, step, record_key,
+                status, papers_dir, config_hash,
                 workstream_id, arm, parent_run_id, trigger_source, git_sha, git_branch,
-                config_effective_json, paper_set_hash, question, report_question_set, metadata_json
+                config_effective_json, paper_set_hash, question, report_question_set,
+                started_at, finished_at, created_at, updated_at,
+                payload_json, metadata_json
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s, %s,
+                %s, 'run', '', 'main',
+                %s, %s, %s,
                 %s, %s, %s, %s, %s, %s,
-                %s::jsonb, %s, %s, %s, %s::jsonb
+                %s::jsonb, %s, %s, %s,
+                %s, %s, %s, %s,
+                %s::jsonb, %s::jsonb
             )
-            ON CONFLICT (run_id) DO UPDATE SET
-                started_at = COALESCE(workflow.workflow_runs.started_at, EXCLUDED.started_at),
-                finished_at = COALESCE(EXCLUDED.finished_at, workflow.workflow_runs.finished_at),
-                status = EXCLUDED.status,
-                papers_dir = EXCLUDED.papers_dir,
-                config_hash = EXCLUDED.config_hash,
-                workstream_id = COALESCE(workflow.workflow_runs.workstream_id, EXCLUDED.workstream_id),
-                arm = COALESCE(workflow.workflow_runs.arm, EXCLUDED.arm),
-                parent_run_id = COALESCE(workflow.workflow_runs.parent_run_id, EXCLUDED.parent_run_id),
-                trigger_source = COALESCE(workflow.workflow_runs.trigger_source, EXCLUDED.trigger_source),
-                git_sha = COALESCE(workflow.workflow_runs.git_sha, EXCLUDED.git_sha),
-                git_branch = COALESCE(workflow.workflow_runs.git_branch, EXCLUDED.git_branch),
+            ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
+                status = COALESCE(EXCLUDED.status, workflow.run_records.status),
+                papers_dir = COALESCE(EXCLUDED.papers_dir, workflow.run_records.papers_dir),
+                config_hash = COALESCE(EXCLUDED.config_hash, workflow.run_records.config_hash),
+                workstream_id = COALESCE(EXCLUDED.workstream_id, workflow.run_records.workstream_id),
+                arm = COALESCE(EXCLUDED.arm, workflow.run_records.arm),
+                parent_run_id = COALESCE(EXCLUDED.parent_run_id, workflow.run_records.parent_run_id),
+                trigger_source = COALESCE(EXCLUDED.trigger_source, workflow.run_records.trigger_source),
+                git_sha = COALESCE(EXCLUDED.git_sha, workflow.run_records.git_sha),
+                git_branch = COALESCE(EXCLUDED.git_branch, workflow.run_records.git_branch),
                 config_effective_json = CASE
-                    WHEN workflow.workflow_runs.config_effective_json IS NULL OR workflow.workflow_runs.config_effective_json = '{}'::jsonb
+                    WHEN workflow.run_records.config_effective_json IS NULL OR workflow.run_records.config_effective_json = '{}'::jsonb
                         THEN EXCLUDED.config_effective_json
-                    ELSE workflow.workflow_runs.config_effective_json
+                    ELSE workflow.run_records.config_effective_json
                 END,
-                paper_set_hash = COALESCE(workflow.workflow_runs.paper_set_hash, EXCLUDED.paper_set_hash),
-                question = COALESCE(workflow.workflow_runs.question, EXCLUDED.question),
-                report_question_set = COALESCE(workflow.workflow_runs.report_question_set, EXCLUDED.report_question_set),
-                metadata_json = workflow.workflow_runs.metadata_json || EXCLUDED.metadata_json
+                paper_set_hash = COALESCE(EXCLUDED.paper_set_hash, workflow.run_records.paper_set_hash),
+                question = COALESCE(EXCLUDED.question, workflow.run_records.question),
+                report_question_set = COALESCE(EXCLUDED.report_question_set, workflow.run_records.report_question_set),
+                started_at = COALESCE(workflow.run_records.started_at, EXCLUDED.started_at),
+                finished_at = COALESCE(EXCLUDED.finished_at, workflow.run_records.finished_at),
+                payload_json = CASE
+                    WHEN workflow.run_records.payload_json IS NULL OR workflow.run_records.payload_json = '{}'::jsonb
+                        THEN EXCLUDED.payload_json
+                    ELSE workflow.run_records.payload_json
+                END,
+                metadata_json = workflow.run_records.metadata_json || EXCLUDED.metadata_json,
+                updated_at = EXCLUDED.updated_at
             """,
             (
                 run_id,
-                _utc_now(),
-                started_at,
-                finished_at,
                 status,
                 papers_dir,
                 config_hash,
@@ -237,29 +131,54 @@ def create_workflow_run(
                 paper_set_hash,
                 question,
                 report_question_set,
+                started_at,
+                finished_at,
+                now,
+                now,
+                json.dumps({"source": "state"}, ensure_ascii=False),
                 json.dumps(metadata or {}, ensure_ascii=False),
             ),
         )
         if workstream_id:
             cur.execute(
                 """
-                INSERT INTO workflow.workstream_runs
-                (workstream_id, run_id, arm, source_bucket, is_baseline, parent_run_id, created_at, metadata_json)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW(), %s::jsonb)
-                ON CONFLICT (workstream_id, run_id) DO UPDATE SET
-                    arm = COALESCE(workflow.workstream_runs.arm, EXCLUDED.arm),
-                    source_bucket = COALESCE(workflow.workstream_runs.source_bucket, EXCLUDED.source_bucket),
-                    parent_run_id = COALESCE(workflow.workstream_runs.parent_run_id, EXCLUDED.parent_run_id),
-                    metadata_json = workflow.workstream_runs.metadata_json || EXCLUDED.metadata_json
+                INSERT INTO workflow.run_records
+                (
+                    run_id, record_kind, step, record_key,
+                    status, workstream_id, arm, parent_run_id,
+                    created_at, updated_at, payload_json, metadata_json
+                )
+                VALUES (
+                    %s, 'workstream_link', '', %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s::jsonb, %s::jsonb
+                )
+                ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
+                    status = COALESCE(EXCLUDED.status, workflow.run_records.status),
+                    workstream_id = COALESCE(EXCLUDED.workstream_id, workflow.run_records.workstream_id),
+                    arm = COALESCE(EXCLUDED.arm, workflow.run_records.arm),
+                    parent_run_id = COALESCE(EXCLUDED.parent_run_id, workflow.run_records.parent_run_id),
+                    payload_json = workflow.run_records.payload_json || EXCLUDED.payload_json,
+                    metadata_json = workflow.run_records.metadata_json || EXCLUDED.metadata_json,
+                    updated_at = EXCLUDED.updated_at
                 """,
                 (
-                    workstream_id,
                     run_id,
+                    workstream_id,
+                    status,
+                    workstream_id,
                     arm,
-                    "current",
-                    bool(str(arm or "").strip().lower() in {"baseline", "control", "gpt-5"}),
                     parent_run_id,
-                    json.dumps({"created_by": "workflow"}, ensure_ascii=False),
+                    now,
+                    now,
+                    json.dumps(
+                        {
+                            "source_bucket": "current",
+                            "is_baseline": bool(str(arm or "").strip().lower() in {"baseline", "control", "gpt-5"}),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    json.dumps({"source": "state"}, ensure_ascii=False),
                 ),
             )
         conn.commit()
@@ -276,10 +195,14 @@ def set_workflow_status(db_path: Path, run_id: str, status: str, *, finished_at:
             final_ts = _utc_now()
         cur.execute(
             """
-            UPDATE workflow.workflow_runs
+            UPDATE workflow.run_records
             SET status = %s,
-                finished_at = COALESCE(%s, finished_at)
+                finished_at = COALESCE(%s, finished_at),
+                updated_at = NOW()
             WHERE run_id = %s
+              AND record_kind = 'run'
+              AND step = ''
+              AND record_key = 'main'
             """,
             (status, final_ts, run_id),
         )
@@ -310,53 +233,223 @@ def record_step(
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
+        meta = {
+            "step_attempt_id": step_attempt_id,
+            "attempt_no": attempt_no,
+            "queued_at": queued_at,
+            "duration_ms": duration_ms,
+            "status_reason": status_reason,
+            "error_code": error_code,
+            "error_message": error_message,
+            "worker_id": worker_id,
+            "retry_of_attempt_id": retry_of_attempt_id,
+        }
         cur.execute(
             """
-            INSERT INTO workflow.workflow_steps
+            INSERT INTO workflow.run_records
             (
-                run_id, step, status, step_attempt_id, attempt_no, queued_at,
-                started_at, finished_at, duration_ms, status_reason,
-                error_code, error_message, worker_id, retry_of_attempt_id, output_json
+                run_id, record_kind, step, record_key, status,
+                started_at, finished_at, created_at, updated_at,
+                output_json, metadata_json
             )
             VALUES (
-                %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s,
-                %s, %s, %s, %s, %s::jsonb
+                %s, 'step', %s, 'main', %s,
+                %s, %s, NOW(), NOW(),
+                %s::jsonb, %s::jsonb
             )
-            ON CONFLICT (run_id, step) DO UPDATE SET
+            ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
                 status = EXCLUDED.status,
-                step_attempt_id = COALESCE(EXCLUDED.step_attempt_id, workflow.workflow_steps.step_attempt_id),
-                attempt_no = COALESCE(EXCLUDED.attempt_no, workflow.workflow_steps.attempt_no),
-                queued_at = COALESCE(EXCLUDED.queued_at, workflow.workflow_steps.queued_at),
-                started_at = EXCLUDED.started_at,
-                finished_at = EXCLUDED.finished_at,
-                duration_ms = COALESCE(EXCLUDED.duration_ms, workflow.workflow_steps.duration_ms),
-                status_reason = COALESCE(EXCLUDED.status_reason, workflow.workflow_steps.status_reason),
-                error_code = COALESCE(EXCLUDED.error_code, workflow.workflow_steps.error_code),
-                error_message = COALESCE(EXCLUDED.error_message, workflow.workflow_steps.error_message),
-                worker_id = COALESCE(EXCLUDED.worker_id, workflow.workflow_steps.worker_id),
-                retry_of_attempt_id = COALESCE(EXCLUDED.retry_of_attempt_id, workflow.workflow_steps.retry_of_attempt_id),
-                output_json = EXCLUDED.output_json
+                started_at = COALESCE(workflow.run_records.started_at, EXCLUDED.started_at),
+                finished_at = COALESCE(EXCLUDED.finished_at, workflow.run_records.finished_at),
+                output_json = CASE
+                    WHEN EXCLUDED.output_json = '{}'::jsonb
+                        THEN workflow.run_records.output_json
+                    ELSE EXCLUDED.output_json
+                END,
+                metadata_json = workflow.run_records.metadata_json || EXCLUDED.metadata_json,
+                updated_at = NOW()
             """,
             (
                 run_id,
                 step,
                 status,
-                step_attempt_id,
-                attempt_no,
-                queued_at,
                 started_at,
                 finished_at,
-                duration_ms,
-                status_reason,
-                error_code,
-                error_message,
-                worker_id,
-                retry_of_attempt_id,
                 json.dumps(output or {}, ensure_ascii=False),
+                json.dumps(meta, ensure_ascii=False),
             ),
         )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def find_similar_completed_step(
+    db_path: Path,
+    *,
+    step: str,
+    exclude_run_id: str,
+    config_hash: Optional[str] = None,
+    papers_dir: Optional[str] = None,
+    paper_set_hash: Optional[str] = None,
+    workstream_id: Optional[str] = None,
+    arm: Optional[str] = None,
+    question: Optional[str] = None,
+    report_question_set: Optional[str] = None,
+    match_question: bool = False,
+    match_report_question_set: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """Return latest completed step output from a similar prior run, if any."""
+
+    conn = _connect(db_path)
+    try:
+        cur = conn.cursor()
+        query = """
+            SELECT
+                s.run_id,
+                s.started_at,
+                s.finished_at,
+                s.output_json
+            FROM workflow.run_records s
+            JOIN workflow.run_records r
+              ON r.run_id = s.run_id
+             AND r.record_kind = 'run'
+             AND r.step = ''
+             AND r.record_key = 'main'
+            WHERE s.record_kind = 'step'
+              AND s.step = %s
+              AND s.record_key = 'main'
+              AND s.status = 'completed'
+              AND s.run_id <> %s
+        """
+        params: List[Any] = [step, exclude_run_id]
+        if config_hash:
+            query += " AND r.config_hash = %s"
+            params.append(config_hash)
+        if papers_dir:
+            query += " AND r.papers_dir = %s"
+            params.append(papers_dir)
+        if paper_set_hash:
+            query += " AND r.paper_set_hash = %s"
+            params.append(paper_set_hash)
+        if workstream_id:
+            query += " AND r.workstream_id = %s"
+            params.append(workstream_id)
+        if arm:
+            query += " AND r.arm = %s"
+            params.append(arm)
+        if match_question:
+            query += " AND COALESCE(r.question, '') = %s"
+            params.append(question or "")
+        if match_report_question_set:
+            query += " AND COALESCE(r.report_question_set, '') = %s"
+            params.append(report_question_set or "")
+        query += """
+            ORDER BY COALESCE(s.finished_at, s.updated_at, s.created_at) DESC
+            LIMIT 1
+        """
+        cur.execute(query, params)
+        row = cur.fetchone()
+        if not row:
+            return None
+        output = row[3] if isinstance(row[3], dict) else {}
+        if not isinstance(output, dict):
+            try:
+                output = json.loads(str(row[3] or "{}"))
+            except Exception:
+                output = {}
+        return {
+            "run_id": row[0],
+            "started_at": _to_iso(row[1]),
+            "finished_at": _to_iso(row[2]),
+            "output": output,
+        }
+    finally:
+        conn.close()
+
+
+def find_similar_report_question_items(
+    db_path: Path,
+    *,
+    exclude_run_id: str,
+    config_hash: Optional[str] = None,
+    papers_dir: Optional[str] = None,
+    paper_set_hash: Optional[str] = None,
+    workstream_id: Optional[str] = None,
+    arm: Optional[str] = None,
+    question: Optional[str] = None,
+    report_question_set: Optional[str] = None,
+    match_question: bool = False,
+    match_report_question_set: bool = False,
+) -> Dict[str, Dict[str, Any]]:
+    """Return latest reusable structured question payloads keyed by question_id."""
+
+    conn = _connect(db_path)
+    try:
+        cur = conn.cursor()
+        query = """
+            SELECT DISTINCT ON (q.question_id)
+                q.question_id,
+                q.run_id,
+                r.finished_at,
+                q.payload_json
+            FROM workflow.run_records q
+            JOIN workflow.run_records r
+              ON r.run_id = q.run_id
+             AND r.record_kind = 'run'
+             AND r.step = ''
+             AND r.record_key = 'main'
+            WHERE q.record_kind = 'question'
+              AND q.step = 'agentic'
+              AND q.question_id IS NOT NULL
+              AND q.run_id <> %s
+              AND r.status = 'completed'
+        """
+        params: List[Any] = [exclude_run_id]
+        if config_hash:
+            query += " AND r.config_hash = %s"
+            params.append(config_hash)
+        if papers_dir:
+            query += " AND r.papers_dir = %s"
+            params.append(papers_dir)
+        if paper_set_hash:
+            query += " AND r.paper_set_hash = %s"
+            params.append(paper_set_hash)
+        if workstream_id:
+            query += " AND r.workstream_id = %s"
+            params.append(workstream_id)
+        if arm:
+            query += " AND r.arm = %s"
+            params.append(arm)
+        if match_question:
+            query += " AND COALESCE(r.question, '') = %s"
+            params.append(question or "")
+        if match_report_question_set:
+            query += " AND COALESCE(r.report_question_set, '') = %s"
+            params.append(report_question_set or "")
+        query += """
+            ORDER BY q.question_id, COALESCE(r.finished_at, q.updated_at, q.created_at) DESC
+        """
+        cur.execute(query, params)
+        out: Dict[str, Dict[str, Any]] = {}
+        for qid, source_run_id, source_finished_at, payload in cur.fetchall():
+            question_id = str(qid or "").strip()
+            if not question_id:
+                continue
+            item = payload if isinstance(payload, dict) else {}
+            if not isinstance(item, dict):
+                try:
+                    item = json.loads(str(payload or "{}"))
+                except Exception:
+                    item = {}
+            if not item:
+                continue
+            out[question_id] = {
+                "source_run_id": str(source_run_id or ""),
+                "source_finished_at": _to_iso(source_finished_at),
+                "item": item,
+            }
+        return out
     finally:
         conn.close()
 
@@ -371,8 +464,12 @@ def get_workflow_run(db_path: Path, run_id: str) -> Optional[Dict[str, Any]]:
                 run_id, created_at, started_at, finished_at, status, papers_dir, config_hash,
                 workstream_id, arm, parent_run_id, trigger_source, git_sha, git_branch,
                 paper_set_hash, question, report_question_set, metadata_json, config_effective_json
-            FROM workflow.workflow_runs
+            FROM workflow.run_records
             WHERE run_id = %s
+              AND record_kind = 'run'
+              AND step = ''
+              AND record_key = 'main'
+            LIMIT 1
             """,
             (run_id,),
         )
@@ -422,38 +519,43 @@ def list_workflow_steps(db_path: Path, run_id: str) -> List[Dict[str, Any]]:
         cur.execute(
             """
             SELECT
-                step, status, step_attempt_id, attempt_no, queued_at,
-                started_at, finished_at, duration_ms, status_reason,
-                error_code, error_message, worker_id, retry_of_attempt_id, output_json
-            FROM workflow.workflow_steps
+                step, status, started_at, finished_at, output_json, metadata_json
+            FROM workflow.run_records
             WHERE run_id = %s
+              AND record_kind = 'step'
             ORDER BY started_at NULLS LAST, step
             """,
             (run_id,),
         )
         out: List[Dict[str, Any]] = []
         for row in cur.fetchall():
-            output = row[13] if isinstance(row[13], dict) else {}
+            output = row[4] if isinstance(row[4], dict) else {}
             if not isinstance(output, dict):
                 try:
-                    output = json.loads(str(row[13] or "{}"))
+                    output = json.loads(str(row[4] or "{}"))
                 except Exception:
                     output = {}
+            meta = row[5] if isinstance(row[5], dict) else {}
+            if not isinstance(meta, dict):
+                try:
+                    meta = json.loads(str(row[5] or "{}"))
+                except Exception:
+                    meta = {}
             out.append(
                 {
                     "step": row[0],
                     "status": row[1],
-                    "step_attempt_id": row[2],
-                    "attempt_no": row[3],
-                    "queued_at": _to_iso(row[4]),
-                    "started_at": _to_iso(row[5]),
-                    "finished_at": _to_iso(row[6]),
-                    "duration_ms": row[7],
-                    "status_reason": row[8],
-                    "error_code": row[9],
-                    "error_message": row[10],
-                    "worker_id": row[11],
-                    "retry_of_attempt_id": row[12],
+                    "step_attempt_id": meta.get("step_attempt_id"),
+                    "attempt_no": meta.get("attempt_no"),
+                    "queued_at": _to_iso(meta.get("queued_at")),
+                    "started_at": _to_iso(row[2]),
+                    "finished_at": _to_iso(row[3]),
+                    "duration_ms": meta.get("duration_ms"),
+                    "status_reason": meta.get("status_reason"),
+                    "error_code": meta.get("error_code"),
+                    "error_message": meta.get("error_message"),
+                    "worker_id": meta.get("worker_id"),
+                    "retry_of_attempt_id": meta.get("retry_of_attempt_id"),
                     "output": output,
                 }
             )

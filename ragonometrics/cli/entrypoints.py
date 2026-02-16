@@ -202,9 +202,12 @@ def cmd_workflow(args: argparse.Namespace) -> int:
     """
     papers_dir = Path(args.papers) if args.papers else load_settings().papers_dir
     if args.async_mode:
+        if args.redis_url:
+            print("Note: --redis-url is deprecated and ignored. Use --queue-db-url or DATABASE_URL.")
+        queue_db_url = args.queue_db_url or args.meta_db_url
         job = enqueue_workflow(
             papers_dir,
-            redis_url=args.redis_url,
+            db_url=queue_db_url,
             config_path=Path(args.config_path) if args.config_path else None,
             meta_db_url=args.meta_db_url,
             agentic=args.agentic,
@@ -291,8 +294,14 @@ def build_parser() -> argparse.ArgumentParser:
     w.add_argument("--papers-dir", dest="papers", type=str, help=argparse.SUPPRESS)
     w.add_argument("--config-path", type=str, default=None)
     w.add_argument("--meta-db-url", type=str, default=None)
-    w.add_argument("--redis-url", type=str, default="redis://redis:6379")
-    w.add_argument("--async", dest="async_mode", action="store_true", help="Enqueue workflow via Redis/RQ")
+    w.add_argument(
+        "--queue-db-url",
+        type=str,
+        default=None,
+        help="Postgres URL for async queue (defaults to --meta-db-url or DATABASE_URL).",
+    )
+    w.add_argument("--redis-url", type=str, default=None, help=argparse.SUPPRESS)
+    w.add_argument("--async", dest="async_mode", action="store_true", help="Enqueue workflow via Postgres async queue")
     w.add_argument("--agentic", action="store_true", help="Enable agentic LLM sub-question workflow")
     w.add_argument("--question", type=str, default=None, help="Main question for agentic workflow")
     w.add_argument("--agentic-model", type=str, default=None, help="Model override for agentic workflow")

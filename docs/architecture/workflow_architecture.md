@@ -4,7 +4,7 @@ This document describes the workflow subsystem: how it orchestrates multi-step r
 
 Overview
 --------
-The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) and persists state transitions to Postgres (`workflow.workflow_runs`, `workflow.workflow_steps`).
+The workflow runner coordinates ingestion, enrichment, optional econ data pulls, optional agentic QA, optional indexing, evaluation, and report emission. It is implemented in [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) and persists state transitions and lineage to Postgres through a unified ledger table (`workflow.run_records`).
 
 Workflow Diagram
 ----------------
@@ -38,6 +38,12 @@ Entry Points
 - Queue: [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py) enqueues `workflow_entrypoint`
 
 The `--papers` flag accepts either a **directory** or a **single PDF file**. The runner normalizes this into a list of PDF paths.
+
+Workstream lineage flags:
+- `--workstream-id`
+- `--arm`
+- `--parent-run-id`
+- `--trigger-source`
 
 Step-by-Step Behavior
 ---------------------
@@ -73,14 +79,25 @@ Step-by-Step Behavior
 
 8) Report  
    - Writes a JSON report to [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports).
+   - Generates audit Markdown/PDF artifacts when enabled (`WORKFLOW_RENDER_AUDIT_ARTIFACTS=1`).
 
 Artifacts and State
 -------------------
-- Workflow state tables (Postgres): `workflow.workflow_runs`, `workflow.workflow_steps`
-  - `workflow.workflow_runs` tracks run metadata and status.
-  - `workflow.workflow_steps` tracks step outputs, timestamps, status.
+- Workflow ledger table (Postgres):
+  - `workflow.run_records`
+  - `record_kind='run'` tracks run metadata and status.
+  - `record_kind='step'` tracks step outputs, timestamps, status.
+  - `record_kind='report'` stores full report payloads.
+  - `record_kind='question'` stores normalized report questions.
+  - `record_kind='artifact'` stores generated artifact paths/hashes.
+  - `record_kind='workstream_link'` stores lineage/grouping links.
+- Index run linkage:
+  - `indexing.pipeline_runs.workflow_run_id`
+  - `indexing.pipeline_runs.workstream_id`
 - Prep manifest: [`reports/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
 - Report JSON: [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Audit Markdown: [`reports/audit-workflow-report-<run_id>.md`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Audit PDF: [`reports/audit-workflow-report-<run_id>-latex.pdf`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
 - Usage tracking table (Postgres): `observability.token_usage`
 - Optional FAISS + metadata: [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index), [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes), Postgres tables.
 
@@ -125,6 +142,12 @@ Key Configuration Flags
 | `WORKFLOW_REPORT_QUESTIONS` | Enable structured report questions. | `1` | bool | Use `0` to disable. |
 | `WORKFLOW_REPORT_QUESTIONS_SET` | Report question set to run. | `structured` | enum | `structured|agentic|both|none`. |
 | `WORKFLOW_REPORT_QUESTION_WORKERS` | Concurrency for report questions. | `8` | int | |
+| `WORKSTREAM_ID` / `WORKFLOW_WORKSTREAM_ID` | Workstream grouping id for lineage/comparison runs. | empty | string | Also exposed as CLI `--workstream-id`. |
+| `WORKSTREAM_ARM` / `WORKFLOW_ARM` | Variant arm label. | empty | string | Also exposed as CLI `--arm`. |
+| `WORKSTREAM_PARENT_RUN_ID` | Parent/baseline run id. | empty | string | Also exposed as CLI `--parent-run-id`. |
+| `WORKFLOW_TRIGGER_SOURCE` | Trigger source label. | auto (`workflow_sync`/`workflow_async`) | string | Also exposed as CLI `--trigger-source`. |
+| `WORKFLOW_RENDER_AUDIT_ARTIFACTS` | Enable audit markdown/pdf artifact generation. | `1` | bool | |
+| `WORKFLOW_RENDER_AUDIT_PDF` | Enable PDF generation for audit report. | `1` | bool | Requires `pandoc` + TeX engine in PATH. |
 | `DATABASE_URL` | Postgres URL for indexing + hybrid retrieval. | empty | string (URL) | |
 | `FRED_API_KEY` | FRED API key for econ step. | unset | string | Enables econ step. |
 | `ECON_SERIES_IDS` | FRED series IDs. | empty | CSV string | Defaults to `GDPC1,FEDFUNDS` when econ step enabled with no list. |

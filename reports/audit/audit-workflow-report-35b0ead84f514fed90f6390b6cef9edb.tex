@@ -1,0 +1,144 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\section{\texorpdfstring{Audit Report: Workflow \texttt{35b0ead84f514fed90f6390b6cef9edb}}{Audit Report: Workflow 35b0ead84f514fed90f6390b6cef9edb}}\label{audit-report-workflow-35b0ead84f514fed90f6390b6cef9edb}
+
+\subsection{Overview}\label{overview}
+
+\begin{itemize}
+\tightlist
+\item
+  Source JSON: \texttt{reports\textbackslash{}workflow-report-35b0ead84f514fed90f6390b6cef9edb.json}
+\item
+  Run ID: \texttt{35b0ead84f514fed90f6390b6cef9edb}
+\item
+  Papers input: \texttt{papers\textbackslash{}Use\_of\_Cumulative\_Sums\_of\_Squares\_for\_Re.pdf}
+\item
+  Started at: \texttt{2026-02-16T04:52:41.678161+00:00}
+\item
+  Finished at: \texttt{2026-02-16T04:52:46.598968+00:00}
+\item
+  Duration: \texttt{0:00:04.920807}
+\end{itemize}
+
+\subsection{Effective Configuration}\label{effective-configuration}
+
+\begin{itemize}
+\tightlist
+\item
+  Chat model: \texttt{gpt-5-nano}
+\item
+  Embedding model: \texttt{text-embedding-3-large}
+\item
+  Top K: \texttt{10}
+\item
+  Chunk words / overlap: \texttt{350} / \texttt{75}
+\item
+  Batch size: \texttt{64}
+\item
+  Database URL configured: \texttt{True}
+\end{itemize}
+
+\subsection{Step Outcomes}\label{step-outcomes}
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{prep}: \texttt{completed}
+\item
+  \texttt{ingest}: \texttt{num\_pdfs=1,\ num\_papers=1}
+\item
+  \texttt{enrich}: \texttt{openalex=0,\ citec=0}
+\item
+  \texttt{econ\_data}: \texttt{fetched}
+\item
+  \texttt{agentic}: \texttt{skipped}
+\item
+  \texttt{index}: \texttt{skipped\ (reason:\ }db\_unreachable\texttt{)}
+\item
+  \texttt{report\_store}: \texttt{pending}
+\end{itemize}
+
+\subsection{Agentic Summary}\label{agentic-summary}
+
+\begin{itemize}
+\tightlist
+\item
+  Status: \texttt{skipped}
+\item
+  Main question: n/a
+\item
+  Report question set: \texttt{n/a}
+\item
+  Structured questions generated: \texttt{0}
+\item
+  Confidence mean/median: \texttt{n/a} / \texttt{n/a}
+\item
+  Confidence labels: low=0, medium=0, high=0
+\end{itemize}
+
+\subsubsection{Final Answer}\label{final-answer}
+
+n/a
+
+\subsubsection{Sub-Answers}\label{sub-answers}
+
+\emph{No sub-answers recorded.}
+
+\subsection{Structured Q\&A Appendix}\label{structured-qa-appendix}
+
+This section mirrors \texttt{agentic.report\_questions} for audit traceability.
+
+\emph{No structured report questions found.}
+
+\end{document}

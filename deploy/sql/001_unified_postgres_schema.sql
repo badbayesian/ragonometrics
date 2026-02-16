@@ -182,11 +182,12 @@ $$;
 -- =========================
 -- workflow
 -- =========================
-CREATE TABLE IF NOT EXISTS workflow.workflow_runs (
-    run_id TEXT PRIMARY KEY,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    started_at TIMESTAMPTZ,
-    finished_at TIMESTAMPTZ,
+CREATE TABLE IF NOT EXISTS workflow.run_records (
+    id BIGSERIAL PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    record_kind TEXT NOT NULL,
+    step TEXT NOT NULL DEFAULT '',
+    record_key TEXT NOT NULL DEFAULT '',
     status TEXT,
     papers_dir TEXT,
     config_hash TEXT,
@@ -200,117 +201,70 @@ CREATE TABLE IF NOT EXISTS workflow.workflow_runs (
     paper_set_hash TEXT,
     question TEXT,
     report_question_set TEXT,
-    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb
-);
-CREATE TABLE IF NOT EXISTS workflow.workstreams (
-    workstream_id TEXT PRIMARY KEY,
-    name TEXT,
-    objective TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb
-);
-CREATE TABLE IF NOT EXISTS workflow.workstream_runs (
-    workstream_id TEXT NOT NULL REFERENCES workflow.workstreams(workstream_id) ON DELETE CASCADE,
-    run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-    arm TEXT,
-    source_bucket TEXT,
-    is_baseline BOOLEAN NOT NULL DEFAULT FALSE,
-    parent_run_id TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    PRIMARY KEY (workstream_id, run_id)
-);
-CREATE INDEX IF NOT EXISTS workflow_runs_created_at_idx
-    ON workflow.workflow_runs(created_at DESC);
-CREATE INDEX IF NOT EXISTS workflow_runs_workstream_idx
-    ON workflow.workflow_runs(workstream_id);
-CREATE INDEX IF NOT EXISTS workflow_workstream_runs_run_idx
-    ON workflow.workstream_runs(run_id);
-
-CREATE TABLE IF NOT EXISTS workflow.workflow_steps (
-    run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-    step TEXT NOT NULL,
-    status TEXT,
-    step_attempt_id TEXT,
-    attempt_no INTEGER,
-    queued_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
-    duration_ms INTEGER,
-    status_reason TEXT,
-    error_code TEXT,
-    error_message TEXT,
-    worker_id TEXT,
-    retry_of_attempt_id TEXT,
-    output_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    PRIMARY KEY (run_id, step)
-);
-
-CREATE TABLE IF NOT EXISTS workflow.workflow_reports (
-    run_id TEXT PRIMARY KEY REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-    status TEXT,
-    started_at TIMESTAMPTZ,
-    finished_at TIMESTAMPTZ,
-    papers_dir TEXT,
     report_path TEXT,
     agentic_status TEXT,
-    report_questions_set TEXT,
     report_hash TEXT,
     report_question_count INTEGER,
     confidence_mean DOUBLE PRECISION,
     confidence_label_counts_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     final_answer_hash TEXT,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE TABLE IF NOT EXISTS workflow.report_questions (
-    run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-    question_id TEXT NOT NULL,
-    category TEXT,
-    question TEXT,
-    answer TEXT,
-    confidence TEXT,
-    confidence_score DOUBLE PRECISION,
-    retrieval_method TEXT,
-    evidence_type TEXT,
-    assumption_flag BOOLEAN,
-    assumption_notes TEXT,
-    quote_snippet TEXT,
-    table_figure TEXT,
-    data_source TEXT,
-    citation_anchors_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-    related_questions_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    question_id TEXT,
+    artifact_type TEXT,
+    artifact_path TEXT,
+    artifact_sha256 TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (run_id, question_id)
+    output_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    CHECK (record_kind IN ('run', 'step', 'report', 'question', 'artifact', 'workstream_link')),
+    UNIQUE (run_id, record_kind, step, record_key)
 );
-CREATE TABLE IF NOT EXISTS workflow.artifacts (
+CREATE INDEX IF NOT EXISTS workflow_run_records_run_kind_idx
+    ON workflow.run_records(run_id, record_kind);
+CREATE INDEX IF NOT EXISTS workflow_run_records_created_at_idx
+    ON workflow.run_records(created_at DESC);
+CREATE INDEX IF NOT EXISTS workflow_run_records_status_idx
+    ON workflow.run_records(status);
+CREATE INDEX IF NOT EXISTS workflow_run_records_step_idx
+    ON workflow.run_records(step);
+CREATE INDEX IF NOT EXISTS workflow_run_records_workstream_idx
+    ON workflow.run_records(workstream_id, arm);
+CREATE INDEX IF NOT EXISTS workflow_run_records_question_idx
+    ON workflow.run_records(question_id);
+CREATE INDEX IF NOT EXISTS workflow_run_records_payload_gin_idx
+    ON workflow.run_records USING GIN(payload_json);
+
+CREATE TABLE IF NOT EXISTS workflow.async_jobs (
     id BIGSERIAL PRIMARY KEY,
-    run_id TEXT NOT NULL REFERENCES workflow.workflow_runs(run_id) ON DELETE CASCADE,
-    artifact_type TEXT NOT NULL,
-    path TEXT NOT NULL,
-    sha256 TEXT,
+    job_id TEXT NOT NULL UNIQUE,
+    queue_name TEXT NOT NULL DEFAULT 'default',
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'queued',
+    payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    result_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    error_text TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 3,
+    retry_delay_seconds INTEGER NOT NULL DEFAULT 10,
+    available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    locked_at TIMESTAMPTZ,
+    worker_id TEXT,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    meta_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    UNIQUE (run_id, artifact_type, path)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (status IN ('queued', 'retry', 'running', 'completed', 'failed')),
+    CHECK (job_type IN ('workflow', 'index'))
 );
-CREATE INDEX IF NOT EXISTS workflow_reports_status_idx
-    ON workflow.workflow_reports(status);
-CREATE INDEX IF NOT EXISTS workflow_reports_started_at_idx
-    ON workflow.workflow_reports(started_at DESC);
-CREATE INDEX IF NOT EXISTS workflow_reports_finished_at_idx
-    ON workflow.workflow_reports(finished_at DESC);
-CREATE INDEX IF NOT EXISTS workflow_reports_question_set_idx
-    ON workflow.workflow_reports(report_questions_set);
-CREATE INDEX IF NOT EXISTS workflow_reports_report_hash_idx
-    ON workflow.workflow_reports(report_hash);
-CREATE INDEX IF NOT EXISTS workflow_report_questions_conf_idx
-    ON workflow.report_questions(confidence);
-CREATE INDEX IF NOT EXISTS workflow_reports_payload_gin_idx
-    ON workflow.workflow_reports USING GIN(payload);
-CREATE INDEX IF NOT EXISTS workflow_reports_payload_path_gin_idx
-    ON workflow.workflow_reports USING GIN(payload jsonb_path_ops);
+CREATE INDEX IF NOT EXISTS workflow_async_jobs_status_available_idx
+    ON workflow.async_jobs(status, available_at, created_at);
+CREATE INDEX IF NOT EXISTS workflow_async_jobs_queue_status_idx
+    ON workflow.async_jobs(queue_name, status, available_at);
+CREATE INDEX IF NOT EXISTS workflow_async_jobs_worker_idx
+    ON workflow.async_jobs(worker_id, status);
 
 -- =========================
 -- retrieval

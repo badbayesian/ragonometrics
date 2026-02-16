@@ -7,7 +7,7 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 | Flow | Entry | Core Path | Primary Outputs |
 | --- | --- | --- | --- |
 | Workflow (sync) | `ragonometrics workflow` via `ragonometrics/cli/entrypoints.py:194` | `run_workflow` in `ragonometrics/pipeline/workflow.py:823` | `reports/workflow-report-<run_id>.json`, `reports/prep-manifest-<run_id>.json`, `workflow.workflow_*` rows, `workflow.workflow_reports` row |
-| Workflow (async) | `ragonometrics workflow --async` via `ragonometrics/cli/entrypoints.py:194` | `enqueue_workflow` -> `workflow_entrypoint` in `ragonometrics/integrations/rq_queue.py:32`, `ragonometrics/pipeline/workflow.py:1182` | Same as sync, executed by RQ worker |
+| Workflow (async) | `ragonometrics workflow --async` via `ragonometrics/cli/entrypoints.py:194` | `enqueue_workflow` -> Postgres queue worker -> `workflow_entrypoint` in `ragonometrics/integrations/rq_queue.py`, `ragonometrics/pipeline/workflow.py` | Same as sync, executed by Postgres queue worker |
 | Query CLI | `ragonometrics query` via `ragonometrics/cli/entrypoints.py:53` | `load_papers` -> chunk/embed -> `top_k_context` -> LLM answer | stdout answer + `retrieval.query_cache` rows |
 | Streamlit chat | `ragonometrics ui` via `ragonometrics/cli/entrypoints.py:116` | `ragonometrics/ui/streamlit_app.py:536` | Interactive answers, snapshots, usage metrics, cache rows |
 | Index-only | `ragonometrics index` via `ragonometrics/cli/entrypoints.py:32` | `build_index` in `ragonometrics/indexing/indexer.py:124` | `vectors.index`, `indexes/vectors-*.index`, index sidecar/manifests, Postgres vectors/metadata |

@@ -10,4 +10,4 @@ Indexing and Retrieval
 Queueing
 --------
 - [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py) enqueues indexing jobs.
-- Use Redis + RQ worker for async indexing.
+- Use the Postgres-backed queue worker (`python -m ragonometrics.integrations.rq_queue worker`) for async indexing.
