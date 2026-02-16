@@ -1,4 +1,4 @@
-"""Multi-step agentic workflow orchestration for ingest -> enrich -> index -> evaluate -> report."""
+"""Workflow orchestration for ingest, enrichment, agentic QA, indexing, evaluation, and reporting."""
 
 from __future__ import annotations
 
@@ -42,10 +42,12 @@ from ragonometrics.integrations.econ_data import fetch_fred_series
 
 
 def _utc_now() -> str:
+    """Return the current UTC timestamp in ISO-8601 format."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def _is_insufficient_quota_error(exc: Exception) -> bool:
+    """Return whether an exception chain represents an insufficient quota error."""
     current: Exception | None = exc
     seen: set[int] = set()
     while current is not None and id(current) not in seen:
@@ -64,6 +66,7 @@ def _is_insufficient_quota_error(exc: Exception) -> bool:
 
 
 def _estimate_tokens(text: str) -> int:
+    """Estimate token usage from text length using a coarse heuristic."""
     if not text:
         return 0
     text = str(text)
@@ -74,6 +77,7 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _resolve_paper_paths(papers_path: Path) -> List[Path]:
+    """Resolve a file or directory input into a list of PDF paths."""
     if papers_path.is_file():
         if papers_path.suffix.lower() == ".pdf":
             return [papers_path]
@@ -84,10 +88,12 @@ def _resolve_paper_paths(papers_path: Path) -> List[Path]:
 
 
 def _progress_iter(items, desc: str, *, total: int | None = None):
+    """Wrap an iterable with a tqdm progress bar."""
     return tqdm(items, desc=desc, total=total)
 
 
 def _can_connect_db(db_url: str) -> bool:
+    """Return True when the provided database URL is reachable."""
     try:
         import psycopg2
 
@@ -99,6 +105,7 @@ def _can_connect_db(db_url: str) -> bool:
 
 
 def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict[str, Any]]:
+    """Select the metadata database URL and capture fallback diagnostics."""
     preferred = (preferred_db_url or "").strip() or None
     env_db = (os.environ.get("DATABASE_URL") or "").strip() or None
     candidates: List[tuple[str, str]] = []
@@ -135,6 +142,7 @@ def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict
 
 
 def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Path:
+    """Write the workflow report JSON file and return its path."""
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"workflow-report-{run_id}.json"
     path.write_text(
@@ -145,6 +153,7 @@ def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Pat
 
 
 def _bool_env(name: str, default: bool) -> bool:
+    """Parse a boolean environment variable with a default fallback."""
     raw = os.environ.get(name)
     if raw is None:
         return default
@@ -157,6 +166,7 @@ def _bool_env(name: str, default: bool) -> bool:
 
 
 def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_at: str | None) -> Dict[str, Any]:
+    """Attach source-run reuse metadata to a step output payload."""
     if isinstance(step_output, dict):
         out = dict(step_output)
     else:
@@ -169,12 +179,14 @@ def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_
 
 
 def _tail(text: str, limit: int = 800) -> str:
+    """Return the trailing slice of a string constrained by the provided limit."""
     if not text:
         return ""
     return text[-limit:]
 
 
 def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
+    """Execute a subprocess command and capture return code, stdout, and stderr."""
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
@@ -187,6 +199,7 @@ def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
 
 
 def _git_value(args: List[str]) -> str | None:
+    """Run a git command and return a trimmed stdout value when successful."""
     try:
         proc = subprocess.run(
             ["git", *args],
@@ -206,6 +219,7 @@ def _git_value(args: List[str]) -> str | None:
 
 
 def _render_audit_artifacts(*, run_id: str, report_path: Path, report_dir: Path) -> Dict[str, Any]:
+    """Render markdown/PDF audit artifacts for a workflow report."""
     out: Dict[str, Any] = {
         "enabled": _bool_env("WORKFLOW_RENDER_AUDIT_ARTIFACTS", True),
         "status": "pending",
@@ -304,6 +318,7 @@ def _store_report_in_db(
     payload: Dict[str, Any],
     workflow_status: str,
 ) -> Dict[str, Any]:
+    """Persist the finalized workflow report payload to Postgres."""
     out: Dict[str, Any] = {"database_url": bool(db_url)}
     if not db_url:
         out["status"] = "skipped"
@@ -340,6 +355,7 @@ def _finalize_workflow_report(
     db_url: str | None,
     workflow_status: str,
 ) -> Dict[str, Any]:
+    """Finalize workflow output, write report artifacts, and persist report state."""
     summary.setdefault("finished_at", _utc_now())
     summary["report_store"] = {"status": "pending", "database_url": bool(db_url)}
     summary["audit_artifacts"] = {"status": "pending"}
@@ -384,6 +400,7 @@ def _finalize_quota_termination(
     step: str,
     exc: Exception,
 ) -> Dict[str, Any]:
+    """Finalize workflow state and report when execution stops due to quota limits."""
     err_text = str(exc)
     summary["error"] = err_text
     summary["fatal_error"] = {
@@ -407,6 +424,7 @@ def _finalize_quota_termination(
 
 
 def _parse_subquestions(raw: str, max_items: int) -> List[str]:
+    """Parse raw planner output into a deduplicated list of subquestions."""
     items: List[str] = []
     for line in raw.splitlines():
         line = line.strip()
@@ -431,6 +449,7 @@ def _agentic_plan(
     max_items: int,
     run_id: str | None = None,
 ) -> List[str]:
+    """Generate agentic subquestions for the main research prompt."""
     instructions = (
         "You are a research analyst. Generate a short list of sub-questions that would help "
         "answer the main question. Return one sub-question per line, no extra text."
@@ -460,6 +479,7 @@ def _agentic_summarize(
     sub_answers: List[Dict[str, str]],
     run_id: str | None = None,
 ) -> str:
+    """Synthesize sub-answer results into a final response."""
     bullets = "\n".join([f"- {item['question']}: {item['answer']}" for item in sub_answers])
     synthesis_prompt = (
         "Synthesize a concise, researcher-grade answer based on the sub-answers below. "
@@ -480,6 +500,7 @@ def _agentic_summarize(
 
 
 def _format_citations_context(citations: List[Dict[str, Any]], max_items: int) -> str:
+    """Format extracted citations into a compact context block for prompting."""
     if not citations:
         return ""
     items = citations[:max_items]
@@ -509,6 +530,7 @@ def _format_citations_context(citations: List[Dict[str, Any]], max_items: int) -
 
 
 def _split_context_chunks(context: str) -> List[Dict[str, Any]]:
+    """Parse provenance-tagged context text into structured chunk metadata."""
     chunks: List[Dict[str, Any]] = []
     if not context:
         return chunks
@@ -536,6 +558,7 @@ def _split_context_chunks(context: str) -> List[Dict[str, Any]]:
 
 
 def _confidence_from_retrieval_stats(stats: Dict[str, Any] | None) -> tuple[str, float, str]:
+    """Convert retrieval statistics into a confidence label and numeric score."""
     if not stats or int(stats.get("top_k", 0) or 0) <= 0:
         return "low", 0.0, "unknown"
     method = str(stats.get("method") or "local")
@@ -566,6 +589,7 @@ def _build_report_prompt(
     context: str,
     anchors: List[Dict[str, Any]],
 ) -> str:
+    """Build the JSON-output prompt for a structured report question."""
     anchor_lines = []
     for item in anchors:
         section = f" section {item['section']}" if item.get("section") else ""
@@ -741,6 +765,7 @@ REPORT_QUESTION_SECTIONS: List[tuple[str, str, List[str]]] = [
 
 
 def _normalize_report_question_set(value: str | None, enabled_default: bool) -> str:
+    """Normalize report question set mode to a supported value."""
     if not value:
         return "structured" if enabled_default else "none"
     text = value.strip().lower()
@@ -756,6 +781,7 @@ def _normalize_report_question_set(value: str | None, enabled_default: bool) -> 
 
 
 def _build_report_questions() -> List[Dict[str, str]]:
+    """Construct the structured report question definitions."""
     questions: List[Dict[str, str]] = []
     for section_key, section_title, items in REPORT_QUESTION_SECTIONS:
         for idx, question in enumerate(items, start=1):
@@ -770,6 +796,7 @@ def _build_report_questions() -> List[Dict[str, str]]:
 
 
 def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    """Convert subquestion answers into report-question style entries."""
     report: List[Dict[str, str]] = []
     for idx, item in enumerate(sub_answers, start=1):
         report.append(
@@ -785,6 +812,7 @@ def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> Lis
 
 
 def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Summarize confidence scores and labels across report-question answers."""
     scores: List[float] = []
     labels: Dict[str, int] = {"high": 0, "medium": 0, "low": 0}
     for item in items:
@@ -853,6 +881,7 @@ def _answer_report_question_item(
     item: Dict[str, str],
     run_id: str | None = None,
 ) -> Dict[str, Any]:
+    """Answer one structured report question using retrieval and LLM output parsing."""
     context, retrieval_stats = top_k_context(
         chunks,
         chunk_embeddings,
@@ -943,6 +972,7 @@ def _answer_report_questions(
     run_id: str | None = None,
     reusable_items_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
+    """Answer all structured report questions with optional reuse of prior results."""
     questions = _build_report_questions()
     if not questions:
         return []
@@ -1051,6 +1081,7 @@ def _answer_subquestion(
     run_id: str | None = None,
     question_id: str | None = None,
 ) -> Dict[str, str]:
+    """Answer a single agentic subquestion using retrieved context."""
     context = top_k_context(
         chunks,
         chunk_embeddings,
