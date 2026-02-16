@@ -5,7 +5,9 @@ x-app-env: &app_env
   STREAMLIT_PASSWORD: ${STREAMLIT_PASSWORD}
   OPENALEX_API_KEY: ${OPENALEX_API_KEY}
   OPENALEX_MAILTO: ${OPENALEX_MAILTO}
-  DATABASE_URL: ${DATABASE_URL}
+  # Use an internal container-safe DB URL by default so host env overrides
+  # (for example DATABASE_URL=...@localhost) do not break inter-container access.
+  DATABASE_URL: ${CONTAINER_DATABASE_URL:-postgres://postgres:postgres@postgres:5432/ragonometrics}
   FRED_API_KEY: ${FRED_API_KEY}
   ECON_SERIES_IDS: ${ECON_SERIES_IDS}
   WORKFLOW_AGENTIC: ${WORKFLOW_AGENTIC}
@@ -93,7 +95,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-ragonometrics}
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
-      - "${PGADMIN_HOST_PORT:-5050}:80"
+      - "${PGADMIN_HOST_PORT:-5052}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
