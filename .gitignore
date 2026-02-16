@@ -48,7 +48,9 @@ bench_results.json
 bench/benchmark.csv
 bench/sweep/
 
+# Generated LaTeX report artifacts (keep local only)
+reports/**/*.tex
+
 # FAISS/metadata artifacts
 vectors_*.index
 vectors_*.sqlite
-
