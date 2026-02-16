@@ -1,0 +1,3672 @@
+{
+  "run_id": "cf1d92ff869046f39b7319007e9a7835",
+  "started_at": "2026-02-15T19:29:20.818045+00:00",
+  "papers_dir": "papers\\NetworksElectoralCompetition.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\sqlite\\ragonometrics_token_usage.sqlite",
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 13145312,
+      "corpus_hash": "16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-cf1d92ff869046f39b7319007e9a7835.json"
+  },
+  "ingest": {
+    "num_pdfs": 1,
+    "num_papers": 1
+  },
+  "enrich": {
+    "openalex": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "completed",
+    "question": "What is the key contribution?",
+    "question_tokens_estimate": 7,
+    "subquestions": [
+      "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')"
+    ],
+    "sub_answers": [
+      {
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "No specific question was posed. Below is a concise synthesis of key definitions, data, and identification from the provided context, with citations.\n\n- Roll-off (House turnout relative to top-of-ticket)\n  - Definition: Share of top-of-ticket voters who abstain from the House race: (VotesTop − VotesHouse) / VotesTop; captures abstention after incurring the cost of voting; related to “roll-off” literature (Feddersen & Pesendorfer 1996; Miller 2022; Snyder & Strömberg 2010) (page 18 words 275-496).\n  - Variable construction and scope: Main analysis at county level from Dave Leip’s; robustness at county-by-CD level from Harvard EDA, Daily Kos, Dave Leip’s, and MIT EDS Lab; exclude elections without a top-of-ticket race (page 49 words 0-276).\n  - Summary stats: Mean 4.42%, SD 12.22 pp; also report turnout in top-of-ticket (mean 51.34%) and House (mean 49.07%) (page 49 words 0-276).\n\n- Campaign contributions data\n  - Source: Kuziemko et al. 2023 (October), constructed from FEC data in Bonica 2014; geocoding used to identify whether contributor resides in the same congressional district as the candidate (page 18 words 275-496).\n\n- Border pairs identification design\n  - Setup: Neighboring county pairs that straddle a district boundary; counties are similar except district assignment, yielding different district homophily; restrict to counties fully within one district; collapse outcomes to county level; include one observation per county–pair; compare within-state pairs; precision decreases due to restricted sample (page 28 words 0-349).\n  - Specification:\n    - $y_{ct} = \\alpha_c + \\mu_{pt} + \\beta\\,\\bar{\\pi}_{c,t} + X'_{ct}\\delta + \\varepsilon_{ct}$, where $y_{ct}$ is the outcome, $\\mu_{pt}$ pair-by-year FE, $X_{ct}$ time-varying county controls; use state-by-year FE (insufficient data for district-by-year FE) (page 28 words 0-349).\n  - Results note: Qualitatively similar to redistricting design; estimates on “Selected Party” become insignificant after adding DMA-by-year FE (page 28 words 0-349).\n\n- Conceptual framework\n  - Develops a theoretical model of information diffusion within districts; district homophily summarized as a network statistic; considers news about elected officials diffusing through networks to determine the equilibrium share of informed voters (page 28 words 0-349).\n\n- Vote count data construction\n  - County-by-CD measures built from precinct-level vote counts (Harvard EDA 2000–2010; MIT EDS Lab 2016–2020) combined with county-by-CD vote counts from Dave Leip’s (House) and Daily Kos (President, Senator, Governor) (page 47 words 0-207).\n\n- CES variables and summary statistics (knowledge, preferences, voting)\n  - Knowledge outcomes (binary): Heard of Representative; Selected Party; Selected Correct Party; defined via pre-survey items on recognizing and assigning party to the House representative (page 47 words 0-207).\n  - Voting/preference outcomes (binary): Prefer Incumbent/Opponent/Neither (pre-survey); Voted for Incumbent/Opponent/Neither (post-survey); Validated turnout in general/primary; self-reported general turnout; handling of missing when no incumbent or unmatched rolls (page 48 words 0-333).\n  - Summary (sample means): Heard of Rep 93.2%; Selected Party 68.6%; Selected Correct Party 61.7%; Prefer Incumbent 40.1%; Voted for Incumbent 41.0%; Validated General Turnout 57.5%; Self-Reported General Turnout 87.8% (page 49 words 0-276).\n\n- Additional pointers\n  - Figures showing effects of homophily on self-reported voting using commuting- and zip-code-based measures (Figures C11, C14); a figure on changes in district homophily with progressively finer bins (Figure C5) (page 61 words 0-15; page 64 words 0-45; page 54 words 0-18).",
+        "question_tokens_estimate": 19
+      }
+    ],
+    "final_answer": "- Core contribution: Formalizes and empirically tests how district homophily governs the diffusion of information about elected officials—modeled as a network statistic that determines the equilibrium share of informed voters—and links this mechanism to electoral behavior. Empirically, it identifies homophily’s effects using a within-state border-pairs design and operationalizes participation via a precise roll-off measure. (page 28 words 0-349; page 18 words 275-496)\n\n- Theory to measurement: Develops a model of news diffusion within districts, summarizing district homophily as a network statistic shaping the informed share; operationalizes abstention conditional on showing up via roll-off $=(\\text{VotesTop}-\\text{VotesHouse})/\\text{VotesTop}$. (page 28 words 0-349; page 18 words 275-496)\n\n- Identification: Implements a neighboring-county border-pairs design with county and pair-by-year fixed effects and time-varying controls to isolate district-assignment-induced differences in homophily; documents robustness and the sensitivity of “Selected Party” to adding DMA-by-year FE. (page 28 words 0-349)\n\n- Data infrastructure: Assembles multi-source county and county-by-CD vote counts (precinct-level EDA/EDS merged with Dave Leip’s and Daily Kos), CES-based knowledge/preference/turnout measures, and geocoded FEC contributions identifying in-district contributors—enabling comprehensive tests of the theory. (page 47 words 0-207; page 48 words 0-333; page 18 words 275-496)\n\n- Empirical grounding: Provides descriptive baselines for roll-off and turnout (mean roll-off 4.42%; top-of-ticket turnout 51.34%; House turnout 49.07%) and for voter knowledge/behavior (e.g., Heard of Rep 93.2%; Validated General Turnout 57.5%), anchoring the analysis. (page 49 words 0-276)",
+    "report_questions_enabled": true,
+    "report_questions_set": "both",
+    "report_questions": [
+      {
+        "id": "A01",
+        "category": "A) Research question / contribution",
+        "question": "What is the main research question of the paper?",
+        "answer": "How the alignment between social networks and political boundaries (district homophily) affects voters’ political knowledge and behavior, including turnout.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "direct statement (introduction)",
+        "confidence": "low",
+        "confidence_score": 0.31323401739665313,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 2,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Introduction",
+            "note": "States the research question explicitly."
+          },
+          {
+            "page": 5,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Contribution",
+            "note": "Reiterates focus on how the match between networks and boundaries affects knowledge and behavior."
+          }
+        ],
+        "quote_snippet": "How does the alignment between social networks and political boundaries impact voters’ political knowledge and behavior?",
+        "table_figure": null,
+        "data_source": "Introduction",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A02",
+        "category": "A) Research question / contribution",
+        "question": "What is the paper's primary contribution relative to the existing literature?",
+        "answer": "The paper’s primary contribution is to provide causal, near-national estimates of how social networks (district homophily) affect voter knowledge—shifting the focus beyond traditional media by leveraging geographic variation in U.S. social ties (and, secondarily, linking social learning to political geography/redistricting).",
+        "question_tokens_estimate": 19,
+        "evidence_type": "direct statement in text",
+        "confidence": "low",
+        "confidence_score": 0.3201369538893216,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 3,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Introduction",
+            "note": "States two primary contributions; first is causal, near-national estimates of networks’ impact on voter knowledge."
+          },
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": "Introduction",
+            "note": "Clarifies leveraging geographic variation in the U.S. social network; relevance for redistricting."
+          },
+          {
+            "page": 5,
+            "start_word": 275,
+            "end_word": 475,
+            "section": "Introduction",
+            "note": "Connects social learning to political geography and implications for gerrymandering measures."
+          }
+        ],
+        "quote_snippet": "This paper makes two primary contributions: First, I contribute to the literature on how voters learn about politics by providing causal estimates of the extent to which social networks impact voter knowledge",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A03",
+        "category": "A) Research question / contribution",
+        "question": "What is the central hypothesis being tested?",
+        "answer": "Greater alignment between social ties and congressional district boundaries (district homophily) facilitates the diffusion of representative-specific political information, making voters more informed and influencing voting behavior.",
+        "question_tokens_estimate": 11,
+        "evidence_type": "textual evidence",
+        "confidence": "low",
+        "confidence_score": 0.28653574361407586,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 6,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "Defines district homophily and posits that information spreads more readily between friends in the same district, implying boundaries shape political information flow."
+          },
+          {
+            "page": 28,
+            "start_word": 275,
+            "end_word": 405,
+            "section": "main",
+            "note": "States empirical link and provides a diffusion framework showing how district homophily determines informed share."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "Reports event-study evidence that changes in district homophily change voter knowledge, consistent with the hypothesis."
+          }
+        ],
+        "quote_snippet": "Assuming that information about representatives spreads more readily between friends in the same district, the way district boundaries are drawn can shape how political information flows through social networks.",
+        "table_figure": null,
+        "data_source": "Paper text in provided context",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A04",
+        "category": "A) Research question / contribution",
+        "question": "What are the main outcomes of interest (dependent variables)?",
+        "answer": "Dependent variables include: (A) Voter information measures from CES: Heard of Representative, Selected Party, Selected Correct Party. (B) Candidate preference (pre-survey): Prefer Incumbent, Prefer Opponent, Prefer Neither. (C) Vote choice (post-survey): Voted for Incumbent, Voted for Opponent, Voted for Neither. (D) Turnout measures from CES: Voted in General Election (Validated), Voted in Primary Election (Validated), Voted in General Election (Self-Report). (E) Vote-count outcomes: House roll-off (share of top-of-ticket voters abstaining in House race), Turnout in Top-of-Ticket Election (as share of VAP), and Turnout in House Election (as share of VAP).",
+        "question_tokens_estimate": 15,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.34403041836800285,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "States study examines voter knowledge, self-reported choices, and actual voting via vote counts."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Appendix Table B1 defines voter knowledge outcomes."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Appendix Table B2 defines CES voting outcomes (preferences, vote choices, turnout variables)."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Table B4/B5 define vote-count outcomes: roll-off and turnout measures."
+          },
+          {
+            "page": 22,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Text describes roll-off as share of top-of-ticket voters who abstain in House election."
+          }
+        ],
+        "quote_snippet": "I study the impact of district homophily on voters’ knowledge and political behavior... I then incorporate vote count data to reveal actual voting behavior",
+        "table_figure": "Appendix Tables B1, B2, B4–B5",
+        "data_source": "CES; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos; Census (VAP)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A05",
+        "category": "A) Research question / contribution",
+        "question": "What are the key treatment/exposure variables (independent variables)?",
+        "answer": "District homophily—both its level (used directly in regressions) and, for the redistricting event study, the change in district homophily a county experiences between 2012 and 2013 (Δπ̄c).",
+        "question_tokens_estimate": 17,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.24776601700919515,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "Defines Δπ̄c as the change in district homophily between 2012 and 2013 used in event studies."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 shows 'District Homophily' as the independent variable in regressions."
+          }
+        ],
+        "quote_snippet": "Δπ̄c is the change in district homophily experienced by county c between 2012 and 2013",
+        "table_figure": "Table C2",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A06",
+        "category": "A) Research question / contribution",
+        "question": "What setting/context does the paper study (country, market, period)?",
+        "answer": "United States (continental U.S.); U.S. congressional districts/elections and voter information diffusion via social networks; centered on the 2010 Census redistricting with treatment in 2012–2013 and an event-study window spanning roughly 2006–2022.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.31368693464548203,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": null,
+            "note": "Scope across the continental U.S. using national data on social ties"
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Focus on post-2010 Census redistricting; new borders for Nov 2012 elections; treatment timing and event-study years (incl. 2006–2022)"
+          }
+        ],
+        "quote_snippet": "The Census was conducted in April 2010, and states needed to draw new congressional district borders in time for the November 2012 elections.",
+        "table_figure": null,
+        "data_source": "national data on social ties",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A07",
+        "category": "A) Research question / contribution",
+        "question": "What is the main mechanism proposed by the authors?",
+        "answer": "Information diffuses through social networks and travels faster among same-district friends (district homophily); thus, alignment between social ties and district boundaries drives voter knowledge about representatives.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.26822049639980433,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 6,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Defines mechanism: voters learn via networks; same-district ties accelerate spread; introduces district homophily."
+          },
+          {
+            "page": 28,
+            "start_word": 275,
+            "end_word": 405,
+            "section": null,
+            "note": "Conceptual framework of diffusion with homophily; district homophily as summary statistic."
+          },
+          {
+            "page": 34,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Clarifies district homophily arises from intersection of networks and district boundaries."
+          },
+          {
+            "page": 4,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Highlights social networks as key source of political information."
+          }
+        ],
+        "quote_snippet": "Accordingly, information about representatives is likely to spread more quickly when people are more likely to interact with others from the same district.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A08",
+        "category": "A) Research question / contribution",
+        "question": "What alternative mechanisms are discussed?",
+        "answer": "Social pressure and recruitment.",
+        "question_tokens_estimate": 10,
+        "evidence_type": "textual evidence",
+        "confidence": "low",
+        "confidence_score": 0.2426677094907878,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 4,
+            "start_word": 150,
+            "end_word": 210,
+            "section": null,
+            "note": "Peer-effects literature mentions other mechanisms."
+          }
+        ],
+        "quote_snippet": "which also explores other mechanisms such as social pressure (Gerber et al. 2008, Sinclair et al. 2012) and recruitment (Klofstad 2007).",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A09",
+        "category": "A) Research question / contribution",
+        "question": "What are the main policy implications claimed by the paper?",
+        "answer": "The paper argues that how district lines are drawn shapes how political information spreads through social networks, which in turn affects voter knowledge and turnout. Thus, redistricting and assessments of partisan bias should incorporate social learning (rather than assume fixed voter behavior). It further notes that newly available social network data (e.g., the SCI) could help policymakers draw fairer districts, but the same data could be exploited by partisan gerrymanderers.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.34582459069433863,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 6,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Empirical Strategy: District Homophily",
+            "note": "District boundaries can shape political information flow via network–district alignment."
+          },
+          {
+            "page": 5,
+            "start_word": 275,
+            "end_word": 475,
+            "section": "Main text (gerrymandering implications)",
+            "note": "Findings imply turnout depends on how borders group one’s social network; literature overlooks social learning."
+          },
+          {
+            "page": 36,
+            "start_word": 0,
+            "end_word": 309,
+            "section": "Implications preceding References",
+            "note": "Social network data (SCI) could be used to draw fairer districts but may also be exploited by partisan gerrymanderers."
+          }
+        ],
+        "quote_snippet": "enabling its use by policymakers to draw fairer districts, but also by partisan gerrymanderers who may seek to exploit it.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A10",
+        "category": "A) Research question / contribution",
+        "question": "What is the welfare interpretation (if any) of the results?",
+        "answer": "The paper does not provide a formal welfare analysis. Its results imply that higher district homophily increases voter knowledge and reduces abstention, and it notes policy relevance: such network data could be used to draw fairer districts but also exploited by gerrymanderers, making welfare implications ambiguous.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual_evidence",
+        "confidence": "low",
+        "confidence_score": 0.31149671482875635,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 19,
+            "start_word": 40,
+            "end_word": 140,
+            "section": null,
+            "note": "States main results: knowledge increases and abstention decreases."
+          },
+          {
+            "page": 36,
+            "start_word": 150,
+            "end_word": 250,
+            "section": null,
+            "note": "Policy relevance highlighting potential for fairer districts and for exploitation by gerrymanderers."
+          }
+        ],
+        "quote_snippet": "district homophily increases voters’ knowledge about their representatives, and accordingly decreases abstention in House elections.",
+        "table_figure": null,
+        "data_source": "Main text (pages 19, 36)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "A11",
+        "category": "A) Research question / contribution",
+        "question": "What are the main limitations acknowledged by the authors?",
+        "answer": "They note two broad limitations. Substantively, the paper does not yet estimate the diffusion model’s key parameters or run counterfactual map simulations—those are deferred to future work. Methodologically, their identification result relies on restrictive map/network assumptions: limited fragmentation with a dominant district per county, simple boundaries where a county intersects at most two districts (and perturbations preserve this), non-trivial out-of-state network leakage (spectral radius < 1), and network non-degeneracy (linearly independent rows). They acknowledge the two-district split condition is restrictive, though it holds for most U.S. counties.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.26450904786970586,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 34,
+            "start_word": 200,
+            "end_word": 320,
+            "section": null,
+            "note": "Future work to estimate diffusion parameters and simulate counterfactual maps"
+          },
+          {
+            "page": 44,
+            "start_word": 300,
+            "end_word": 491,
+            "section": "appendix",
+            "note": "Assumptions 1–2: Limited fragmentation and simple boundaries; note on two-district split prevalence"
+          },
+          {
+            "page": 45,
+            "start_word": 0,
+            "end_word": 180,
+            "section": "appendix",
+            "note": "Assumptions 3–4: Non-trivial out-of-state connections and network non-degeneracy"
+          },
+          {
+            "page": 46,
+            "start_word": 175,
+            "end_word": 320,
+            "section": "appendix",
+            "note": "Identification depends on leakage and non-degeneracy to ensure invertibility"
+          }
+        ],
+        "quote_snippet": "Future work will focus on estimating the parameters of the diffusion process, which would allow for the simulation of counterfactual district maps.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Identification requires: (1) limited fragmentation with a dominant district per county; (2) simple boundaries so each county spans ≤2 districts and nearby maps preserve this; (3) leakage to out-of-state nodes (ρ(Πs)<1); (4) non-degenerate network (independent rows).",
+        "related_questions": []
+      },
+      {
+        "id": "A12",
+        "category": "A) Research question / contribution",
+        "question": "What does the paper claim is novel about its data or identification?",
+        "answer": "The paper claims novelty in using nationwide social-network data (the Facebook friendship graph) to construct a district homophily measure that aligns social ties with congressional districts, and in identifying causal effects by exploiting geographic variation and redistricting-induced changes in homophily over time.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "textual evidence from main text",
+        "confidence": "low",
+        "confidence_score": 0.31282513555240943,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": null,
+            "note": "National data on social ties; leveraging geographic variation across the U.S."
+          },
+          {
+            "page": 6,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Defines district homophily and states use of Facebook friendship graph"
+          },
+          {
+            "page": 6,
+            "start_word": 275,
+            "end_word": 415,
+            "section": null,
+            "note": "Identification leverages redistricting-driven changes over time"
+          }
+        ],
+        "quote_snippet": "By employing national data on social ties, my analysis comprehensively captures social networks",
+        "table_figure": null,
+        "data_source": "Facebook friendship graph (national social ties)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B01",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the identification strategy (in one sentence)?",
+        "answer": "Exploit changes in county-level district homophily induced by the 2010 redistricting in an event-study design (with fixed effects), with a district-border county-pairs comparison as an alternative robustness strategy.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "textual description of methods",
+        "confidence": "low",
+        "confidence_score": 0.3420695296675894,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 45,
+            "section": null,
+            "note": "Focus on single 2010 redistricting event to avoid staggered treatment and permit pre-trend tests."
+          },
+          {
+            "page": 15,
+            "start_word": 120,
+            "end_word": 260,
+            "section": null,
+            "note": "Event-study setup around treatment timing (2012 as last pre-treatment year) and specification."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 90,
+            "section": null,
+            "note": "Alternative identification via border county pairs across district lines."
+          }
+        ],
+        "quote_snippet": "Focusing on a single redistricting event allows me to avoid concerns related to staggered treatment events",
+        "table_figure": null,
+        "data_source": "2010 U.S. congressional redistricting; SCI-based district homophily",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B02",
+        "category": "B) Identification strategy / causal design",
+        "question": "Is the design experimental, quasi-experimental, or observational?",
+        "answer": "Quasi-experimental",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.2960513458866162,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 6,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "2 Empirical Strategy and Networks Data",
+            "note": "Uses redistricting-induced changes in district homophily for plausibly causal identification (natural experiment)."
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Event study setup around 2010 redistricting",
+            "note": "Event-study design leveraging a single redistricting event to estimate causal effects."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Voters’ Choices event studies",
+            "note": "Event studies treat 2010 as base year with new district boundaries affecting behavior from 2012."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Border pairs design",
+            "note": "Border-pairs comparison across district lines is a quasi-experimental spatial design."
+          }
+        ],
+        "quote_snippet": "changes in district homophily due to redistricting largely are not. Consequently, plausibly causal identification",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B03",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the source of exogenous variation used for identification?",
+        "answer": "The 2010 Census–driven congressional redistricting (implemented for the 2012 elections), which induced changes in district homophily between 2012 and 2013; additionally, a border-pairs design comparing adjacent counties across district lines serves as an alternative source of variation.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.3452658951371074,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 60,
+            "section": null,
+            "note": "Focus on the single redistricting event following the 2010 Census"
+          },
+          {
+            "page": 15,
+            "start_word": 220,
+            "end_word": 270,
+            "section": null,
+            "note": "Defines the treatment as the change in district homophily between 2012 and 2013"
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 120,
+            "section": null,
+            "note": "Border-pairs identification comparing counties across district borders"
+          }
+        ],
+        "quote_snippet": "∆π̄c is the change in district homophily experienced by county c between 2012 and 2013",
+        "table_figure": "Appendix Figure C4",
+        "data_source": "2010 Census redistricting (new congressional district borders for 2012 elections)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B04",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the treatment definition and timing?",
+        "answer": "Treatment is the change in district homophily caused by the 2010 redistricting, measured as Δπ̄c—the change a county experiences between 2012 and 2013. Timing: Census in Apr 2010; new borders used for Nov 2012 elections; representatives under new borders seated Jan 2013. The last pre-treatment year is 2012 for outcomes tied to the current representative, and 2011 (or 2010 for even-year outcomes) for upcoming-election outcomes; event studies assume 2012 as the last pre-treatment year.",
+        "question_tokens_estimate": 11,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.11053936640375273,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Defines Δπ̄c as the change in district homophily between 2012 and 2013; details timing of Census, election, seating, and last pre-treatment year(s)."
+          }
+        ],
+        "quote_snippet": "“∆π̄c is the change in district homophily experienced by county c between 2012 and 2013.”",
+        "table_figure": "Appendix Figure C4",
+        "data_source": "2010 Census redistricting",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B05",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the control/comparison group definition?",
+        "answer": "In the event‑study, the comparison is counties with little or no change in district homophily around the 2012 redistricting, using the pre‑treatment year as baseline (2012 for current‑representative outcomes; 2011/2010 for election‑related outcomes). In the border‑pairs design, the comparison group is the neighboring county across the district border in the same pair‑year (via pair‑by‑year fixed effects).",
+        "question_tokens_estimate": 12,
+        "evidence_type": "Study design description (event study and border-pairs)",
+        "confidence": "low",
+        "confidence_score": 0.21389700792283337,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Defines last pre-treatment year(s) and event-study setup"
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs comparison defined (neighboring county within pair-year)"
+          }
+        ],
+        "quote_snippet": "we can identify the impact of district homophily by comparing deviations from the county-pair’s mean in one county to deviations from the county-pair’s mean in the neighboring county.",
+        "table_figure": "Appendix Table C2 (Border pairs results)",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B06",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the estimating equation / baseline regression specification?",
+        "answer": "Baseline specifications given in the text are:\n1) Event-study (redistricting) specification: yict = λt + Στ βτ Δπ̄c I(τ = t) + Xct δ + Zict γ + εict, with year fixed effects, errors clustered at the county level, and optional additions of district-by-year fixed effects, DMA-by-year fixed effects, and partisan exposure controls.\n2) Border-pairs specification: yct = αc + µpt + β π̄c,t + Xct δ + εct, which includes county fixed effects and pair-by-year fixed effects (and, in this restricted sample, state-by-year fixed effects rather than district-by-year fixed effects).",
+        "question_tokens_estimate": 17,
+        "evidence_type": "direct text (equations)",
+        "confidence": "low",
+        "confidence_score": 0.3288873548233163,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Event-study estimating equation (Eq. 8) and variable definitions."
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Optional district-by-year and DMA-by-year fixed effects; partisan exposure control."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs design estimating equation (Eq. 11)."
+          }
+        ],
+        "quote_snippet": "The specification for this design is ′ yct = αc + µpt + β π̄c,t + Xct δ + εct (11)",
+        "table_figure": null,
+        "data_source": "Equations (8) and (11) in text",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B07",
+        "category": "B) Identification strategy / causal design",
+        "question": "What fixed effects are included (unit, time, two-way, higher dimensional)?",
+        "answer": "Included fixed effects: (1) Time: year fixed effects. (2) Unit: county fixed effects; congressional district fixed effects; media market (DMA) fixed effects. (3) Two-way/higher-dimensional: district-by-year fixed effects; DMA-by-year fixed effects; pair-by-year fixed effects; state-by-year fixed effects. Note: in the border-pairs design, district-by-year FEs are not used; state-by-year and pair-by-year (and, in some specs, DMA-by-year) FEs are included.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.3400683494503729,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 15",
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Event study includes year fixed effects (λt)."
+          },
+          {
+            "page": "page 15",
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Mentions adding district-by-year and DMA-by-year fixed effects."
+          },
+          {
+            "page": "page 28",
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border pairs spec: county FE (αc), pair-by-year FE (μpt); uses state-by-year FEs; omits district-by-year FEs."
+          },
+          {
+            "page": "page 14",
+            "start_word": 275,
+            "end_word": 429,
+            "section": null,
+            "note": "Regression includes media market and congressional district fixed effects."
+          },
+          {
+            "page": "page 19",
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Notes results similar when county fixed effects are included."
+          },
+          {
+            "page": "page 65",
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Appendix Table C2 shows FEs: County, Pair x Year, State x Year, DMA x Year."
+          }
+        ],
+        "quote_snippet": "µpt is the pair-by-year fixed effect",
+        "table_figure": "Appendix Table C2",
+        "data_source": "Appendix Table C2",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B08",
+        "category": "B) Identification strategy / causal design",
+        "question": "What standard errors are used (robust, clustered; at what level)?",
+        "answer": "Clustered standard errors at the county level.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.3215341803039984,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Model specification states errors are clustered at the county level."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 note specifies standard errors clustered at the county level."
+          }
+        ],
+        "quote_snippet": "Standard errors clustered at the county level in parentheses.",
+        "table_figure": "Table C2",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B09",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the key identifying assumption (parallel trends, exclusion restriction, ignorability)?",
+        "answer": "Parallel trends.",
+        "question_tokens_estimate": 23,
+        "evidence_type": "textual (methods: event-study design and pre-trend checks)",
+        "confidence": "low",
+        "confidence_score": 0.33852113349453294,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 24,
+            "end_word": 46,
+            "section": null,
+            "note": "Mentions a visual test of pre-trends around the 2012 redistricting"
+          },
+          {
+            "page": 15,
+            "start_word": 120,
+            "end_word": 200,
+            "section": null,
+            "note": "Introduces event-study specification (Eq. 8), which relies on parallel trends"
+          }
+        ],
+        "quote_snippet": "allows for a visual test of pre-trends in changes in district homophily.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B10",
+        "category": "B) Identification strategy / causal design",
+        "question": "What evidence is provided to support the identifying assumption?",
+        "answer": "The paper supports the identifying assumption with (i) robustness to constructing district homophily using zip-code–level networks—showing similar patterns, slightly larger effects, and no effects on placebo outcomes—and (ii) an alternative border-pairs specification that yields qualitatively similar results to the redistricting design (reported in Appendix Table C2). It also notes institutional/empirical constraints (e.g., most counties lie wholly in one district) that make district homophily informative about the assignment.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "robustness checks, placebo tests, and alternative identification design",
+        "confidence": "low",
+        "confidence_score": 0.26440040229632683,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 27,
+            "start_word": 275,
+            "end_word": 439,
+            "section": null,
+            "note": "Zip-code–level network robustness and placebo outcomes show similar patterns and no placebo effects."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs specification yields qualitatively similar results; results in Appendix Table C2."
+          },
+          {
+            "page": 44,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "appendix",
+            "note": "Institutional constraints (many counties entirely in one district; ~90%) supporting informativeness of homophily."
+          }
+        ],
+        "quote_snippet": "With the border pairs design, I find qualitatively similar results as in the redistricting design",
+        "table_figure": "Appendix Table C2",
+        "data_source": "Appendix Section C.4 (CES + SCI zip-code networks) and Appendix Table C2",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B11",
+        "category": "B) Identification strategy / causal design",
+        "question": "Are there event-study or pre-trend tests? What do they show?",
+        "answer": "Yes. The study uses event‑study designs (which also enable a visual pre‑trend test). The event studies show that effects on voter knowledge emerge right after redistricting—most strongly in the 2014 survey—and remain relatively stable over time.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual_evidence",
+        "confidence": "low",
+        "confidence_score": 0.3265706672763601,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "States that focusing on a single redistricting allows a visual pre-trend test and lays out the event-study framework."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Reports event-study findings: effects appear in 2014 and are stable over time."
+          }
+        ],
+        "quote_snippet": "most strongly takes effect in the first survey after redistricting (2014). Impacts are relatively stable over time.",
+        "table_figure": null,
+        "data_source": "CES (Cooperative Election Study)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B12",
+        "category": "B) Identification strategy / causal design",
+        "question": "What instruments are used (if IV)? Define instrument and first stage.",
+        "answer": "No instrumental variables are described in the provided text. Identification relies on model structure (invertibility of the Jacobian via the Inverse Function Theorem), not an IV strategy; thus no instrument or first stage is defined here.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "inference_from_text",
+        "confidence": "low",
+        "confidence_score": 0.13210708535614082,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 45,
+            "start_word": 275,
+            "end_word": 370,
+            "section": "appendix",
+            "note": "Identification via Inverse Function Theorem and Jacobian invertibility, not IV."
+          },
+          {
+            "page": 46,
+            "start_word": 275,
+            "end_word": 372,
+            "section": "appendix",
+            "note": "States the map is locally identified; no mention of instruments or first-stage regressions."
+          },
+          {
+            "page": 32,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Presents structural dynamics and steady-state expressions; no IV setup."
+          }
+        ],
+        "quote_snippet": "By the Inverse Function Theorem, local injectivity is determined by the invertibility of the Jacobian DF (Q0s ).",
+        "table_figure": null,
+        "data_source": "CES surveys and Dave Leip’s Election Atlas data (as described)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B13",
+        "category": "B) Identification strategy / causal design",
+        "question": "What is the first-stage strength (F-stat, partial R^2, relevance evidence)?",
+        "answer": "Using the within–border-pairs regressions (Table C2), approximate single-instrument first-stage F-stats (t^2 from coef/SE) in the most saturated specification (col 6) are: Heard of Incumbent F ≈ 7.9 (0.256/0.091); Selected Correct Party F ≈ 4.6 (0.343/0.160); Selected Party F ≈ 0.8 (0.136/0.151). Across specifications, F ranges are ≈ 7.4–10.6 (Heard), 4.4–14.3 (Selected Correct Party), and 0.8–6.8 (Selected Party). Partial R^2 is not reported in the provided context. Relevance evidence: statistically significant positive effects for key familiarity measures (p=0.005 for Heard; p=0.032 for Selected Correct Party in col 6), and placebo tests show no significant relationships for governor/senators, supporting relevance specific to House-representative information.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "regression_table_and_placebo_text",
+        "confidence": "low",
+        "confidence_score": 0.30081851757688044,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 coefficients, standard errors, and p-values for effects of District Homophily on familiarity outcomes within border pairs."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo summary: district homophily does not significantly predict statewide-office outcomes."
+          }
+        ],
+        "quote_snippet": "District Homophily 0.256*** (0.091) ... 0.136 (0.151) ... 0.343** (0.160)",
+        "table_figure": "Table C2",
+        "data_source": "CES within-border-pairs regressions (appendix)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B14",
+        "category": "B) Identification strategy / causal design",
+        "question": "If RDD: what is the running variable and cutoff? bandwidth choice?",
+        "answer": "Not applicable—the study does not employ a regression discontinuity design. It uses event-study analyses (with 2010 as the base year) and a border-pairs specification; thus no running variable, cutoff, or bandwidth is defined.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.2982535532267215,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 20,
+            "start_word": 275,
+            "end_word": 461,
+            "section": null,
+            "note": "States use of event-study design (2010 base year) for voting-related outcomes."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Describes event studies and focus on even years for interpretation."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Describes border-pairs specification as an alternative identification strategy."
+          }
+        ],
+        "quote_snippet": "I run event studies analogous to equation 8 to examine the impact of district homophily on voting-related outcomes",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "B15",
+        "category": "B) Identification strategy / causal design",
+        "question": "If DiD: what is the timing variation (staggered adoption)? estimator used?",
+        "answer": "No staggered adoption. The design centers on a single redistricting shock from the 2010 Census, with effects realized for the Nov 2012 elections and new representatives seated Jan 2013. The estimator is an event-study difference-in-differences that interacts the county’s change in district homophily (Δπ̄c, 2012–2013) with event-time indicators, includes year fixed effects, county-by-year and individual controls, errors clustered at the county level, and can include district-by-year fixed effects.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.3241949630430817,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Single event avoids staggered adoption; timing (2012 elections, Jan 2013 seating) and event-study specification with FE and clustering."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Event-study interpretation context (even-year focus; outcome scaling)."
+          }
+        ],
+        "quote_snippet": "Focusing on a single redistricting event allows me to avoid concerns related to staggered treatment events… the congressional representatives first elected under the new borders assumed office in January 2013.",
+        "table_figure": null,
+        "data_source": "2010 Census redistricting (Nov 2012 elections)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C01",
+        "category": "C) Data, sample, and measurement",
+        "question": "What dataset(s) are used? (name sources explicitly)",
+        "answer": "Cooperative Election Study (CES, formerly CCES); Meta’s Social Connectedness Index (SCI); Dave Leip’s Atlas of U.S. Presidential Elections (Election Atlas); precinct-level vote counts from the Harvard Election Data Archive (2000–2010) and the MIT Election Data and Science Lab (2016–2020); county-by-congressional-district vote counts from Daily Kos.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual evidence from methods and appendix",
+        "confidence": "low",
+        "confidence_score": 0.3256958101891945,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Use of Cooperative Election Study (CES) for voter information and behavior"
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "Description of the Social Connectedness Index (SCI) from Meta apps"
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Vote count data sources: Harvard EDA, MIT Election Data and Science Lab, Dave Leip’s Election Atlas, and Daily Kos"
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Use of Dave Leip’s Election Atlas in turnout/vote share analysis"
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Zip-code-level construction using SCI"
+          }
+        ],
+        "quote_snippet": "precinct-level vote count data from the Harvard Election Data Archive (for 2000-2010) and the MIT Election Data and Science Lab (for 2016-2020), combined with county-by-congressional-district vote count data from Dave Leip’s Election Atlas (for House elections) and Daily Kos",
+        "table_figure": null,
+        "data_source": "Appendix B.1.1; Sections 3.1–3.2; Section 5.3; Page 8 (SCI details)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C02",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the unit of observation (individual, household, firm, county, transaction, product)?",
+        "answer": "individual",
+        "question_tokens_estimate": 23,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.33652792509374285,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 180,
+            "end_word": 260,
+            "section": null,
+            "note": "Defines the outcome at the individual level: yict is for a given individual i in county c in year t."
+          },
+          {
+            "page": 17,
+            "start_word": 300,
+            "end_word": 370,
+            "section": null,
+            "note": "States the analysis uses CES survey responses with hundreds of thousands of respondents (individuals)."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 60,
+            "section": "appendix",
+            "note": "Summary statistics list large numbers of observations for respondent-level variables."
+          }
+        ],
+        "quote_snippet": "yict is the outcome for a given individual i in county c in year t",
+        "table_figure": "Table B3: CES Data: Summary Statistics",
+        "data_source": "Cooperative Election Study (CES)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C03",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample period and geographic coverage?",
+        "answer": "2006–2022; the 48 contiguous U.S. states (continental U.S.), analyzed at the county level (3,136 counties).",
+        "question_tokens_estimate": 12,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.2497455184946808,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Geographic restriction to 48 contiguous states."
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Coverage across 17 years of CES."
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Event-study window includes 2006–2022."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "County coverage: 3,136 counties."
+          }
+        ],
+        "quote_snippet": "I only include respondents in the 48 contiguous states... across all 17 years of the CES",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C04",
+        "category": "C) Data, sample, and measurement",
+        "question": "What are the sample restrictions / inclusion criteria?",
+        "answer": "CES analyses include only respondents in the 48 contiguous states. Exclusions: (1) respondents with missing answers to the candidate party recognition question; (2) respondents missing required demographic answers when demographic controls are used; (3) a small number in 2006–2007 assigned to counties outside their state; (4) 925 North Carolina respondents in 2020 assigned to incorrect congressional districts (shown wrong candidate names). For voting/event‑study analyses, the sample focuses on even years (odd years are smaller and noisier; most voting outcomes are only available in even years). Coverage note: in even years at least one respondent is present in 80–90% of counties, about two‑thirds in odd years. For SCI-based measures, the SCI includes only users who interacted with a Meta app in the prior 30 days, and areas with very small populations are removed.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.25791566656218423,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Includes 48 contiguous states and county coverage notes."
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Footnote detailing exclusions (missing responses, demographic nonresponse, misassigned counties, NC 2020 district error)."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Restriction to even years for consistency and data availability."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "SCI inclusion criterion (recent Meta app use) and small-population area removal."
+          }
+        ],
+        "quote_snippet": "I only include respondents in the 48 contiguous states.",
+        "table_figure": null,
+        "data_source": "CES (Cooperative Election Study); Dave Leip’s Election Atlas; Meta Social Connectedness Index (SCI)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C05",
+        "category": "C) Data, sample, and measurement",
+        "question": "What is the sample size (N) in the main analysis?",
+        "answer": "612,085 respondents",
+        "question_tokens_estimate": 12,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.2534699615932913,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "States total CES respondents used across 17 years in 48 states"
+          }
+        ],
+        "quote_snippet": "In these 48 states and across all 17 years of the CES, there are 612,085 respondents",
+        "table_figure": null,
+        "data_source": "CES (Cooperative Election Study)",
+        "assumption_flag": true,
+        "assumption_notes": "Interprets 'main analysis' as the CES-based analysis sample; the paper also cites SCI coverage (3,136 counties; 9,834,496 county pairs) for network data.",
+        "related_questions": []
+      },
+      {
+        "id": "C06",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is the key outcome measured? Any transformations (logs, z-scores, indices)?",
+        "answer": "The key outcomes are measured as binary survey indicators (e.g., Heard of Representative, Selected Party, Selected Correct Party) from the CES, and as voting outcomes that are either binary choices or turnout shares of the Voting Age Population (VAP) and a roll-off difference. No log, z-score, or index transformations are applied; estimates are interpreted as changes in probability since outcomes are binary and district homophily is scaled 0–1.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "Appendix variable descriptions and methods text",
+        "confidence": "low",
+        "confidence_score": 0.3102898319611432,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "States outcomes are binary and district homophily is 0–1, so estimates are probability changes."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Defines voter knowledge outcomes as Binary from pre-survey."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Defines voting preference/choice and validated turnout variables as Binary from pre/post surveys."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Defines roll-off and turnout measures; turnout is share of VAP."
+          }
+        ],
+        "quote_snippet": "District homophily is measured on a scale from 0 to 1, and outcome variables are binary.",
+        "table_figure": "Table B1; Table B2; Table B4",
+        "data_source": "CES (Cooperative Election Study); Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos",
+        "assumption_flag": true,
+        "assumption_notes": "Interprets the paper’s primary outcomes as the CES voter knowledge/voting measures and county-level turnout/roll-off; no evidence of additional transformations provided.",
+        "related_questions": []
+      },
+      {
+        "id": "C07",
+        "category": "C) Data, sample, and measurement",
+        "question": "How is treatment/exposure measured? Any constructed variables?",
+        "answer": "Treatment/exposure is the change in district homophily at the county level induced by the 2010 redistricting, operationalized as Δπ̄c—the difference in a county’s district homophily between 2012 (pre) and 2013 (post). Constructed variables include: (1) county exposure to Democrats (friendship-share–weighted Democratic vote shares across connected counties); (2) aggregated network measures connecting the model to data—the county–county friendship matrix Π (πc,c′), district population shares q(c,d), and aggregated county steady-state informed share ρoc(t); (3) CES voter knowledge binaries (Heard of Representative, Selected Party, Selected Correct Party); and (4) voting outcomes such as House roll-off (top-of-ticket votes minus House votes) and turnout rates as shares of VAP. Models also use district-by-year and DMA-by-year fixed effects to net out election- and media-market shocks.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.3034837296648951,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Defines Δπ̄c as the change in district homophily between 2012 and 2013 and frames treatment timing."
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Constructed exposure to Democrats and DMA-by-year fixed effects."
+          },
+          {
+            "page": 33,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Constructed network aggregation: Π (πc,c′), q(c,d), and aggregated ρoc(t)."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Constructed CES knowledge variables: definitions for Heard/Selected/Selected Correct Party."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Constructed voting outcomes: Roll-Off and turnout measures; data sources."
+          }
+        ],
+        "quote_snippet": "∆π̄c is the change in district homophily experienced by county c between 2012 and 2013",
+        "table_figure": null,
+        "data_source": "CES surveys; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C08",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there key covariates/controls? Which ones are always included?",
+        "answer": "Yes. Key covariates/controls include: (a) year fixed effects (always in the event-study specs); (b) county-by-year demographic controls; and (c) individual-level controls. Additional controls used in some specifications are district-by-year fixed effects, DMA-by-year fixed effects, and a county-level Democratic exposure measure. In the within-border-pair regressions (Table C2), County and Pair×Year fixed effects are included in every column, with State×Year and DMA×Year added in some columns.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "direct text",
+        "confidence": "low",
+        "confidence_score": 0.34956408360977403,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Event-study spec: year FEs, county-by-year controls (Xct), individual controls (Zict); clustering."
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Optional additions: district-by-year FEs, DMA-by-year FEs, Democratic exposure control."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Within border-pair regressions: FE structure across columns; definitions of individual and county-by-year controls."
+          }
+        ],
+        "quote_snippet": "λt are year fixed effects, Xct is a vector of county-by-year controls, and Zict is a vector of individual controls. I can additionally include district-by-year fixed effects… include DMA-by-year fixed effects.",
+        "table_figure": "Table C2",
+        "data_source": "Main text (p. 15) and Appendix Table C2 (p. 65)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C09",
+        "category": "C) Data, sample, and measurement",
+        "question": "How are missing data handled (dropping, imputation, weighting)?",
+        "answer": "Missing/invalid observations are excluded rather than imputed. Specifically: (1) survey cases with missing candidate-party recognition responses are dropped; respondents missing demographic answers are also excluded when those controls are used; misassigned county/district cases (including 925 NC respondents in 2020) are removed. (2) Several voting variables are coded missing when there is no incumbent running, or when both validated voting indicators are missing. (3) In vote-count data, elections with no top-of-ticket race and cases where turnout exceeds VAP are excluded. Weighting: CES cumulative weights are used to re-weight observations across years; weights do not adjust for pre/post attrition. No imputation is described.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "text_from_document",
+        "confidence": "low",
+        "confidence_score": 0.31647121514709664,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Drops missing candidate-party recognition responses; excludes respondents missing demographics; removes misassigned county/district cases; weights do not account for attrition."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Uses CES cumulative weights to re-weight observations across years."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Voting variables set to missing if no incumbent; post-survey voting variables missing if both validated indicators are missing."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Excludes elections with no top-of-ticket race and cases where turnout exceeds VAP."
+          }
+        ],
+        "quote_snippet": "I exclude missing responses to the candidate party recognition question (<2% of respondents in each year...). When including individual demographic controls, I similarly exclude respondents who did not answer...",
+        "table_figure": "Table B2",
+        "data_source": "CES; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C10",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are weights used (survey weights, propensity weights)? How?",
+        "answer": "Yes. CES survey weights are used so the respondent sample represents people living in the U.S.; however, the weights do not adjust for attrition between the pre- and post-election surveys.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "textual",
+        "confidence": "medium",
+        "confidence_score": 0.3628265093281664,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 270,
+            "end_word": 349,
+            "section": null,
+            "note": "States that the weighted sample is representative of U.S. residents."
+          },
+          {
+            "page": 20,
+            "start_word": 430,
+            "end_word": 461,
+            "section": null,
+            "note": "Notes that weights do not account for attrition between survey waves."
+          }
+        ],
+        "quote_snippet": "Because the weighted sample is representative of people living in the U.S. (rather than of U.S. counties)",
+        "table_figure": null,
+        "data_source": "CES (Cooperative Election Study) survey weights",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C11",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are data linked/merged across sources? How is linkage performed?",
+        "answer": "Yes. The paper links Facebook SCI network data to congressional districts by aggregating county–county friendship shares and weighting by county–district population shares. Specifically, it builds πc,k from SCI, then computes district homophily as Σd∈D(c) Σk πc,k × q(c,d) × q(k,d), where q(c,d) is the share of county c’s population in district d. For robustness, the same aggregation is done using commuting flows. At the zip level, SCI is linked to CES respondents via reported zip codes. County-level SCI is used to match with county-level vote counts and campaign contributions.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.30299321978219823,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 7,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "2.1.1 Definition of District Homophily",
+            "note": "Defines district homophily and introduces population-weighted linkage via q(c,d)."
+          },
+          {
+            "page": 9,
+            "start_word": 0,
+            "end_word": 257,
+            "section": "2.1.3 Construction of District Homophily from SCI",
+            "note": "Explains aggregating SCI to Π and summing within-district shares; constructs πc,k from SCI."
+          },
+          {
+            "page": 8,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "2.1.2 Proxy for Social Networks: Facebook Social Connectedness Index",
+            "note": "Defines SCI and notes county focus to facilitate matching to county-level outcomes."
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "5.3 Zip-Code-Level Social Network Data",
+            "note": "Links zip-level SCI to CES via respondents’ reported zip codes."
+          },
+          {
+            "page": 33,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "6.7 Aggregating to County-Level",
+            "note": "Details aggregation using county–district population shares and county-county friendship probabilities."
+          }
+        ],
+        "quote_snippet": "I do this by using the SCI to construct the Π matrix of county-county friendship shares, and then for each county summing friendship shares across same-district counties (adjusting for counties that intersect multiple districts).",
+        "table_figure": null,
+        "data_source": "Facebook Social Connectedness Index (SCI); county–district population shares q(c,d); commuting flows; CES respondent zip codes; county-level vote/contribution data.",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C12",
+        "category": "C) Data, sample, and measurement",
+        "question": "What summary statistics are reported for main variables?",
+        "answer": "Summary statistics reported include: (1) for district homophily—mean, standard deviation, minimum, maximum, 1st and 99th percentiles, and ranges for the middle 50% and 80% of counties; (2) for CES knowledge/voting and county voting outcomes—number of observations, mean (percent), and standard deviation (percentage points).",
+        "question_tokens_estimate": 14,
+        "evidence_type": "text and tables",
+        "confidence": "medium",
+        "confidence_score": 0.3757044005327591,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "District homophily summary statistics: mean, SD, min, max, percentiles, middle ranges."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Tables B3 and B5 show Observations, Mean (%), SD (pp) for CES and voting outcomes."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Table C1 (placebo outcomes) also uses Observations, Mean (%), SD (pp)."
+          }
+        ],
+        "quote_snippet": "mean district homophily is 41% with a standard deviation of 14pp; minimum district homophily is 2% and maximum is 87%, while the 1st percentile is 8% and the 99th percentile is 67%",
+        "table_figure": "Table B3: CES Data: Summary Statistics; Table B5: Voting Outcomes: Summary Statistics; Table C1: Placebo Outcomes Summary Statistics",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "C13",
+        "category": "C) Data, sample, and measurement",
+        "question": "Are there descriptive figures/maps that establish baseline patterns?",
+        "answer": "Yes. Appendix Figures C1–C2 provide descriptive figures on how geographic and demographic features correlate with district homophily (2012 and 2020), and Appendix Figures C4–C5 map the nationwide distribution of changes.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.33953190147297013,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Mentions Appendix Figures C1–C2 summarizing correlations in 2012 and 2020."
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "States Appendix Figure C4 provides a map of changes."
+          },
+          {
+            "page": 53,
+            "start_word": 0,
+            "end_word": 40,
+            "section": "appendix",
+            "note": "Notes that Figures C4–C5 illustrate how changes are distributed around the country."
+          }
+        ],
+        "quote_snippet": "Appendix Figures C1–C2 summarize how various geographic and demographic features correlate with district homophily, separately in 2012 and 2020.",
+        "table_figure": "Appendix Figures C1–C2; Figures C4–C5",
+        "data_source": "Paper appendix (figures cited)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D01",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the headline main effect estimate (sign and magnitude)?",
+        "answer": "Positive: a 10pp increase in district homophily raises the share of contributions to in-district candidates by 7.4pp.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "text (main text)",
+        "confidence": "medium",
+        "confidence_score": 0.3668964869451069,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 229,
+            "section": null,
+            "note": "Campaign contributions main effect"
+          }
+        ],
+        "quote_snippet": "In particular, a 10pp increase in district homophily is associated with a 7.4pp increase in the share of contributions to in- district candidates, from a mean of 51%.",
+        "table_figure": "Figure 8",
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D02",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What is the preferred specification and why is it preferred?",
+        "answer": "The preferred specification constructs district homophily using the Facebook Social Connectedness Index (SCI), because SCI is a strong proxy for real-world social networks, whereas commuting flows are more geographically concentrated and tend to overstate homophily.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.19272777411442193,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 7,
+            "start_word": 275,
+            "end_word": 379,
+            "section": null,
+            "note": "States the use of SCI as the data source for social networks and justifies it as a top proxy."
+          },
+          {
+            "page": 9,
+            "start_word": 0,
+            "end_word": 257,
+            "section": null,
+            "note": "Explains that commuting flows are more concentrated, leading to higher commuting-based homophily than SCI."
+          }
+        ],
+        "quote_snippet": "I use the Facebook Social Connectedness Index (SCI)—one of the best existing proxies for real-world social networks.",
+        "table_figure": "Figure 1 (page 9)",
+        "data_source": "Facebook Social Connectedness Index (SCI)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D03",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How economically meaningful is the effect (percent change, elasticity, dollars)?",
+        "answer": "A 10pp rise in district homophily produces modest but nontrivial shifts: voter knowledge rises by 0.7pp (≈0.75% relative) for name recognition, 3.2pp (≈4.7%) for picking a party, and 3.3pp (≈5.3%) for picking the correct party. It reduces ballot roll-off by about 10% (and by about 2pp when roll-off is constructed using votes/VAP). For money, it reallocates giving toward local races: the in-district share of House contributions rises by 7.4pp from a 51% mean (~14.5% relative), with no change in total donations.",
+        "question_tokens_estimate": 20,
+        "evidence_type": "Reported quantitative estimates from event-study analyses in the paper",
+        "confidence": "low",
+        "confidence_score": 0.33059979194916095,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Knowledge effects per 10pp increase and baseline means"
+          },
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 229,
+            "section": null,
+            "note": "Roll-off reduction (~10%) and contributions shift (+7.4pp from 51%)"
+          },
+          {
+            "page": 67,
+            "start_word": 0,
+            "end_word": 258,
+            "section": "appendix",
+            "note": "Alternative roll-off measure shows ~2pp decrease; no change in turnout levels"
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Baseline means for knowledge outcomes (Table B3)"
+          }
+        ],
+        "quote_snippet": "a 10pp increase in district homophily is associated with a 7.4pp increase in the share of contributions to in-district candidates, from a mean of 51%.",
+        "table_figure": "Figure 6 (Roll-Off); Figure 8 (Contributions); Table B3 (CES summary stats)",
+        "data_source": "CES survey; Dave Leip’s Election Atlas (county-level votes)",
+        "assumption_flag": true,
+        "assumption_notes": "Interprets effects per 10pp assuming linear scaling and computes relative percent changes using reported means; adopts paper’s stated 10% roll-off reduction and 2pp VAP-based roll-off change.",
+        "related_questions": []
+      },
+      {
+        "id": "D04",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the key robustness checks and do results survive them?",
+        "answer": "Key checks include: (1) adding district-by-year fixed effects to absorb election-specific shocks; (2) adding DMA-by-year fixed effects to rule out media-market confounds; (3) controlling for partisan bias in network ties via each county’s exposure to Democrats; (4) using state-by-year fixed effects; (5) exploiting a within–border-pair design with county and pair-by-year fixed effects; (6) adding individual demographic controls (gender, race, education, age, co-partisanship) and (7) adding county-by-year demographics (population, race/age/gender shares, urban share); and (8) placebo tests on governors and senators. Results largely survive: the effects on ‘Heard of Incumbent’ and ‘Selected Correct Party’ remain positive and statistically significant across specifications with these controls, while the weaker ‘Selected Party’ measure loses significance. Placebo outcomes show no significant relationship, supporting robustness.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "mixed",
+        "confidence": "low",
+        "confidence_score": 0.3283513759686765,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Describes adding district-by-year and DMA-by-year fixed effects; controls for partisan exposure to Democrats."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 shows robustness across County & Pair×Year, State×Year, DMA×Year FEs; adds Democratic exposure, individual and county-year controls; significance for Heard of Incumbent and Selected Correct Party."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo tests summary: district homophily does not significantly predict governor/senator outcomes."
+          }
+        ],
+        "quote_snippet": "In general, district homophily does not significantly predict the placebo outcomes.",
+        "table_figure": "Table C2: Effect of District Homophily on Voter Familiarity with Representative, within Border Pairs",
+        "data_source": "CES (Cooperative Election Study)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D05",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What placebo tests are run and what do they show?",
+        "answer": "Placebo tests replicate the knowledge measures for statewide offices unaffected by congressional district borders: for the governor and each U.S. senator, indicators for heard of, selected party, and selected correct party (nine outcomes). These tests show no significant effect of district homophily on any of the placebo outcomes.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.18274002630391975,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 170,
+            "section": null,
+            "note": "Describes placebo outcomes for governor and senators and states no significant impact."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Appendix summary reiterating that district homophily does not significantly predict placebo outcomes."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 120,
+            "section": null,
+            "note": "Mentions lack of evidence for impacts on placebo outcomes (same three outcomes for governor and senators)."
+          }
+        ],
+        "quote_snippet": "I do not find evidence that district homophily increases voters’ knowledge on placebo outcomes (i.e., the same three outcomes but for the respondent’s governor and senators).",
+        "table_figure": "Appendix Table C1",
+        "data_source": "Cooperative Election Study (CES)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D06",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What falsification outcomes are tested (unaffected outcomes)?",
+        "answer": "Placebo (falsification) outcomes are voters’ knowledge measures for statewide offices: for the governor and for each of the two U.S. senators—whether the respondent has heard of them, selects a party, and selects the correct party (nine outcomes total).",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual evidence",
+        "confidence": "low",
+        "confidence_score": 0.275338042494289,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 220,
+            "section": null,
+            "note": "Defines placebo tests: governor and senators; outcomes are heard of, select party, select correct party; reports no significant impact."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 120,
+            "section": "appendix",
+            "note": "Appendix C.2 summary and Table C1 list the nine placebo outcomes and note no significant prediction by district homophily."
+          },
+          {
+            "page": 20,
+            "start_word": 120,
+            "end_word": 260,
+            "section": null,
+            "note": "States they do not find evidence that district homophily increases knowledge on placebo outcomes for governor and senators."
+          },
+          {
+            "page": 16,
+            "start_word": 170,
+            "end_word": 320,
+            "section": null,
+            "note": "CES asks about House representative, both senators, and governor—basis for constructing analogous placebo outcomes."
+          }
+        ],
+        "quote_snippet": "I test whether district homophily impacts voters’ knowledge of their governor and senators... I find no significant impact of district homophily on these nine outcomes.",
+        "table_figure": "Table C1: CES Data: Summary Statistics for Placebo Outcomes",
+        "data_source": "Cooperative Election Study (CES)",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D07",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What heterogeneity results are reported (by income, size, baseline exposure, region)?",
+        "answer": "Reported heterogeneity pertains to district homophily levels rather than treatment-effect splits: (1) Income: With media-market and district fixed effects, higher white non-Hispanic share correlates positively with changes in homophily, while higher poverty share correlates negatively. (2) Size: Larger counties (by population) have lower homophily—each 1% population increase predicts a 0.05pp decrease; urban areas are more often split. (3) Baseline exposure: Homophily is higher where residents are farther from district borders/areas with geographically larger districts; authors also control for social-network partisanship exposure in outcome models. (4) Region: Counties in single-district states have higher average homophily (53%), consistent with networks following state boundaries; rural areas show higher homophily than urban areas.",
+        "question_tokens_estimate": 21,
+        "evidence_type": "textual",
+        "confidence": "medium",
+        "confidence_score": 0.37521798394600775,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Size, urban/rural patterns; single-district states; population-population effect on homophily; distance/border logic."
+          },
+          {
+            "page": 14,
+            "start_word": 275,
+            "end_word": 429,
+            "section": null,
+            "note": "Income and demographic correlations with changes in district homophily; controls used."
+          },
+          {
+            "page": 19,
+            "start_word": 0,
+            "end_word": 200,
+            "section": null,
+            "note": "Models include control for partisanship of the social network (baseline exposure control)."
+          }
+        ],
+        "quote_snippet": "Counties in single district states have higher district homophily on average (53%)… a one percent increase in county population is associated with a 0.05pp decrease in district homophily.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D08",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What mechanism tests are performed and what do they imply?",
+        "answer": "Two mechanism tests are reported: (1) Ballot roll-off: higher district homophily reduces House roll-off (e.g., a 10pp increase cuts roll-off by about 0.04pp, ≈10%), indicating greater down-ballot participation. (2) Campaign contributions: a 10pp increase in district homophily raises the share of county donations going to in-district House candidates by 7.4pp (from a 51% mean) with no change in total House donations, implying a reallocation toward local candidates rather than more overall giving. Placebo tests for governors and senators show no significant effects, consistent with a district-specific information/salience mechanism.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "Textual summary of figure/caption results and appendix placebo tests",
+        "confidence": "low",
+        "confidence_score": 0.1494383940132082,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 229,
+            "section": null,
+            "note": "Roll-off reduction and in-district contribution share increase; no change in total donations"
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo outcomes show no significant effects for governor/senators"
+          }
+        ],
+        "quote_snippet": "district homophily reduces roll-off; a 10pp increase raises the in-district contribution share by 7.4pp, with no impact on total donations.",
+        "table_figure": "Figure 6 and Figure 8",
+        "data_source": "CES (roll-off); county donations to House candidates (contribution shares)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "D09",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "How sensitive are results to alternative samples/bandwidths/controls?",
+        "answer": "The main findings are robust across alternative samples and control sets. Estimates are similar with county fixed effects and when including odd years (though odd-year coefficients are noisier). Results remain after adding district-by-year and DMA-by-year fixed effects and controlling for Democratic exposure, demographics, and county-year covariates; the ‘heard of incumbent’ and ‘correct party’ effects stay positive and significant, while the ‘selected party’ (any party) effect attenuates and loses precision in the within-border-pairs design. Placebo tests for governors/senators show no effects, and using commuting flows as an alternative network measure yields qualitatively similar effects at about half the magnitude. Effects appear quickly post-redistricting and are relatively stable over time.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "Appendix table and narrative robustness text",
+        "confidence": "low",
+        "confidence_score": 0.3485816104887248,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Similar results with county fixed effects; odd years yield similar results but noisier estimates."
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Controls: district-by-year FEs, DMA-by-year FEs, and Democratic exposure."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 shows robustness across added controls; ‘Heard of Incumbent’ and ‘Selected Correct Party’ remain significant; ‘Selected Party’ attenuates."
+          },
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Placebo outcomes show no significant impacts; commuting flows robustness with similar direction, ~half the magnitude."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo tests for governor/senators: generally no significant prediction by district homophily."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Effects emerge in first post-redistricting survey and are stable over time."
+          }
+        ],
+        "quote_snippet": "Impacts are relatively stable over time.",
+        "table_figure": "Appendix Table C2",
+        "data_source": "CES; Nielsen DMA boundaries; 2016 5-Year ACS County-County Commuting Flows; Placebo tests (Appendix C.2)",
+        "assumption_flag": true,
+        "assumption_notes": "Bandwidth sensitivity (if any) is not discussed in the provided excerpts.",
+        "related_questions": []
+      },
+      {
+        "id": "D10",
+        "category": "D) Results, magnitudes, heterogeneity, robustness",
+        "question": "What are the main takeaways in the conclusion (bullet summary)?",
+        "answer": "- Evidence points toward effects concentrating support towards in-district House candidates and away from out-of-district candidates.\n- Calls for future research on how candidates adjust campaign strategies to district homophily, aiming for a general-equilibrium view of social-learning effects from district boundaries.\n- Policy implication: newly available social network data (e.g., SCI) can help draw fairer districts but could also be exploited for partisan gerrymandering.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.2241474231421388,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 36,
+            "start_word": 0,
+            "end_word": 309,
+            "section": "Conclusion/Implications",
+            "note": "Concluding implications about in-district tilt, research agenda, and policy risks/uses of SCI."
+          }
+        ],
+        "quote_snippet": "towards House candidates in their own districts, away from House candidates running in other districts... enabling its use by policymakers to draw fairer districts, but also by partisan gerrymanderers",
+        "table_figure": null,
+        "data_source": "Social Connectedness Index (SCI)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E01",
+        "category": "E) Citations and related literature",
+        "question": "What are the most important prior papers cited and why are they central here?",
+        "answer": "Key prior work falls into three pillars that the paper builds on: (1) Redistricting fairness measures that largely ignore turnout/network effects—Stephanopoulos & McGhee (2015) and McCartan & Imai (2023)—which the paper critiques by incorporating social-network-driven information and turnout responses; (2) Social learning and political networks showing information spreads through ties and calling for causal estimates—foundationally Lazarsfeld et al. (1944); evidence on diffusion in networks (Conley & Udry 2010; Banerjee et al. 2013; Beaman et al. 2021); and explicit calls for causal work (Fowler et al. 2011)—motivating the paper’s causal designs and its focus on district homophily; (3) Empirical and experimental studies of peer influence and information transmission—lab/field evidence (Klar & Shmargad 2017; Druckman et al. 2018; Fafchamps et al. 2019; Arias et al. 2019) and turnout contagion/peer effects (Gerber et al. 2008; Sinclair et al. 2012; Klofstad 2007; Nickerson 2008; Pons 2018), plus place effects (Cantoni & Pons 2022; Brown et al. 2023)—which ground the mechanisms linking networks to knowledge and participation. Methodologically, the paper’s border-pairs identification follows Spenkuch & Toniatti (2018). It also leverages national social-tie data in the spirit of Alt et al. (2022) and demonstrates large-scale social influence akin to Bond et al. (2012). Conceptually, its diffusion model aligns with network diffusion under homophily (Jackson & López-Pintado 2013) and segregation measures (Echenique & Fryer 2007). Finally, the knowledge–turnout link (Snyder & Strömberg 2010) underpins why increased information from higher district homophily can shift participation.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "textual synthesis from introduction, literature review, methods, and references",
+        "confidence": "low",
+        "confidence_score": 0.33105038096722883,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 2,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Frames critique of redistricting fairness measures; positions social networks and knowledge-turnout link."
+          },
+          {
+            "page": 4,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Literature on social networks, calls for causal estimates, media avoidance; experimental/peer-effects studies."
+          },
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": null,
+            "note": "Use of national social-tie data; links to Alt et al. (2022) and Bond et al. (2012)."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs design referencing Spenkuch & Toniatti (2018) and conceptual diffusion framework."
+          },
+          {
+            "page": 37,
+            "start_word": 0,
+            "end_word": 331,
+            "section": null,
+            "note": "References for Bond (2012), Cantoni & Pons (2022), Brown et al. (2023), and other peer-effects works."
+          },
+          {
+            "page": 38,
+            "start_word": 0,
+            "end_word": 326,
+            "section": null,
+            "note": "References including Echenique & Fryer (2007) and several diffusion/political info studies."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 327,
+            "section": null,
+            "note": "References including Jackson & López-Pintado (2013) and McCartan & Imai (2023)."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": null,
+            "note": "References including Snyder & Strömberg (2010) and additional turnout/peer influence works."
+          }
+        ],
+        "quote_snippet": "I build on this work by highlighting the role of social networks as a key source of information for voters.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E02",
+        "category": "E) Citations and related literature",
+        "question": "Which papers does this work most directly build on or extend?",
+        "answer": "Most directly, it builds on work using large-scale social network data to study political behavior and diffusion (Alt et al. 2022; Bond et al. 2012) and on place/peer-effects studies (Cantoni & Pons 2022; Brown et al. 2023). It also extends strategic gerrymandering models by incorporating social learning effects (Owen & Grofman 1988; Friedman & Holden 2008, 2020; Gul & Pesendorfer 2010; Kolotilin & Wolitzky 2020; Bouton et al. 2023).",
+        "question_tokens_estimate": 15,
+        "evidence_type": "textual citations from the paper’s framing",
+        "confidence": "low",
+        "confidence_score": 0.30810576278123053,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": "Main text",
+            "note": "Author states they build on prior studies, citing Alt et al. (2022), Bond et al. (2012), and positioning relative to Cantoni & Pons (2022) and Brown et al. (2023)."
+          },
+          {
+            "page": 5,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Main text",
+            "note": "Author bridges social learning with political geography/redistricting models and lists canonical gerrymandering papers."
+          },
+          {
+            "page": 5,
+            "start_word": 275,
+            "end_word": 475,
+            "section": "Main text",
+            "note": "Notes implications once social learning is considered and references broader gerrymandering measurement work."
+          }
+        ],
+        "quote_snippet": "I build on these studies by estimating how social network structure impacts voter knowledge… Second, I bridge the literature on social learning with the literature on models of political geography",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E03",
+        "category": "E) Citations and related literature",
+        "question": "Which papers are used as benchmarks or comparisons in the results?",
+        "answer": "The results benchmark against the 50-State Redistricting Simulations by McCartan, Kenny, Simko, Kuriwaki, et al. (2021), comparing features of actual maps to the distribution across 5,000 simulated maps per state.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual citation",
+        "confidence": "low",
+        "confidence_score": 0.2745280798867526,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 34,
+            "start_word": 275,
+            "end_word": 379,
+            "section": "main text",
+            "note": "Describes using McCartan et al. (2021) simulated maps to compare features against a distribution."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 327,
+            "section": "references",
+            "note": "Bibliographic entry for McCartan et al. (2021) 50-State Redistricting Simulations."
+          }
+        ],
+        "quote_snippet": "McCartan, Kenny, Simko, Kuriwaki, et al. 2021 simulate 5,000 congressional district maps for each of the 50 states... enabling... comparing a feature of interest of a given map against the distribution",
+        "table_figure": null,
+        "data_source": "McCartan et al. (2021) 50-State Redistricting Simulations",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E04",
+        "category": "E) Citations and related literature",
+        "question": "What data sources or datasets are cited and how are they used?",
+        "answer": "Cited datasets and uses: (1) Facebook Social Connectedness Index (SCI): used as the main proxy for real-world social networks to construct district homophily, primarily with U.S. county–county pairs from the Oct 2021 snapshot; also constructed at the zip code (ZCTA) level for robustness. (2) Commuting flows: used as an alternative proxy to construct district homophily; strongly correlated with SCI-based measures and yields qualitatively similar results. (3) Cooperative Election Study (CES): nationally representative surveys (2006–2022) used to measure voters’ information about representatives and self-reported voting/preferences; CES county and district identifiers enable linkage to homophily; CES zip codes allow zip-level robustness checks. (4) Dave Leip’s Atlas of U.S. Presidential Elections: used for vote count data to study actual voting behavior. (5) Pew Research Center surveys on Facebook usage (Auxier & Anderson 2021; Vogels et al. 2021): cited to document that Facebook usage rates are relatively even across demographic groups and parties, supporting SCI’s suitability.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "direct textual evidence from methods/data descriptions",
+        "confidence": "low",
+        "confidence_score": 0.3308023899105018,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 7,
+            "start_word": 275,
+            "end_word": 379,
+            "section": "2.1.2 Proxy for Social Networks: Facebook Social Connectedness Index",
+            "note": "Introduces SCI as proxy for social networks aggregated from Facebook friendships."
+          },
+          {
+            "page": 8,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "2.1.2 Proxy for Social Networks: Facebook Social Connectedness Index",
+            "note": "Defines SCI, states use of Oct 2021 county–county pairs; mentions commuting flows as alternative and correlation."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": "2.1.2 Proxy for Social Networks: Facebook Social Connectedness Index",
+            "note": "Details SCI snapshot construction and cites Pew evidence on even Facebook usage across demographics and parties."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "3 Outcomes Data; 3.1 Voters’ Information",
+            "note": "Describes CES data, years, content, and linkage to county/district for voter knowledge outcomes."
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": "Outcomes and vote data linkage",
+            "note": "Cites Dave Leip’s Atlas; explains use of CES pre/post election surveys for voting outcomes."
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "5.3 Zip-Code-Level Social Network Data",
+            "note": "Explains construction of district homophily using SCI at the zip (ZCTA) level and use of CES zip codes."
+          }
+        ],
+        "quote_snippet": "I use the SCI for U.S. county-county pairs from the October 2021 snapshot.",
+        "table_figure": null,
+        "data_source": "Facebook Social Connectedness Index (Oct 2021, county–county and zip–zip); CES (2006–2022); Commuting flows; Dave Leip’s Atlas of U.S. Presidential Elections; Pew Research Center usage surveys",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E05",
+        "category": "E) Citations and related literature",
+        "question": "What methodological or econometric references are cited (e.g., DiD, IV, RDD methods)?",
+        "answer": "Cited methodological/econometric references include: Gourieroux, Monfort, & Renault (1993) on indirect inference; Sinclair, McConnell, & Green (2012) on detecting spillover effects in multilevel experiments; McCartan & Imai (2023) on sequential Monte Carlo sampling for redistricting plans; McCartan et al. (2021) on 50-state redistricting simulations; McCormick, Salganik, & Zheng (2010) on estimating personal network size; Echenique & Fryer (2007) on a segregation measure based on social interactions; Snyder & Strömberg (2010) on press coverage and political accountability (used for identification strategies); and Spenkuch & Toniatti (2018) on political advertising and election results (informing a border-pairs/border-discontinuity design).",
+        "question_tokens_estimate": 21,
+        "evidence_type": "references/citations",
+        "confidence": "medium",
+        "confidence_score": 0.3997880642088801,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 38,
+            "start_word": 0,
+            "end_word": 326,
+            "section": "References",
+            "note": "Gourieroux, Monfort, & Renault (1993). Indirect inference (econometric method)."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": "References",
+            "note": "Sinclair, McConnell, & Green (2012). Detecting Spillover Effects: design and analysis of multilevel experiments."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 327,
+            "section": "References",
+            "note": "McCartan & Imai (2023). Sequential Monte Carlo for sampling balanced and compact redistricting plans."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 327,
+            "section": "References",
+            "note": "McCartan et al. (2021). 50-State Redistricting Simulations (simulation methodology)."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": "References",
+            "note": "McCormick, Salganik, & Zheng (2010). Estimating personal network size (network measurement method)."
+          },
+          {
+            "page": 38,
+            "start_word": 0,
+            "end_word": 326,
+            "section": "References",
+            "note": "Echenique & Fryer (2007). A Measure of Segregation Based on Social Interactions (measurement/statistic)."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": "References",
+            "note": "Snyder & Strömberg (2010). Press Coverage and Political Accountability (identification using media-market congruence)."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Border pairs specification",
+            "note": "Explicit use of Spenkuch & Toniatti (2018) to justify border-pairs design."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": "References",
+            "note": "Spenkuch & Toniatti (2018). Political Advertising and Election Results* (empirical design at media-market borders)."
+          }
+        ],
+        "quote_snippet": "Gourieroux, C., Monfort, A., & Renault, E. (1993). Indirect inference. Journal of Applied Econometrics, 8 (S1), S85–S118.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E06",
+        "category": "E) Citations and related literature",
+        "question": "Are there any seminal or classic references the paper positions itself against?",
+        "answer": "Yes. The paper challenges classic strategic gerrymandering models and measures that assume voter distributions and decisions are independent of district maps, citing Owen & Grofman (1988), Friedman & Holden (2008, 2020), Gul & Pesendorfer (2010), Kolotilin & Wolitzky (2020), and Efficiency Gap work (Stephanopoulos & McGhee, 2015).",
+        "question_tokens_estimate": 19,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.27354932674976956,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 5,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main text",
+            "note": "States existing redistricting models assume voter distributions and decisions are independent of the map; lists classic references and contrasts with findings."
+          }
+        ],
+        "quote_snippet": "Existing models of strategic partisan redistricting … assume that changes to district boundaries do not affect the distribution of partisans… Voters’ decisions are independent of the district map.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E07",
+        "category": "E) Citations and related literature",
+        "question": "Are there citations to code, data repositories, or appendices that are essential to the claims?",
+        "answer": "Yes. The paper cites essential appendices (Appendix B) detailing data construction and variables, and references multiple data repositories used in the analysis (Dave Leip’s Election Atlas, Harvard Election Data Archive, MIT Election Data and Science Lab, Daily Kos, Census, and CES datasets with DOIs). No explicit code repository is cited in the provided text.",
+        "question_tokens_estimate": 23,
+        "evidence_type": "appendix and data repository citations",
+        "confidence": "low",
+        "confidence_score": 0.3061721700291295,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Appendix B describes construction of vote count measures using Harvard Election Data Archive, MIT Election Data and Science Lab, Dave Leip’s Atlas, and Daily Kos."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Appendix B tables and variable descriptions cite data sources for roll-off and turnout (Dave Leip’s Atlas, Harvard Election Data Archive, Daily Kos, MIT Election Data and Science Lab, Census)."
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Main text cites Dave Leip’s Election Atlas and CES survey data; references CES methodology and exclusions."
+          },
+          {
+            "page": 40,
+            "start_word": 0,
+            "end_word": 303,
+            "section": "references",
+            "note": "References include CES 2020 and 2022 datasets with DOIs (data repository citations)."
+          },
+          {
+            "page": 39,
+            "start_word": 0,
+            "end_word": 327,
+            "section": "references",
+            "note": "References include Kuriwaki (2018) Cumulative CES Common Content (Dataverse DOI) and 50-State Redistricting Simulations (data resource DOI)."
+          }
+        ],
+        "quote_snippet": "combined with county-by-congressional-district vote count data from Dave Leip’s Election Atlas (for House elections) and Daily Kos (for President, Senator, and Governor elections).",
+        "table_figure": "Table B4: Descriptions for Voting Outcome Variables",
+        "data_source": "Appendix B; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos; U.S. Census; CES datasets (DOIs in references).",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "E08",
+        "category": "E) Citations and related literature",
+        "question": "What gaps in the literature do the authors say these citations leave open?",
+        "answer": "They highlight three main gaps: (1) a lack of causal estimates on how social networks affect political knowledge, especially the causal role of district boundaries aligning (or not) with social ties; (2) existing peer-effects and mobilization studies often focus on turnout or persuasion and many are lab-based or outside the U.S., leaving information transmission within networks and nationwide U.S. networks underexplored; and (3) gerrymandering models and fairness metrics assume voter distributions and turnout are invariant to district maps, overlooking social learning and the possibility that borders change participation by grouping social ties.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "Direct textual evidence from introduction and literature review",
+        "confidence": "low",
+        "confidence_score": 0.30376113152112244,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 2,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Introduction",
+            "note": "States causal estimates of network effects on political knowledge are limited and the role of political boundaries in social learning has not been causally explored."
+          },
+          {
+            "page": 4,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Literature review",
+            "note": "Notes calls for more causal estimates in social-network political information literature; discusses lab and field studies."
+          },
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": "Literature review",
+            "note": "Says related studies focus on turnout/peer effects and not directly on information transmission; emphasizes leveraging national U.S. social ties."
+          },
+          {
+            "page": 5,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Contribution/Models of gerrymandering",
+            "note": "Argues existing gerrymandering models and measures assume fixed partisan distributions and ignore social networks’ effects on turnout."
+          }
+        ],
+        "quote_snippet": "the role of political boundaries—which group some friends together while separating others—in social learning has not been causally explored.",
+        "table_figure": null,
+        "data_source": "Provided context excerpts (pages 2, 4–5)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F01",
+        "category": "F) Replication and transparency",
+        "question": "Are replication files or code provided? If so, where?",
+        "answer": "No. The provided context does not mention any replication files or code or where to access them.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.21170377402826074,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 25,
+            "section": "appendix",
+            "note": "Appendix lists data and variable descriptions; no replication files or code referenced."
+          },
+          {
+            "page": 1,
+            "start_word": 372,
+            "end_word": 388,
+            "section": null,
+            "note": "Acknowledgments section ends without mentioning replication files or code."
+          }
+        ],
+        "quote_snippet": "B Data Descriptions",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F02",
+        "category": "F) Replication and transparency",
+        "question": "Is there a pre-analysis plan or registered trial? Provide details if mentioned.",
+        "answer": "No. The provided excerpts do not mention a pre-analysis plan or any trial/registry; no registration details are given.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "textual (no mention in provided excerpts)",
+        "confidence": "low",
+        "confidence_score": 0.25252882149704253,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Methods and event-study setup discussed; no pre-analysis plan or registration mentioned."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Appendix defines variables and outcomes; no pre-registration details provided."
+          }
+        ],
+        "quote_snippet": "Focusing on a single redistricting event allows me to avoid concerns related to staggered treatment events, and also allows for a visual test of pre-trends in changes in district homophily.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F03",
+        "category": "F) Replication and transparency",
+        "question": "Are data access constraints disclosed (restricted access, proprietary data, NDAs)?",
+        "answer": "No explicit restricted-access, proprietary, or NDA requirements are disclosed. The text only notes privacy-related limitations to the SCI (small-population areas removed, noise added; some zip codes omitted for privacy).",
+        "question_tokens_estimate": 20,
+        "evidence_type": "textual evidence (privacy-related data limitations)",
+        "confidence": "low",
+        "confidence_score": 0.2639892199729601,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "SCI removes small-population areas and adds noise to preserve privacy."
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "SCI omits some zip codes due to privacy concerns."
+          }
+        ],
+        "quote_snippet": "due to privacy concerns, zip codes with small populations do not appear in the SCI data.",
+        "table_figure": null,
+        "data_source": "Meta Social Connectedness Index (SCI)",
+        "assumption_flag": true,
+        "assumption_notes": "Conclusion based only on provided excerpts; other parts of the document may discuss access terms not shown here.",
+        "related_questions": []
+      },
+      {
+        "id": "F04",
+        "category": "F) Replication and transparency",
+        "question": "Are key steps in data cleaning and construction documented?",
+        "answer": "Yes. The document explicitly details how key datasets are constructed (e.g., district homophily from SCI; county-by-CD vote measures) and records key cleaning steps and exclusions for survey data and voting outcomes.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "methods and appendix text",
+        "confidence": "low",
+        "confidence_score": 0.2328718636910073,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 9,
+            "start_word": 0,
+            "end_word": 257,
+            "section": null,
+            "note": "Construction of district homophily from SCI with aggregation procedure and formulas."
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Construction of vote count measures and CES variable descriptions."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Definitions of voting preference and vote-choice variables."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Summary statistics and precise definitions for turnout and roll-off with data sources."
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Survey data cleaning: explicit exclusions for missing responses, demographic nonresponse, misassignments."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "SCI data construction choices (scaling, privacy noise, user inclusion, location assignment)."
+          }
+        ],
+        "quote_snippet": "I exclude missing responses to the candidate party recognition question (<2% of respondents in each year; ...). Lastly, in the 2020 survey, 925 respondents in North Carolina were assigned to incorrect congressional districts...",
+        "table_figure": "Tables B1–B5; Figure 1 reference (methods text)",
+        "data_source": "Harvard Election Data Archive; MIT Election Data and Science Lab; Dave Leip’s Election Atlas; Daily Kos; Meta Social Connectedness Index",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "F05",
+        "category": "F) Replication and transparency",
+        "question": "Are robustness and sensitivity analyses fully reported or partially omitted?",
+        "answer": "Fully reported.",
+        "question_tokens_estimate": 19,
+        "evidence_type": "narrative description in main text and appendix",
+        "confidence": "low",
+        "confidence_score": 0.271322823909785,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 229,
+            "section": "5 Robustness",
+            "note": "Dedicated Robustness section outlines multiple checks (placebo outcomes, alternative homophily measure)."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Appendix C.2 reports placebo outcome tests and notes generally null effects, indicating reported robustness results."
+          }
+        ],
+        "quote_snippet": "I explore the robustness of this finding by testing whether district homophily impacts placebo outcomes, by constructing an alternative measure of district homophily using commuting flows,",
+        "table_figure": "Table C1 (Appendix C.2)",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "G01",
+        "category": "G) External validity and generalization",
+        "question": "What populations or settings are most likely to generalize from this study?",
+        "answer": "Adults in the continental United States, across counties and congressional districts, especially in U.S. House election and post‑redistricting settings. Generalizability is strongest to U.S. voters because the study links a nationally representative CES sample to counties/districts and uses nationwide social-network measures (SCI) that cover all 3,136 counties, with Facebook usage relatively even across most demographic and geographic groups. Findings also likely extend to settings where non–social-media proxies for ties (e.g., commuting flows) capture similar network structure.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "Study design and data coverage details",
+        "confidence": "low",
+        "confidence_score": 0.2854722064950393,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": "main",
+            "note": "Uses data from across the continental U.S.; leverages geographic variation in U.S. social networks; relevance to redistricting."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": "main",
+            "note": "SCI coverage (3,136 counties; nationwide pairs) and relatively even Facebook usage across demographic and geographic groups."
+          },
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "CES is nationally representative; large samples; linked to county and congressional district."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "Similar results when using commuting flows as an alternative proxy for social networks."
+          }
+        ],
+        "quote_snippet": "The CES is a nationally representative survey that has run annually from 2006 to 2022",
+        "table_figure": null,
+        "data_source": "Cooperative Election Study (CES); Meta Social Connectedness Index (SCI)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "G02",
+        "category": "G) External validity and generalization",
+        "question": "What populations or settings are least likely to generalize?",
+        "answer": "Least likely to generalize are: (1) geographies excluded from results (Alaska, Hawaii, Washington, D.C., and territories); (2) very small-population areas removed from the SCI; (3) groups with low Meta/Facebook use—especially older adults (65+); and (4) counties with highly fragmented or complex district splits that violate the limited-fragmentation/simple-boundaries assumptions.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "Textual evidence from data/methods and appendix assumptions",
+        "confidence": "low",
+        "confidence_score": 0.26154170789138104,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 13,
+            "start_word": 275,
+            "end_word": 555,
+            "section": null,
+            "note": "Results exclude Alaska, Hawaii, Washington, D.C., and territories"
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "SCI removes very small-population areas; includes only users active in last 30 days"
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "Facebook usage lowest among 65+ (50%)"
+          },
+          {
+            "page": 44,
+            "start_word": 275,
+            "end_word": 491,
+            "section": "appendix",
+            "note": "Local mapping assumes limited fragmentation/simple boundaries; some counties are split across many districts (rare)"
+          }
+        ],
+        "quote_snippet": "areas with particularly small populations are removed",
+        "table_figure": null,
+        "data_source": "Meta Social Connectedness Index (SCI) and U.S. Facebook usage rates cited (Pew, 2021)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "G03",
+        "category": "G) External validity and generalization",
+        "question": "Do the authors discuss boundary conditions or scope limits?",
+        "answer": "Yes. They explicitly note scope limits (e.g., findings specific to the U.S.; analysis over the continental 48 states) and impose boundary/identification conditions in the appendix (limited fragmentation, simple boundaries, out-of-state leakage, and network non-degeneracy). They also restrict the border-pairs design to counties fully within one district and within-state pairs due to data/precision limits.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.2842624617857855,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": "page 5",
+            "start_word": 275,
+            "end_word": 475,
+            "section": null,
+            "note": "Scope statement that findings are specific to the U.S."
+          },
+          {
+            "page": "page 13",
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Scope over continental 48 states and determinants of district homophily"
+          },
+          {
+            "page": "page 28",
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs design restrictions and precision limits"
+          },
+          {
+            "page": "page 44",
+            "start_word": 275,
+            "end_word": 491,
+            "section": "appendix",
+            "note": "Assumptions: Limited fragmentation and Simple boundaries"
+          },
+          {
+            "page": "page 45",
+            "start_word": 0,
+            "end_word": 349,
+            "section": "appendix",
+            "note": "Assumptions: Non-trivial out-of-state connections; Network non-degeneracy"
+          },
+          {
+            "page": "page 46",
+            "start_word": 0,
+            "end_word": 349,
+            "section": "appendix",
+            "note": "Identification result relying on assumptions (invertibility argument)"
+          }
+        ],
+        "quote_snippet": "Though my findings are specific to the U.S., this approach may hold relevance in any context where political boundaries are drawn.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Appendix imposes: (1) Limited fragmentation with a dominant district per county; (2) Simple boundaries (each county intersects ≤2 districts); (3) Non-trivial out-of-state connections (network leakage, spectral radius < 1); (4) Network non-degeneracy (linearly independent rows), ensuring local identification.",
+        "related_questions": []
+      },
+      {
+        "id": "G04",
+        "category": "G) External validity and generalization",
+        "question": "How might the results change in different time periods or markets?",
+        "answer": "Over time, effects appear quickly and persist: voter-knowledge impacts take hold in the first post-redistricting survey (2014) and remain relatively stable. Using odd-year data yields similar patterns but with noisier estimates due to much smaller samples. Across media markets, controlling for DMA-by-year fixed effects generally leaves results qualitatively similar—suggesting they are not driven by market-level media—but in the stricter border-pairs design the ‘Selected Party’ effect becomes insignificant after adding DMA-by-year fixed effects. Moreover, correlations between county traits and changes in homophily largely vanish once media market and district fixed effects are included.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "Event-study estimates over time; fixed-effects controls (DMA-by-year, district-by-year); border-pairs robustness",
+        "confidence": "low",
+        "confidence_score": 0.31940451009186777,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Event studies timing",
+            "note": "Impacts strongest in 2014 and relatively stable over time"
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": "Sample timing",
+            "note": "Odd years have smaller samples; similar results but noisier estimates"
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": "Media market controls",
+            "note": "Includes DMA-by-year fixed effects to address media market confounding"
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Border-pairs robustness",
+            "note": "‘Selected Party’ becomes insignificant after adding DMA-by-year fixed effects"
+          },
+          {
+            "page": 14,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Predictors and fixed effects",
+            "note": "County-level correlations disappear once media market and district FEs are included"
+          }
+        ],
+        "quote_snippet": "most strongly takes effect in the first survey after redistricting (2014). Impacts are relatively stable over time.",
+        "table_figure": null,
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H01",
+        "category": "H) Measurement validity",
+        "question": "Are key variables measured directly or via proxies?",
+        "answer": "Both. Social networks are proxied using Facebook’s Social Connectedness Index and a constructed partisan-exposure measure, while knowledge and voting outcomes are measured directly from CES surveys and administrative vote counts/validated rolls.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "text",
+        "confidence": "low",
+        "confidence_score": 0.3328462292312862,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 7,
+            "start_word": 275,
+            "end_word": 379,
+            "section": null,
+            "note": "SCI used as proxy for real-world social networks"
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Constructed proxy for partisan exposure from friendships and vote shares"
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Voting outcomes measured from pre/post CES surveys and validated rolls"
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 207,
+            "section": "appendix",
+            "note": "Vote counts built from Harvard EDA, MIT/MedSL, Dave Leip, Daily Kos"
+          }
+        ],
+        "quote_snippet": "I use the Facebook Social Connectedness Index (SCI)—one of the best existing proxies for real-world social networks.",
+        "table_figure": null,
+        "data_source": "Facebook Social Connectedness Index; CES surveys; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H02",
+        "category": "H) Measurement validity",
+        "question": "What measurement error risks are acknowledged or likely?",
+        "answer": "Acknowledged and likely measurement error risks include: (1) SCI measurement noise and suppression: small-population areas are removed and noise is added; (2) SCI coverage/assignment issues: only active Meta users in last 30 days are included, usage varies by age, and locations are assigned via self-reported and device data; (3) CES response error: respondents may guess parties and lucky guesses cannot be ruled out; (4) Survey assignment errors: some respondents were assigned to incorrect districts (e.g., 2020 NC), though excluded; (5) Voting data quality/construct issues: turnout metrics exclude cases where turnout exceeds VAP; (6) Potential harmonization inconsistencies from combining multiple vote data sources.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "quoted_and_paraphrased",
+        "confidence": "low",
+        "confidence_score": 0.27088332269027793,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 315,
+            "section": null,
+            "note": "SCI adds privacy noise and removes small-population areas"
+          },
+          {
+            "page": 8,
+            "start_word": 315,
+            "end_word": 380,
+            "section": null,
+            "note": "SCI only includes users active in last 30 days"
+          },
+          {
+            "page": 8,
+            "start_word": 380,
+            "end_word": 430,
+            "section": null,
+            "note": "SCI location assignment based on self-reported info and device data"
+          },
+          {
+            "page": 8,
+            "start_word": 520,
+            "end_word": 624,
+            "section": null,
+            "note": "Facebook usage rates vary by age (coverage heterogeneity)"
+          },
+          {
+            "page": 17,
+            "start_word": 60,
+            "end_word": 140,
+            "section": null,
+            "note": "Selected Party may involve guessing"
+          },
+          {
+            "page": 17,
+            "start_word": 140,
+            "end_word": 220,
+            "section": null,
+            "note": "Lucky guesses cannot be ruled out for Selected Correct Party"
+          },
+          {
+            "page": 17,
+            "start_word": 420,
+            "end_word": 520,
+            "section": null,
+            "note": "2020 NC respondents assigned to incorrect districts; excluded"
+          },
+          {
+            "page": 49,
+            "start_word": 180,
+            "end_word": 230,
+            "section": "appendix",
+            "note": "Elections where turnout exceeds VAP are excluded"
+          },
+          {
+            "page": 47,
+            "start_word": 0,
+            "end_word": 120,
+            "section": "appendix",
+            "note": "Voting outcomes constructed by combining multiple data sources"
+          }
+        ],
+        "quote_snippet": "Lastly, the third dummy variable, “Selected Correct Party”, is coded as 1 if the respondent selected the correct party for the incumbent and 0 otherwise. While lucky guesses cannot be ruled out",
+        "table_figure": null,
+        "data_source": "Social Connectedness Index (SCI); CES; Dave Leip’s Election Atlas; Harvard Election Data Archive; MIT Election Data and Science Lab; Daily Kos",
+        "assumption_flag": true,
+        "assumption_notes": "Coverage heterogeneity in SCI by age and potential inconsistencies from merging multiple vote data sources are inferred risks based on the described data construction and usage-rate differences.",
+        "related_questions": []
+      },
+      {
+        "id": "H03",
+        "category": "H) Measurement validity",
+        "question": "Are there validation checks for key measures?",
+        "answer": "Yes. The study validates key measures via placebo tests for voter information (district homophily does not predict placebo outcomes), external stability/representativeness checks for the SCI (e.g., >0.99 year-to-year correlation and broadly even usage rates), and robustness noting similar results with county fixed effects.",
+        "question_tokens_estimate": 11,
+        "evidence_type": "Placebo tests and external stability checks",
+        "confidence": "low",
+        "confidence_score": 0.26064539994033026,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo outcomes show no significant prediction by district homophily."
+          },
+          {
+            "page": 8,
+            "start_word": 275,
+            "end_word": 624,
+            "section": null,
+            "note": "SCI validation: >0.99 cross-year correlation; usage rates relatively even across demographics."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Robustness: results similar with county fixed effects."
+          }
+        ],
+        "quote_snippet": "In general, district homophily does not significantly predict the placebo outcomes.",
+        "table_figure": "Table C1",
+        "data_source": "CES; Social Connectedness Index (Meta apps); Dave Leip’s Election Atlas",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "H04",
+        "category": "H) Measurement validity",
+        "question": "Do the authors discuss construct validity for core outcomes?",
+        "answer": "Yes. They assess construct validity via placebo outcome tests—showing district homophily does not affect knowledge of statewide officials (governor, senators) where no effect is expected—and corroborate this with robustness using alternative network measures.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "placebo tests and robustness checks",
+        "confidence": "low",
+        "confidence_score": 0.22703125944891173,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Placebo outcomes for governor and senators; no significant impact reported."
+          },
+          {
+            "page": 27,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "No significant impact on placebo outcomes when using commuting-flow-based homophily."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Appendix C.2 summary: district homophily does not significantly predict placebo outcomes; Table C1."
+          }
+        ],
+        "quote_snippet": "I find no significant impact of district homophily on these nine outcomes.",
+        "table_figure": "Table C1",
+        "data_source": "Cooperative Election Study (CES)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I01",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What policy counterfactuals are considered or implied?",
+        "answer": "The implied policy counterfactuals are alternative congressional district maps: (1) simulating counterfactual district maps via the information-diffusion model to forecast voter information under different boundaries, and (2) comparing outcomes across many legally compliant simulated redistricting plans (5,000 per state).",
+        "question_tokens_estimate": 13,
+        "evidence_type": "textual",
+        "confidence": "low",
+        "confidence_score": 0.34996576379917405,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 34,
+            "start_word": 150,
+            "end_word": 215,
+            "section": "Conceptual Framework: Information Diffusion within Districts",
+            "note": "Model enables simulation of counterfactual district maps."
+          },
+          {
+            "page": 34,
+            "start_word": 250,
+            "end_word": 349,
+            "section": "Comparisons Across Many Simulated Maps",
+            "note": "5,000 simulated congressional district maps per state, constrained by state laws."
+          }
+        ],
+        "quote_snippet": "allow for the simulation of counterfactual district maps. … simulate 5,000 congressional district maps for each of the 50 states… constrained to follow the given state’s redistricting laws.",
+        "table_figure": null,
+        "data_source": "McCartan et al. (2021) 50-State Redistricting Simulations",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I02",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What are the main welfare tradeoffs or distributional impacts discussed?",
+        "answer": "The paper highlights distributional impacts from how social networks align with district lines: (1) Higher district homophily raises voters’ information about their House representative and reduces roll-off, concentrating these gains in places where networks and districts align; (2) It reallocates campaign money toward in-district candidates and away from out-of-district ones without changing total donations; (3) Using social-network data to draw districts could improve fairness but also risks partisan exploitation.",
+        "question_tokens_estimate": 18,
+        "evidence_type": "Textual evidence from results and discussion",
+        "confidence": "low",
+        "confidence_score": 0.30339278782441154,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Section 4.1.1–4.1.2",
+            "note": "Increases in district homophily raise voter knowledge; timing and magnitudes reported."
+          },
+          {
+            "page": 24,
+            "start_word": 0,
+            "end_word": 229,
+            "section": "Section 4.2",
+            "note": "Roll-off reduced; donations shift toward in-district candidates with no change in totals."
+          },
+          {
+            "page": 36,
+            "start_word": 0,
+            "end_word": 309,
+            "section": "Conclusion/Implications",
+            "note": "Policy tradeoff: social network data could aid fair maps but also be exploited by gerrymanderers."
+          }
+        ],
+        "quote_snippet": "enabling its use by policymakers to draw fairer districts, but also by partisan gerrymanderers who may seek to exploit it.",
+        "table_figure": "Figure 6 and Figure 8",
+        "data_source": "CES survey; campaign contributions data; Facebook friendship graph/SCI; commuting flows",
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "I03",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "Are cost-benefit or incidence analyses provided?",
+        "answer": "No. The provided excerpts contain event studies, placebo tests, and variable descriptions but do not present cost-benefit or incidence analyses.",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual review of provided excerpts (absence of mention)",
+        "confidence": "low",
+        "confidence_score": 0.24479389793772252,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Describes placebo outcomes; no cost-benefit or incidence analysis indicated."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Defines voting outcome variables and summary stats; not cost-benefit or incidence."
+          },
+          {
+            "page": 15,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "Event study specification and design; no cost-benefit or incidence framing."
+          }
+        ],
+        "quote_snippet": "In general, district homophily does not significantly predict the placebo outcomes.",
+        "table_figure": "Table B4; Table C1",
+        "data_source": null,
+        "assumption_flag": true,
+        "assumption_notes": "Conclusion is limited to the provided excerpts; other parts of the full document may exist but are not included here.",
+        "related_questions": []
+      },
+      {
+        "id": "I04",
+        "category": "I) Policy counterfactuals and welfare",
+        "question": "What policy recommendations are stated or implied?",
+        "answer": "Use social-network data when drawing districts to make them fairer and improve voter information, while instituting safeguards because the same data could be exploited for partisan gerrymandering. The findings are especially relevant for redistricting, and the framework implies policymakers can evaluate or simulate alternative district maps with network-based measures (e.g., district homophily).",
+        "question_tokens_estimate": 12,
+        "evidence_type": "textual inference from main text",
+        "confidence": "low",
+        "confidence_score": 0.3071000189687213,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 36,
+            "start_word": 0,
+            "end_word": 309,
+            "section": "Main text",
+            "note": "Policymakers can use SCI to draw fairer districts; caution about partisan exploitation."
+          },
+          {
+            "page": 4,
+            "start_word": 275,
+            "end_word": 492,
+            "section": "Main text",
+            "note": "Findings especially relevant for redistricting."
+          },
+          {
+            "page": 34,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "Main text",
+            "note": "Framework enables simulating counterfactual district maps based on information diffusion."
+          }
+        ],
+        "quote_snippet": "…enabling its use by policymakers to draw fairer districts, but also by partisan gerrymanderers who may seek to exploit it.",
+        "table_figure": null,
+        "data_source": "Social Connectedness Index (SCI)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J01",
+        "category": "J) Data quality and integrity",
+        "question": "What missingness or attrition patterns are reported?",
+        "answer": "Reported patterns include: (1) attrition between the CES pre- and post-election surveys; (2) incomplete county coverage each year (even years have at least one respondent from 80–90% of counties; odd years about two-thirds); (3) much smaller samples in odd years (about one-fifth the size of even years); and (4) exclusions for missing/incorrect data: <2% missing party-recognition responses, respondents missing demographic answers (when such controls are used), a small number in 2006–2007 misassigned to counties outside their state, and 925 North Carolina respondents in 2020 misassigned to the wrong district.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "document text",
+        "confidence": "low",
+        "confidence_score": 0.31242748280810845,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": "main",
+            "note": "Attrition between pre- and post-election surveys; exclusions for missing party-recognition (<2%), missing demographics, 2006–2007 county/state misassignment, and 2020 NC wrong-district misassignment."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 349,
+            "section": "main",
+            "note": "County coverage by year: even years 80–90% of counties have a respondent; odd years about two-thirds."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": "main",
+            "note": "Odd-year samples are about one-fifth the size of even years."
+          }
+        ],
+        "quote_snippet": "…utilize the same sample as the information outcomes (because there is some attrition between surveys).",
+        "table_figure": null,
+        "data_source": "CES (Cooperative Election Study)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J02",
+        "category": "J) Data quality and integrity",
+        "question": "How are outliers handled (winsorization, trimming, exclusions)?",
+        "answer": "No winsorization or trimming is described. Outliers are not specially transformed; instead, observations are excluded in specific cases: (1) CES respondents with missing candidate-party recognition, missing demographic answers, or erroneous county/district assignments (including 925 NC respondents in 2020); (2) elections with no top-of-ticket race; and (3) cases where turnout exceeds the voting-age population. Some variables are set missing when no incumbent runs.",
+        "question_tokens_estimate": 15,
+        "evidence_type": "document_text",
+        "confidence": "low",
+        "confidence_score": 0.3092116149025004,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "CES exclusions: missing responses, missing demographics, misassigned counties/districts; 2020 NC misassignment excluded."
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Voting outcomes data exclusions: no top-of-ticket race; turnout exceeds VAP."
+          },
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Variables marked missing when no incumbent runs or when validation variables are missing."
+          }
+        ],
+        "quote_snippet": "I exclude missing responses to the candidate party recognition question (<2% of respondents in each year; for most of these cases, the House candidate name is missing in the survey).",
+        "table_figure": "Table B4",
+        "data_source": "CES; Dave Leip’s Election Atlas; Census (VAP)",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J03",
+        "category": "J) Data quality and integrity",
+        "question": "Are there data audits or validation steps described?",
+        "answer": "Yes. The study describes several validation and data-cleaning steps: use of validated voting records by linking CES respondents to state voter rolls, exclusion of misassigned or missing-response CES records, dropping elections where turnout exceeds the VAP (and those without a top-of-ticket race), and placebo outcome tests to validate findings.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "Data cleaning rules, validated measures, and placebo tests documented in appendix",
+        "confidence": "low",
+        "confidence_score": 0.24185108042339895,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 48,
+            "start_word": 0,
+            "end_word": 333,
+            "section": "appendix",
+            "note": "Validated voting variables via linkage to state voter rolls (CES)"
+          },
+          {
+            "page": 17,
+            "start_word": 275,
+            "end_word": 542,
+            "section": null,
+            "note": "Exclusions for missing responses, demographic nonresponse, county/state mismatches, and misassigned districts"
+          },
+          {
+            "page": 49,
+            "start_word": 0,
+            "end_word": 276,
+            "section": "appendix",
+            "note": "Excluding elections where turnout exceeds VAP and without top-of-ticket race"
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo outcome tests show no significant effects for non-House offices"
+          }
+        ],
+        "quote_snippet": "Voted in General Election (Validated) Respondent can be linked to state voter rolls, and there is a record of the (Validated) respondent voting in the general election.",
+        "table_figure": "Table B2",
+        "data_source": "CES linked to state voter rolls; Dave Leip’s Election Atlas",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "J04",
+        "category": "J) Data quality and integrity",
+        "question": "Is there evidence of reporting bias or selective sample inclusion?",
+        "answer": "No. The study transparently reports sample restrictions and weighting, justifies focusing on even years, includes placebo tests and null findings (e.g., no turnout effects), and notes robustness checks—showing no clear signs of reporting bias or selective inclusion.",
+        "question_tokens_estimate": 16,
+        "evidence_type": "Direct textual evidence from methods and results descriptions",
+        "confidence": "low",
+        "confidence_score": 0.30692777890252254,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 16,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Uses CES cumulative weights; describes large, nationally representative samples and linkage to counties/districts."
+          },
+          {
+            "page": 17,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "States inclusion of 48 contiguous states; coverage variation across years; notes representativeness differences and transparency on exclusions."
+          },
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Explains focusing on even years due to smaller odd-year samples; similar results with more noise—justifies, not cherry-picks."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Reports placebo outcomes with generally no significant effects—transparent reporting of null results."
+          },
+          {
+            "page": 67,
+            "start_word": 0,
+            "end_word": 258,
+            "section": "appendix",
+            "note": "Vote count analysis: reports no turnout effect; shows roll-off reduction and discusses precision/pre-trend—balanced reporting."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Notes robustness (commuting flows proxy) and that placebo outcomes show no effect—supports lack of selective reporting."
+          }
+        ],
+        "quote_snippet": "In general, district homophily does not significantly predict the placebo outcomes.",
+        "table_figure": "Table C1 (Appendix)",
+        "data_source": "CES (Cooperative Election Study); Dave Leip’s Atlas of U.S. Presidential Elections",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K01",
+        "category": "K) Model fit and diagnostics",
+        "question": "What goodness-of-fit or diagnostic metrics are reported?",
+        "answer": "Reported diagnostics include R-squared (R2), the number of observations (Obs), clustered standard errors (clustered at the county level) in parentheses, p-values in square brackets, and significance stars.",
+        "question_tokens_estimate": 14,
+        "evidence_type": "appendix regression table",
+        "confidence": "low",
+        "confidence_score": 0.28805989117751185,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Table C2 lists Obs and R2 for each specification; notes state SEs are clustered at county level and p-values in brackets."
+          }
+        ],
+        "quote_snippet": "Standard errors clustered at the county level in parentheses. P-values in square brackets.",
+        "table_figure": "Table C2",
+        "data_source": null,
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K02",
+        "category": "K) Model fit and diagnostics",
+        "question": "Are functional form choices tested (logs, levels, nonlinearities)?",
+        "answer": "Not specified in the provided context. The excerpts indicate linear probability interpretations and robustness via added fixed effects and controls, but do not report tests of alternative functional forms (logs or nonlinearities).",
+        "question_tokens_estimate": 16,
+        "evidence_type": "textual (methods) and table (specification robustness)",
+        "confidence": "low",
+        "confidence_score": 0.2771974868223541,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Outcomes are binary and estimates interpreted as changes in probability, implying a linear specification; no mention of functional form tests."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Robustness shown by adding fixed effects and controls (Table C2), not by changing functional form."
+          },
+          {
+            "page": 15,
+            "start_word": 275,
+            "end_word": 450,
+            "section": null,
+            "note": "Discussion focuses on additional fixed effects and controls (DMA-by-year, partisan exposure), not functional form variations."
+          }
+        ],
+        "quote_snippet": "District homophily is measured on a scale from 0 to 1, and outcome variables are binary. As such, reported estimates give the change in probability of the outcome",
+        "table_figure": "Table C2",
+        "data_source": null,
+        "assumption_flag": null,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K03",
+        "category": "K) Model fit and diagnostics",
+        "question": "Are residual checks or specification tests reported?",
+        "answer": "Yes. Specification tests are reported via placebo outcomes; district homophily does not significantly predict these placebo outcomes. No residual diagnostics are described in the provided text.",
+        "question_tokens_estimate": 13,
+        "evidence_type": "appendix text",
+        "confidence": "low",
+        "confidence_score": 0.22376402325218922,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Appendix C.2 summarizes placebo tests and their null results."
+          },
+          {
+            "page": 27,
+            "start_word": 275,
+            "end_word": 439,
+            "section": null,
+            "note": "Notes additional placebo tests with zip-code networks also showing no significant impact."
+          }
+        ],
+        "quote_snippet": "The nine figures that follow show the results of the placebo tests. In general, district homophily does not significantly predict the placebo outcomes.",
+        "table_figure": null,
+        "data_source": "Appendix C.2",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "K04",
+        "category": "K) Model fit and diagnostics",
+        "question": "How sensitive are results to alternative specifications or estimators?",
+        "answer": "Results are generally robust across alternative specifications and estimators. They remain similar when adding county fixed effects and when including odd-year surveys (though odd years are noisier). Using commuting flows as an alternative network measure yields qualitatively similar positive effects on voter familiarity and incumbent support, with magnitudes about half as large and shifts coming from reduced no preference/not voting rather than reduced opponent support. Placebo tests for governors and senators show no significant effects. An alternative border-pairs design delivers qualitatively similar findings; however, the ‘Selected Party’ outcome becomes insignificant after adding DMA-by-year fixed effects, while ‘Heard of Incumbent’ and ‘Selected Correct Party’ remain significant in most specifications (as shown in Appendix Table C2), with reduced precision due to the restricted sample.",
+        "question_tokens_estimate": 17,
+        "evidence_type": "text_and_table",
+        "confidence": "medium",
+        "confidence_score": 0.3655497023341587,
+        "retrieval_method": "local",
+        "citation_anchors": [
+          {
+            "page": 19,
+            "start_word": 275,
+            "end_word": 406,
+            "section": null,
+            "note": "Similar results with county fixed effects; odd years similar but noisier."
+          },
+          {
+            "page": 20,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Stability over time; similar results with commuting flows; placebo outcomes null."
+          },
+          {
+            "page": 26,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Placebo outcomes show no significant impact; describes commuting flows measure."
+          },
+          {
+            "page": 26,
+            "start_word": 275,
+            "end_word": 375,
+            "section": null,
+            "note": "Commuting homophily effects about half as large; reductions from no preference/not voting."
+          },
+          {
+            "page": 28,
+            "start_word": 0,
+            "end_word": 349,
+            "section": null,
+            "note": "Border-pairs design: qualitatively similar; ‘Selected Party’ becomes insignificant with DMA×year FEs; precision decreases."
+          },
+          {
+            "page": 65,
+            "start_word": 0,
+            "end_word": 288,
+            "section": "appendix",
+            "note": "Appendix Table C2 shows robustness across FE sets; ‘Selected Party’ loses significance with richer FEs; other outcomes remain significant."
+          },
+          {
+            "page": 55,
+            "start_word": 0,
+            "end_word": 152,
+            "section": "appendix",
+            "note": "Placebo outcomes summary: generally no significant prediction by district homophily."
+          }
+        ],
+        "quote_snippet": "With the border pairs design, I find qualitatively similar results as in the redistricting design, except estimates on “Selected Party” become insignificant after adding DMA-by-year fixed effects.",
+        "table_figure": "Appendix Table C2",
+        "data_source": "CES survey; 2016 5-Year ACS County-County Commuting Flows",
+        "assumption_flag": false,
+        "assumption_notes": null,
+        "related_questions": []
+      },
+      {
+        "id": "P01",
+        "category": "P) Previous questions",
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "No specific question was posed. Below is a concise synthesis of key definitions, data, and identification from the provided context, with citations.\n\n- Roll-off (House turnout relative to top-of-ticket)\n  - Definition: Share of top-of-ticket voters who abstain from the House race: (VotesTop − VotesHouse) / VotesTop; captures abstention after incurring the cost of voting; related to “roll-off” literature (Feddersen & Pesendorfer 1996; Miller 2022; Snyder & Strömberg 2010) (page 18 words 275-496).\n  - Variable construction and scope: Main analysis at county level from Dave Leip’s; robustness at county-by-CD level from Harvard EDA, Daily Kos, Dave Leip’s, and MIT EDS Lab; exclude elections without a top-of-ticket race (page 49 words 0-276).\n  - Summary stats: Mean 4.42%, SD 12.22 pp; also report turnout in top-of-ticket (mean 51.34%) and House (mean 49.07%) (page 49 words 0-276).\n\n- Campaign contributions data\n  - Source: Kuziemko et al. 2023 (October), constructed from FEC data in Bonica 2014; geocoding used to identify whether contributor resides in the same congressional district as the candidate (page 18 words 275-496).\n\n- Border pairs identification design\n  - Setup: Neighboring county pairs that straddle a district boundary; counties are similar except district assignment, yielding different district homophily; restrict to counties fully within one district; collapse outcomes to county level; include one observation per county–pair; compare within-state pairs; precision decreases due to restricted sample (page 28 words 0-349).\n  - Specification:\n    - $y_{ct} = \\alpha_c + \\mu_{pt} + \\beta\\,\\bar{\\pi}_{c,t} + X'_{ct}\\delta + \\varepsilon_{ct}$, where $y_{ct}$ is the outcome, $\\mu_{pt}$ pair-by-year FE, $X_{ct}$ time-varying county controls; use state-by-year FE (insufficient data for district-by-year FE) (page 28 words 0-349).\n  - Results note: Qualitatively similar to redistricting design; estimates on “Selected Party” become insignificant after adding DMA-by-year FE (page 28 words 0-349).\n\n- Conceptual framework\n  - Develops a theoretical model of information diffusion within districts; district homophily summarized as a network statistic; considers news about elected officials diffusing through networks to determine the equilibrium share of informed voters (page 28 words 0-349).\n\n- Vote count data construction\n  - County-by-CD measures built from precinct-level vote counts (Harvard EDA 2000–2010; MIT EDS Lab 2016–2020) combined with county-by-CD vote counts from Dave Leip’s (House) and Daily Kos (President, Senator, Governor) (page 47 words 0-207).\n\n- CES variables and summary statistics (knowledge, preferences, voting)\n  - Knowledge outcomes (binary): Heard of Representative; Selected Party; Selected Correct Party; defined via pre-survey items on recognizing and assigning party to the House representative (page 47 words 0-207).\n  - Voting/preference outcomes (binary): Prefer Incumbent/Opponent/Neither (pre-survey); Voted for Incumbent/Opponent/Neither (post-survey); Validated turnout in general/primary; self-reported general turnout; handling of missing when no incumbent or unmatched rolls (page 48 words 0-333).\n  - Summary (sample means): Heard of Rep 93.2%; Selected Party 68.6%; Selected Correct Party 61.7%; Prefer Incumbent 40.1%; Voted for Incumbent 41.0%; Validated General Turnout 57.5%; Self-Reported General Turnout 87.8% (page 49 words 0-276).\n\n- Additional pointers\n  - Figures showing effects of homophily on self-reported voting using commuting- and zip-code-based measures (Figures C11, C14); a figure on changes in district homophily with progressively finer bins (Figure C5) (page 61 words 0-15; page 64 words 0-45; page 54 words 0-18).",
+        "question_tokens_estimate": 19
+      }
+    ],
+    "report_question_confidence": {
+      "count": 83,
+      "mean": 0.2921069186783523,
+      "median": 0.30376113152112244,
+      "min": 0.11053936640375273,
+      "max": 0.3997880642088801,
+      "p25": 0.2627654639321706,
+      "p75": 0.3297435733862386,
+      "label_counts": {
+        "high": 0,
+        "medium": 6,
+        "low": 77
+      }
+    },
+    "report_questions_error": null,
+    "citations_enabled": false,
+    "citations_preview": [],
+    "citations_error": null
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 102.0,
+    "max_chunks": 102,
+    "min_chunks": 102
+  },
+  "finished_at": "2026-02-15T19:40:51.819956+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  }
+}

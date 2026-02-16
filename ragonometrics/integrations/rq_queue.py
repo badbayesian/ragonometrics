@@ -40,6 +40,10 @@ def enqueue_workflow(
     agentic_model: str | None = None,
     agentic_citations: bool | None = None,
     report_question_set: str | None = None,
+    workstream_id: str | None = None,
+    arm: str | None = None,
+    parent_run_id: str | None = None,
+    trigger_source: str | None = None,
 ):
     """Enqueue a multi-step workflow run.
 
@@ -64,6 +68,10 @@ def enqueue_workflow(
         agentic_model,
         agentic_citations,
         report_question_set,
+        workstream_id,
+        arm,
+        parent_run_id,
+        trigger_source,
     )
     return job
 

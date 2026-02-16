@@ -1,0 +1,127 @@
+{
+  "run_id": "825c2af05c87473fa7bddfa953c32fe3",
+  "started_at": "2026-02-15T17:37:52.331376+00:00",
+  "papers_dir": "papers\\Use_of_Cumulative_Sums_of_Squares_for_Re.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\sqlite\\ragonometrics_token_usage.sqlite",
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 1881364,
+      "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-825c2af05c87473fa7bddfa953c32fe3.json"
+  },
+  "ingest": {
+    "num_pdfs": 1,
+    "num_papers": 1
+  },
+  "enrich": {
+    "openalex": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "completed",
+    "question": "What is the key contribution?",
+    "question_tokens_estimate": 7,
+    "subquestions": [
+      "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')"
+    ],
+    "sub_answers": [
+      {
+        "question": "ResponseTextConfig(format=ResponseFormatText(type='text'), verbosity='medium')",
+        "answer": "- ICSS idea and asymptotics\n  - Use cumulative sums of squares and examine the plot of $D_k$; detect a variance change when $\\max_k |D_k|$ crosses a boundary. Asymptotically, the $D_k$ process behaves like a Brownian bridge; e.g., an illustrative asymptotic critical value reported is $D_{.35}=1.358$, and a crossing at $k^*=342$ indicates a change [page 3, 0–349].\n  - Under variance homogeneity ($N_T=0$): $E[C_k]=k\\sigma^2$, $E[C_k C_T]=k(T+2)\\sigma^4$, and $E[D_k]\\to 0$. With one change at $K_1$, $E[D_k]$ departs from 0 in a way characterized by the variance ratio $A=\\sigma_2^2/\\sigma_1^2$; with two changes, a second-order approximation to $E[D_k]$ can be derived similarly [page 11, 275–507].\n\n- Relationship to classical tests\n  - For fixed $k$, $D_k$ is a monotone function of the usual two-sample variance $F$-statistic with\n    $$\n    F_{T-k,k}=\\frac{(C_T-C_k)/(T-k)}{C_k/k}.\n    $$\n    Key distinction: $F$ is for known $k$, whereas ICSS searches over $k$ via $\\max_k |D_k|$ [page 3, 0–349].\n\n- Likelihood ratio (LR) and Bayesian posterior odds frameworks for multiple change-points\n  - Sequential LR tests: define $LR_{n-1,n}$ for testing $H_0:N_T=n-1$ vs $H_a:N_T=n$ for $n=1,2,\\dots$. Critical values require simulation due to nonregularity. Evidence suggests standardized $LR_{0,1}$ (and more generally $LR_{n-1,n}$ via formulas in Table 3) follows an extreme value null with $F(x)=\\exp(-e^{-x})$ [page 8, 0–329].\n  - Posterior odds: assess $p(N_T=n\\mid a)$ using priors with per-time change probability $X$, and changepoint vector $K=(K_1,\\dots,K_{N_T})'$; compare log posterior odds across $n$ [page 8, 0–329].\n\n- Simulation design\n  - 1,000 replicates per design point; i.i.d. $N(0,1)$ sequences; Fortran implementation with a modified polar method and Bratley–Fox–Schrage RNG [page 7, 275–556].\n  - Part One (one change): $T\\in\\{100,200,500\\}$, $K_1/T\\in\\{.25,.50,.75\\}$, variance ratios $A\\in\\{2,3\\}$ [page 7, 0–349].\n  - Part Two (two changes): same $T$; $(K_1/T,K_2/T)\\in\\{(.33,.66),(.20,.80),(.58,.80)\\}$; six configurations $(\\sigma_1^2,\\sigma_2^2,\\sigma_3^2)$ with $\\sigma_1^2=1$ and ratios $A_1=\\sigma_2^2/\\sigma_1^2$, $A_2=\\sigma_3^2/\\sigma_2^2$; symmetric permutations (e.g., $(1,2,4)$ vs reversed) omitted [page 7, 0–349; page 7, 275–556].\n\n- Key empirical findings (identification accuracy)\n  - For $T=100$, detecting a small change ($A=2$) near the beginning is difficult for ICSS. With $T=200$ or larger ratio ($A=3$) and a mid-series change, correct identification exceeds 80%. ICSS improves with longer series and larger $A$ [page 9, 550–899].\n  - Bayesian posterior odds performs best for $A=2$ and is comparable to others for $A=3$ [page 9, 550–899].\n  - ICSS applied to AR(1) residuals ($y_t=\\phi y_{t-1}+a_t$; residuals $\\hat a_t$ with OLS $\\hat\\phi$): percentages with $N_T=1$ are close to those in the i.i.d. case (see Table 8) [page 9, 550–899; page 10, 0–84].\n\n- Computational burden\n  - Posterior odds are computationally heavy; LR mitigates some cost via the Baufays–Rasson algorithm but remains heavy with hundreds of observations and multiple changepoints. ICSS avoids evaluating an objective at all possible changepoint locations, yielding substantial speedups [page 9, 825–904].\n  - CPU-time scaling: LR approach is roughly $O(T^3)$ and of similar order for $N_T=2$ and $N_T=3$; ICSS shows the same dependence on $T$ across $N_T$, indicating a markedly lower and more stable computational cost relative to LR and Bayesian methods [page 11, 275–507].",
+        "question_tokens_estimate": 19
+      }
+    ],
+    "final_answer": "- Introduction of the ICSS procedure for variance change-point detection: use cumulative sums of squares and the scan statistic $\\max_k |D_k|$; under homoscedasticity the $D_k$ process is asymptotically a Brownian bridge, enabling critical thresholds for detection [page 3, 0–349]. The paper also derives $E[C_k]$, $E[C_k C_T]$, and the behavior of $E[D_k]$ under no change, one change (via variance ratio $A=\\sigma_2^2/\\sigma_1^2$), and gives a second-order approximation for two changes [page 11, 275–507].\n\n- Conceptual unification with classical tests: for fixed $k$, $D_k$ is a monotone function of the two-sample variance $F$-statistic, but ICSS generalizes to unknown $k$ via the maximization over $k$ [page 3, 0–349].\n\n- Methodological and inferential framing for multiple change points: sequential likelihood-ratio tests $LR_{n-1,n}$ with evidence for an extreme-value null $F(x)=\\exp(-e^{-x})$ after standardization, and a Bayesian posterior-odds approach over $N_T$ and changepoint vector $K$ [page 8, 0–329].\n\n- Empirical validation and practical guidance: simulations map identification accuracy across $T$, change timing, and variance ratios—ICSS is strong for larger $T$ and $A$, while Bayesian posterior odds excels at smaller changes; performance on AR(1) residuals mirrors the i.i.d. case [page 9, 550–899; page 10, 0–84].\n\n- Computational contribution: ICSS achieves substantial speedups by avoiding evaluation at all candidate changepoints and exhibits markedly lower, more stable CPU-time scaling than LR (roughly $O(T^3)$) and Bayesian methods, making it practical for hundreds of observations and multiple breaks [page 9, 825–904; page 11, 275–507].",
+    "report_questions_enabled": true,
+    "report_questions_set": "structured",
+    "report_questions": [],
+    "report_question_confidence": {
+      "count": 0,
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "p25": 0.0,
+      "p75": 0.0,
+      "label_counts": {
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    },
+    "report_questions_error": "[Errno 22] Invalid argument",
+    "citations_enabled": false,
+    "citations_preview": [],
+    "citations_error": null
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 33.0,
+    "max_chunks": 33,
+    "min_chunks": 33
+  },
+  "finished_at": "2026-02-15T17:50:03.465505+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  }
+}

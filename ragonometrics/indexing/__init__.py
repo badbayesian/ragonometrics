@@ -2,7 +2,15 @@
 
 from .indexer import build_index
 from .manifest import build_index_version, build_run_manifest, write_index_version_sidecar, write_run_manifest
-from .metadata import init_metadata_db, create_pipeline_run, publish_shard, get_active_shards, record_failure, create_index_version
+from .metadata import (
+    init_metadata_db,
+    create_pipeline_run,
+    publish_shard,
+    get_active_shards,
+    record_failure,
+    create_index_version,
+    upsert_paper_metadata,
+)
 from .retriever import hybrid_search
 
 __all__ = [
@@ -17,5 +25,6 @@ __all__ = [
     "get_active_shards",
     "record_failure",
     "create_index_version",
+    "upsert_paper_metadata",
     "hybrid_search",
 ]

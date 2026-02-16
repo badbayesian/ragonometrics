@@ -32,5 +32,4 @@ Notes:
 - If you want live code edits, add a bind mount like `- ./:/app:rw` to the service and ensure Docker Desktop can access the drive.
 - Workflow reports are written to [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports) (bind mounted in the `workflow` service).
 - The compose services load environment variables from `.env` via `env_file`, so keep API keys and workflow settings there.
-- The workflow service mounts [`sqlite/`](https://github.com/badbayesian/ragonometrics/tree/main/sqlite) to persist the workflow state and token usage databases.
 - OpenAlex enrichment uses `OPENALEX_API_KEY` and optional `OPENALEX_MAILTO` from `.env`.

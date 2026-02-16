@@ -1,13 +1,11 @@
-"""LLM pipeline routines, caching, and usage tracking used to produce summaries, citations, and answers."""
+"""LLM pipeline routines, caching, and usage tracking used by active flows."""
 
 from .pipeline import (
     DEFAULT_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
     call_openai,
-    summarize_paper,
     extract_citations,
-    rank_citations,
-    extract_metadata,
+    extract_json,
 )
 
 from .query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
@@ -17,10 +15,8 @@ __all__ = [
     "DEFAULT_MODEL",
     "DEFAULT_MAX_OUTPUT_TOKENS",
     "call_openai",
-    "summarize_paper",
     "extract_citations",
-    "rank_citations",
-    "extract_metadata",
+    "extract_json",
     "DEFAULT_CACHE_PATH",
     "get_cached_answer",
     "make_cache_key",

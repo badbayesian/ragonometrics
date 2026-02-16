@@ -1,0 +1,160 @@
+{
+  "comparison_id": "networks-electoral-competition-gpt5-vs-gpt5-nano-v1",
+  "baseline_run_id": "cf1d92ff869046f39b7319007e9a7835",
+  "variant_run_id": "c52a4b6842704aac8c4258c71def4e29",
+  "schema": [
+    {
+      "name": "comparison_group_id",
+      "type": "text",
+      "purpose": "Logical key that groups runs into one composed workstream comparison."
+    },
+    {
+      "name": "source_bucket",
+      "type": "enum(archive|current)",
+      "purpose": "Where the source report lives; helps provenance and filtering."
+    },
+    {
+      "name": "report_path",
+      "type": "text",
+      "purpose": "Path to the source workflow-report JSON used for this row."
+    },
+    {
+      "name": "run_id",
+      "type": "text",
+      "purpose": "Unique workflow execution identifier."
+    },
+    {
+      "name": "papers_dir",
+      "type": "text",
+      "purpose": "Input paper path(s) processed by the run."
+    },
+    {
+      "name": "started_at",
+      "type": "timestamptz",
+      "purpose": "Workflow start timestamp."
+    },
+    {
+      "name": "finished_at",
+      "type": "timestamptz",
+      "purpose": "Workflow end timestamp."
+    },
+    {
+      "name": "duration_sec",
+      "type": "numeric",
+      "purpose": "Run duration in seconds for cost/latency comparison."
+    },
+    {
+      "name": "chat_model",
+      "type": "text",
+      "purpose": "Primary LLM used by the run."
+    },
+    {
+      "name": "embedding_model",
+      "type": "text",
+      "purpose": "Embedding model used for retrieval/chunk similarity."
+    },
+    {
+      "name": "report_question_set",
+      "type": "enum",
+      "purpose": "Question set mode (structured|agentic|both|none)."
+    },
+    {
+      "name": "report_question_count",
+      "type": "integer",
+      "purpose": "Number of structured/agentic report question records emitted."
+    },
+    {
+      "name": "agentic_status",
+      "type": "text",
+      "purpose": "Top-level status for agentic stage."
+    },
+    {
+      "name": "index_status",
+      "type": "text",
+      "purpose": "Top-level status for index stage."
+    },
+    {
+      "name": "index_reason_or_error",
+      "type": "text",
+      "purpose": "Failure/skipped reason to diagnose differences."
+    },
+    {
+      "name": "report_store_status",
+      "type": "text",
+      "purpose": "Whether report was stored to Postgres."
+    },
+    {
+      "name": "prep_corpus_hash",
+      "type": "text",
+      "purpose": "Fingerprint of corpus content; validates same input set."
+    },
+    {
+      "name": "config_hash",
+      "type": "text",
+      "purpose": "Effective configuration hash; validates run comparability."
+    },
+    {
+      "name": "confidence_mean",
+      "type": "numeric",
+      "purpose": "Mean confidence score across structured questions."
+    },
+    {
+      "name": "confidence_labels",
+      "type": "text",
+      "purpose": "Label distribution summary for quick quality profile."
+    },
+    {
+      "name": "final_answer_preview",
+      "type": "text",
+      "purpose": "Truncated synthesis preview for side-by-side semantic comparison."
+    }
+  ],
+  "records": [
+    {
+      "comparison_group_id": "networks-electoral-competition-gpt5-vs-gpt5-nano-v1",
+      "source_bucket": "archive",
+      "report_path": "reports/archived/workflow-report-cf1d92ff869046f39b7319007e9a7835.json",
+      "run_id": "cf1d92ff869046f39b7319007e9a7835",
+      "papers_dir": "papers\\NetworksElectoralCompetition.pdf",
+      "started_at": "2026-02-15T19:29:20.818045+00:00",
+      "finished_at": "2026-02-15T19:40:51.819956+00:00",
+      "duration_sec": 691.0,
+      "chat_model": "gpt-5",
+      "embedding_model": "text-embedding-3-large",
+      "report_question_set": "both",
+      "report_question_count": 84,
+      "agentic_status": "completed",
+      "index_status": "skipped",
+      "index_reason_or_error": "db_unreachable",
+      "report_store_status": "skipped",
+      "prep_corpus_hash": "16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e",
+      "config_hash": "ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355",
+      "confidence_mean": 0.2921069186783523,
+      "confidence_labels": "high=0, medium=6, low=77",
+      "final_answer_preview": "- Core contribution: Formalizes and empirically tests how district homophily governs the diffusion of information about elected officials—modeled as a network statistic that determines the equilibrium share of informed voters—and links t..."
+    },
+    {
+      "comparison_group_id": "networks-electoral-competition-gpt5-vs-gpt5-nano-v1",
+      "source_bucket": "current",
+      "report_path": "reports/workflow-report-c52a4b6842704aac8c4258c71def4e29.json",
+      "run_id": "c52a4b6842704aac8c4258c71def4e29",
+      "papers_dir": "papers\\NetworksElectoralCompetition.pdf",
+      "started_at": "2026-02-15T21:37:57.144102+00:00",
+      "finished_at": "2026-02-15T21:43:52.685368+00:00",
+      "duration_sec": 355.54,
+      "chat_model": "gpt-5-nano",
+      "embedding_model": "text-embedding-3-large",
+      "report_question_set": "both",
+      "report_question_count": 84,
+      "agentic_status": "completed",
+      "index_status": "indexed",
+      "index_reason_or_error": null,
+      "report_store_status": "stored",
+      "prep_corpus_hash": "16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e",
+      "config_hash": "8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1",
+      "confidence_mean": 0.29217296599402814,
+      "confidence_labels": "high=0, medium=6, low=77",
+      "final_answer_preview": "- Core contribution: A novel roll-off metric that quantifies abstention by top-of-ticket voters in House races (defined as the difference between top-ticket votes and House votes, as a share of top-ticket votes), linking to Swing Voter’s..."
+    }
+  ]
+}

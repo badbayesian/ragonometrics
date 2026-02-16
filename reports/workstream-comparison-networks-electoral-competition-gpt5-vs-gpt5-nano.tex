@@ -1,0 +1,144 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{longtable,booktabs,array}
+\newcounter{none} % for unnumbered tables
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\section{Workstream Comparison: NetworksElectoralCompetition (GPT-5 vs GPT-5-nano)}\label{workstream-comparison-networkselectoralcompetition-gpt-5-vs-gpt-5-nano}
+
+\subsection{Inputs}\label{inputs}
+
+\begin{itemize}
+\tightlist
+\item
+  Baseline (archive): \texttt{reports/archived/workflow-report-cf1d92ff869046f39b7319007e9a7835.json}
+\item
+  Variant (current): \texttt{reports/workflow-report-c52a4b6842704aac8c4258c71def4e29.json}
+\end{itemize}
+
+\subsection{Schema}\label{schema}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Field & Type & Purpose \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{comparison\_group\_id} & \texttt{text} & Logical key that groups runs into one composed workstream comparison. \\
+\texttt{source\_bucket} & `enum(archive & current)` \\
+\texttt{report\_path} & \texttt{text} & Path to the source workflow-report JSON used for this row. \\
+\texttt{run\_id} & \texttt{text} & Unique workflow execution identifier. \\
+\texttt{papers\_dir} & \texttt{text} & Input paper path(s) processed by the run. \\
+\texttt{started\_at} & \texttt{timestamptz} & Workflow start timestamp. \\
+\texttt{finished\_at} & \texttt{timestamptz} & Workflow end timestamp. \\
+\texttt{duration\_sec} & \texttt{numeric} & Run duration in seconds for cost/latency comparison. \\
+\texttt{chat\_model} & \texttt{text} & Primary LLM used by the run. \\
+\texttt{embedding\_model} & \texttt{text} & Embedding model used for retrieval/chunk similarity. \\
+\texttt{report\_question\_set} & \texttt{enum} & Question set mode (structured \\
+\texttt{report\_question\_count} & \texttt{integer} & Number of structured/agentic report question records emitted. \\
+\texttt{agentic\_status} & \texttt{text} & Top-level status for agentic stage. \\
+\texttt{index\_status} & \texttt{text} & Top-level status for index stage. \\
+\texttt{index\_reason\_or\_error} & \texttt{text} & Failure/skipped reason to diagnose differences. \\
+\texttt{report\_store\_status} & \texttt{text} & Whether report was stored to Postgres. \\
+\texttt{prep\_corpus\_hash} & \texttt{text} & Fingerprint of corpus content; validates same input set. \\
+\texttt{config\_hash} & \texttt{text} & Effective configuration hash; validates run comparability. \\
+\texttt{confidence\_mean} & \texttt{numeric} & Mean confidence score across structured questions. \\
+\texttt{confidence\_labels} & \texttt{text} & Label distribution summary for quick quality profile. \\
+\texttt{final\_answer\_preview} & \texttt{text} & Truncated synthesis preview for side-by-side semantic comparison. \\
+\end{longtable}
+}
+
+\subsection{Records}\label{records}
+
+{\def\LTcaptype{none} % do not increment counter
+\begin{longtable}[]{@{}lllllllllllllllllllll@{}}
+\toprule\noalign{}
+comparison\_group\_id & source\_bucket & report\_path & run\_id & papers\_dir & started\_at & finished\_at & duration\_sec & chat\_model & embedding\_model & report\_question\_set & report\_question\_count & agentic\_status & index\_status & index\_reason\_or\_error & report\_store\_status & prep\_corpus\_hash & config\_hash & confidence\_mean & confidence\_labels & final\_answer\_preview \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+networks-electoral-competition-gpt5-vs-gpt5-nano-v1 & archive & reports/archived/workflow-report-cf1d92ff869046f39b7319007e9a7835.json & cf1d92ff869046f39b7319007e9a7835 & papers\textbackslash NetworksElectoralCompetition.pdf & 2026-02-15T19:29:20.818045+00:00 & 2026-02-15T19:40:51.819956+00:00 & 691.0 & gpt-5 & text-embedding-3-large & both & 84 & completed & skipped & db\_unreachable & skipped & 16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e & ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355 & 0.2921069186783523 & high=0, medium=6, low=77 & - Core contribution: Formalizes and empirically tests how district homophily governs the diffusion of information about elected officials---modeled as a network statistic that determines the equilibrium share of informed voters---and links t... \\
+networks-electoral-competition-gpt5-vs-gpt5-nano-v1 & current & reports/workflow-report-c52a4b6842704aac8c4258c71def4e29.json & c52a4b6842704aac8c4258c71def4e29 & papers\textbackslash NetworksElectoralCompetition.pdf & 2026-02-15T21:37:57.144102+00:00 & 2026-02-15T21:43:52.685368+00:00 & 355.54 & gpt-5-nano & text-embedding-3-large & both & 84 & completed & indexed & & stored & 16de593c95c2edb0cfcbb108e9affaa80f59531e97d33d12381e0b725da73b2e & 8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1 & 0.29217296599402814 & high=0, medium=6, low=77 & - Core contribution: A novel roll-off metric that quantifies abstention by top-of-ticket voters in House races (defined as the difference between top-ticket votes and House votes, as a share of top-ticket votes), linking to Swing Voter's... \\
+\end{longtable}
+}
+
+\subsection{Comparison Notes}\label{comparison-notes}
+
+\begin{itemize}
+\tightlist
+\item
+  Both runs process the same paper path: \texttt{papers\textbackslash{}NetworksElectoralCompetition.pdf}.
+\item
+  Baseline model: \texttt{gpt-5}; variant model: \texttt{gpt-5-nano}.
+\item
+  Baseline duration: \texttt{691.0} sec; variant duration: \texttt{355.54} sec.
+\item
+  Baseline confidence mean: \texttt{0.2921069186783523}; variant confidence mean: \texttt{0.29217296599402814}.
+\item
+  Baseline index status: \texttt{skipped} (db\_unreachable); variant index status: \texttt{indexed} (None).
+\item
+  Baseline report store: \texttt{skipped}; variant report store: \texttt{stored}.
+\end{itemize}
+
+\end{document}

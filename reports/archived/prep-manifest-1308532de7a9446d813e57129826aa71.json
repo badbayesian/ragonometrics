@@ -1,0 +1,31 @@
+{
+  "run_id": "1308532de7a9446d813e57129826aa71",
+  "created_at": "2026-02-15T17:40:02.071786+00:00",
+  "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+  "hashing_enabled": true,
+  "validate_text": false,
+  "stats": {
+    "num_files": 1,
+    "total_size_bytes": 1881364,
+    "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+    "hashing_enabled": true,
+    "validate_text": false,
+    "duplicate_count": 0,
+    "empty_file_count": 0,
+    "empty_text_count": 0,
+    "pdfinfo_available": true
+  },
+  "warnings": [],
+  "duplicates": [],
+  "empty_files": [],
+  "empty_text_files": [],
+  "files": [
+    {
+      "path": "papers\\Use_of_Cumulative_Sums_of_Squares_for_Re.pdf",
+      "size_bytes": 1881364,
+      "mtime": 1771172551.773033,
+      "pages": 12,
+      "sha256": "7cb91bd2232780e2ee5c390835f8b231cac49a2d5d0dc4c30c3c0ab41c364b68"
+    }
+  ]
+}

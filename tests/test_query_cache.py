@@ -1,11 +1,10 @@
-"""Query cache tests for sqlite roundtrip and keying behavior."""
-
-from pathlib import Path
+"""Query cache tests for Postgres-backed roundtrip and keying behavior."""
 
 from ragonometrics.pipeline.query_cache import get_cached_answer, make_cache_key, set_cached_answer
 
 
-def test_query_cache_roundtrip(tmp_path):
+def test_query_cache_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "dummy")
     db_path = tmp_path / "cache.sqlite"
     query = "What is the research question?"
     paper = "paper.pdf"

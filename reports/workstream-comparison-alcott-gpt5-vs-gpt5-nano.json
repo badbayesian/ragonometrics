@@ -1,0 +1,160 @@
+{
+  "comparison_id": "alcott-food-deserts-gpt5-vs-gpt5-nano-v1",
+  "baseline_run_id": "d1617aa16048423daa22ca7e29c3526c",
+  "variant_run_id": "e53e1c45434547afaedf7a0d079d5615",
+  "schema": [
+    {
+      "name": "comparison_group_id",
+      "type": "text",
+      "purpose": "Logical key that groups runs into one composed workstream comparison."
+    },
+    {
+      "name": "source_bucket",
+      "type": "enum(archive|current)",
+      "purpose": "Where the source report lives; helps provenance and filtering."
+    },
+    {
+      "name": "report_path",
+      "type": "text",
+      "purpose": "Path to the source workflow-report JSON used for this row."
+    },
+    {
+      "name": "run_id",
+      "type": "text",
+      "purpose": "Unique workflow execution identifier."
+    },
+    {
+      "name": "papers_dir",
+      "type": "text",
+      "purpose": "Input paper path(s) processed by the run."
+    },
+    {
+      "name": "started_at",
+      "type": "timestamptz",
+      "purpose": "Workflow start timestamp."
+    },
+    {
+      "name": "finished_at",
+      "type": "timestamptz",
+      "purpose": "Workflow end timestamp."
+    },
+    {
+      "name": "duration_sec",
+      "type": "numeric",
+      "purpose": "Run duration in seconds for cost/latency comparison."
+    },
+    {
+      "name": "chat_model",
+      "type": "text",
+      "purpose": "Primary LLM used by the run."
+    },
+    {
+      "name": "embedding_model",
+      "type": "text",
+      "purpose": "Embedding model used for retrieval/chunk similarity."
+    },
+    {
+      "name": "report_question_set",
+      "type": "enum",
+      "purpose": "Question set mode (structured|agentic|both|none)."
+    },
+    {
+      "name": "report_question_count",
+      "type": "integer",
+      "purpose": "Number of structured/agentic report question records emitted."
+    },
+    {
+      "name": "agentic_status",
+      "type": "text",
+      "purpose": "Top-level status for agentic stage."
+    },
+    {
+      "name": "index_status",
+      "type": "text",
+      "purpose": "Top-level status for index stage."
+    },
+    {
+      "name": "index_reason_or_error",
+      "type": "text",
+      "purpose": "Failure/skipped reason to diagnose differences."
+    },
+    {
+      "name": "report_store_status",
+      "type": "text",
+      "purpose": "Whether report was stored to Postgres."
+    },
+    {
+      "name": "prep_corpus_hash",
+      "type": "text",
+      "purpose": "Fingerprint of corpus content; validates same input set."
+    },
+    {
+      "name": "config_hash",
+      "type": "text",
+      "purpose": "Effective configuration hash; validates run comparability."
+    },
+    {
+      "name": "confidence_mean",
+      "type": "numeric",
+      "purpose": "Mean confidence score across structured questions."
+    },
+    {
+      "name": "confidence_labels",
+      "type": "text",
+      "purpose": "Label distribution summary for quick quality profile."
+    },
+    {
+      "name": "final_answer_preview",
+      "type": "text",
+      "purpose": "Truncated synthesis preview for side-by-side semantic comparison."
+    }
+  ],
+  "records": [
+    {
+      "comparison_group_id": "alcott-food-deserts-gpt5-vs-gpt5-nano-v1",
+      "source_bucket": "archive",
+      "report_path": "reports/archived/workflow-report-d1617aa16048423daa22ca7e29c3526c.json",
+      "run_id": "d1617aa16048423daa22ca7e29c3526c",
+      "papers_dir": "papers/alcott food deserts.pdf",
+      "started_at": "2026-02-15T19:13:11.001652+00:00",
+      "finished_at": "2026-02-15T19:27:16.173575+00:00",
+      "duration_sec": 845.17,
+      "chat_model": "gpt-5",
+      "embedding_model": "text-embedding-3-large",
+      "report_question_set": "both",
+      "report_question_count": 84,
+      "agentic_status": "completed",
+      "index_status": "skipped",
+      "index_reason_or_error": "db_unreachable",
+      "report_store_status": "skipped",
+      "prep_corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+      "config_hash": "ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355",
+      "confidence_mean": 0.3041450240118245,
+      "confidence_labels": "high=0, medium=18, low=65",
+      "final_answer_preview": "- Quantifies the drivers of the nutrition–income gradient, showing that roughly 90% is due to demand (preferences) and about 10% to supply (prices/availability), across robust specifications; assigns the unobserved term ..."
+    },
+    {
+      "comparison_group_id": "alcott-food-deserts-gpt5-vs-gpt5-nano-v1",
+      "source_bucket": "current",
+      "report_path": "reports/workflow-report-e53e1c45434547afaedf7a0d079d5615.json",
+      "run_id": "e53e1c45434547afaedf7a0d079d5615",
+      "papers_dir": "papers/alcott food deserts.pdf",
+      "started_at": "2026-02-15T21:03:21.277446+00:00",
+      "finished_at": "2026-02-15T21:10:07.499430+00:00",
+      "duration_sec": 406.22,
+      "chat_model": "gpt-5-nano",
+      "embedding_model": "text-embedding-3-large",
+      "report_question_set": "both",
+      "report_question_count": 84,
+      "agentic_status": "completed",
+      "index_status": "failed",
+      "index_reason_or_error": "Index dim 1536 != embeddings dim 3072",
+      "report_store_status": "stored",
+      "prep_corpus_hash": "065ef21add99f7c812460d6ac8b1c2de66e1bda19d4c700827d434e75a8d2fc8",
+      "config_hash": "8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1",
+      "confidence_mean": 0.3042301084348596,
+      "confidence_labels": "high=0, medium=18, low=65",
+      "final_answer_preview": "- Key contribution: A robust decomposition of the nutrition–income gap in healthy eating into supply-side (prices, availability) and demand-side (preferences) factors, showing demand dominates. Across specifications, sup..."
+    }
+  ]
+}

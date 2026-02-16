@@ -3,17 +3,43 @@
 import sys
 import types
 import sqlite3
+import re
 
 
 class SQLiteCursorWrapper:
     def __init__(self, cur):
         self._cur = cur
 
+    @staticmethod
+    def _rewrite_sql(sql: str) -> str:
+        out = sql
+        # Drop schema qualifiers for sqlite-backed tests.
+        out = re.sub(r"\b(?:ingestion|indexing|workflow|retrieval|observability|enrichment)\.", "", out)
+        # Remove Postgres casts.
+        out = re.sub(r"::[A-Za-z_][A-Za-z0-9_]*", "", out)
+        # sqlite compatibility for NOW()/booleans/null ordering.
+        out = out.replace("NOW()", "CURRENT_TIMESTAMP")
+        out = re.sub(r"\bTRUE\b", "1", out, flags=re.IGNORECASE)
+        out = re.sub(r"\bFALSE\b", "0", out, flags=re.IGNORECASE)
+        out = re.sub(r"\s+NULLS\s+LAST\b", "", out, flags=re.IGNORECASE)
+        # Ignore unsupported schema/extension statements in sqlite tests.
+        if re.search(r"^\s*CREATE\s+SCHEMA\b", out, flags=re.IGNORECASE):
+            return "SELECT 1"
+        if re.search(r"^\s*CREATE\s+EXTENSION\b", out, flags=re.IGNORECASE):
+            return "SELECT 1"
+        # Replace unsupported vector/GIN ANN index syntax with basic sqlite index DDL.
+        out = re.sub(r"\bVECTOR\b", "BLOB", out, flags=re.IGNORECASE)
+        out = re.sub(r"\s+USING\s+GIN\s*\([^)]*\)", "", out, flags=re.IGNORECASE)
+        out = re.sub(r"\s+USING\s+diskann\s*\([^)]*\)", "", out, flags=re.IGNORECASE)
+        out = re.sub(r"\s+USING\s+ivfflat\s*\([^)]*\)\s*WITH\s*\([^)]*\)", "", out, flags=re.IGNORECASE)
+        out = out.replace(" jsonb_path_ops", "")
+        return out
+
     def execute(self, sql, params=None):
         if params is None:
             params = ()
         # translate psycopg2 %s params to sqlite ? params
-        sql2 = sql.replace("%s", "?")
+        sql2 = self._rewrite_sql(sql).replace("%s", "?")
         return self._cur.execute(sql2, params)
 
     def fetchone(self):

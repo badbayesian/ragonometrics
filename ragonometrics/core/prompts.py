@@ -10,7 +10,19 @@ MAIN_SUMMARY_PROMPT = (
 RESEARCHER_QA_PROMPT = (
     "You are answering a researcher. Use only the provided context. "
     "Respond succinctly, generally in bullet points. "
-    "Cite the context chunk(s) you used, referencing their provenance (e.g., page/word range)."
+    "Cite the context chunk(s) you used, referencing their provenance (e.g., page/word range). "
+    "When writing formulas, probabilities, indices, or optimization expressions, format them with Markdown-friendly LaTeX "
+    "(inline like $K_{n,n-1}$; display blocks only when needed)."
+)
+
+MATH_LATEX_REVIEW_PROMPT = (
+    "You are a math-formatting reviewer for an existing answer. "
+    "Rewrite only notation formatting when needed so mathematical content renders correctly in Markdown/MathJax. "
+    "Use inline LaTeX with $...$ for short expressions and $$...$$ for standalone equations. "
+    "Preserve wording, bullets, citations, and factual meaning. "
+    "Do not add or remove claims. "
+    "If no formatting changes are needed, return the original answer unchanged. "
+    "Output only the final answer text."
 )
 
 PIPELINE_SUMMARY_CHUNK_INSTRUCTIONS = (

@@ -5,7 +5,7 @@ This repo includes a lightweight, multi-step workflow runner that demonstrates:
 - Orchestrating multi-step AI pipelines
 - Persisting workflow state and step outputs
 - Async execution through Redis + RQ
-- API-driven enrichment (OpenAlex, CitEc, Crossref, FRED/World Bank)
+- API-driven enrichment (OpenAlex, CitEc, FRED/World Bank)
 
 Workflow Steps
 --------------
@@ -19,10 +19,10 @@ Workflow Steps
 
 State Persistence
 -----------------
-State is persisted to SQLite in [`sqlite/ragonometrics_workflow_state.sqlite`](https://github.com/badbayesian/ragonometrics/blob/main/sqlite/ragonometrics_workflow_state.sqlite):
+State is persisted to Postgres (schema `workflow`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py):
 
-- `workflow_runs` stores overall run metadata and status.
-- `workflow_steps` stores per-step status, timestamps, and output JSON.
+- `workflow.workflow_runs` stores overall run metadata and status.
+- `workflow.workflow_steps` stores per-step status, timestamps, and output JSON.
 
 Code locations:
 - [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py)
@@ -44,7 +44,7 @@ Example input path: [`papers/`](https://github.com/badbayesian/ragonometrics/tre
 
 Operational Notes
 -----------------
-- For long-running workflows, keep state DB on durable storage.
+- For long-running workflows, use durable Postgres storage and backups.
 - Use [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports) for archived summaries or push to object storage.
 
 Key Environment Variables

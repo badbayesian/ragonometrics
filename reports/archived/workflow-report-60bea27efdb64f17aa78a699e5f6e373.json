@@ -1,0 +1,87 @@
+{
+  "run_id": "60bea27efdb64f17aa78a699e5f6e373",
+  "started_at": "2026-02-15T17:08:36.596440+00:00",
+  "papers_dir": "papers\\Use_of_Cumulative_Sums_of_Squares_for_Re.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "ed36f9c374bd26f642bca2aef6a1df3ce5139b582ea5b545619c7caf2071f355",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5",
+      "database_url": "postgres://postgres:postgres@postgres:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "usage_db": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\sqlite\\ragonometrics_token_usage.sqlite",
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 1881364,
+      "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-60bea27efdb64f17aa78a699e5f6e373.json"
+  },
+  "ingest": {
+    "num_pdfs": 1,
+    "num_papers": 1
+  },
+  "enrich": {
+    "openalex": 0,
+    "citec": 0
+  },
+  "econ_data": {
+    "status": "fetched",
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "skipped"
+  },
+  "index": {
+    "database_url": true,
+    "database_reachable": false,
+    "status": "skipped",
+    "reason": "db_unreachable"
+  },
+  "evaluate": {
+    "avg_chunks_per_paper": 33.0,
+    "max_chunks": 33,
+    "min_chunks": 33
+  },
+  "finished_at": "2026-02-15T17:08:50.615889+00:00"
+}

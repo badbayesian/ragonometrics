@@ -3,16 +3,16 @@
 
 # Ingestion and chunking
 papers_dir = "papers"
-max_papers = 3
-max_words = 20000
-chunk_words = 275
-chunk_overlap = 60
+max_papers = 6
+max_words = 30000
+chunk_words = 350
+chunk_overlap = 75
 
 # Retrieval
-top_k = 8
-bm25_weight = 0.4
+top_k = 10
+bm25_weight = 0.45
 reranker_model = "gpt-5-nano"
-rerank_top_n = 40
+rerank_top_n = 30
 query_expansion = "1"
 query_expand_model = "gpt-5-nano"
 
@@ -22,7 +22,7 @@ embedding_model = "text-embedding-3-large"
 chat_model = "gpt-5-nano"
 
 # Storage / indexing
-database_url = ""
+database_url = "postgres://postgres:postgres@localhost:5432/ragonometrics"
 index_idempotent_skip = true
 allow_unverified_index = false
 
