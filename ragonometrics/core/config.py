@@ -16,7 +16,6 @@ except ImportError:  # pragma: no cover - fallback for older Python
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
-SQLITE_DIR = PROJECT_ROOT / "sqlite"
 
 ENV_CONFIG_MAP = {
     "DATABASE_URL": "database_url",

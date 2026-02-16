@@ -1,4 +1,4 @@
-"""Core pipeline primitives for settings, ingestion, embeddings, retrieval, and summarization. Shared by CLI, indexing, and the Streamlit UI to build end-to-end RAG runs."""
+﻿"""Core pipeline primitives for settings, ingestion, embeddings, retrieval, and summarization. Shared by CLI, indexing, and the Streamlit UI to build end-to-end RAG runs."""
 
 from __future__ import annotations
 
@@ -9,11 +9,9 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Tuple
 
-import requests
 import psycopg2
-from datetime import datetime
 from typing import Optional
 from tqdm import tqdm
 
@@ -188,6 +186,251 @@ def run_pdfinfo(path: Path) -> Dict[str, str]:
     return {"title": title, "author": author}
 
 
+_UNKNOWN_AUTHOR_VALUES = {"", "unknown", "none", "n/a", "na"}
+_AUTHOR_NOISE_TOKENS = {
+    "journal",
+    "association",
+    "university",
+    "department",
+    "school",
+    "institute",
+    "working",
+    "paper",
+    "abstract",
+    "stable",
+    "url",
+    "copyright",
+    "http",
+    "https",
+    "doi",
+    "volume",
+    "issue",
+    "pp",
+    "terms",
+    "conditions",
+    "nber",
+}
+_AUTHOR_NAME_PATTERN = re.compile(
+    r"\b(?:[A-Z][A-Za-z'`-]+|[A-Z]\.)"
+    r"(?:\s+(?:[A-Z][A-Za-z'`-]+|[A-Z]\.)){1,5}\b"
+)
+_AUTHOR_FOOTNOTE_PATTERN = re.compile(r"[\*\u2020\u2021\u00a7\u00b6]+")
+_AUTHOR_JOIN_WORDS = {"and", "et", "al"}
+_AUTHOR_SCAN_STOP_MARKERS = ("abstract", "introduction", "keywords", "jel")
+
+
+def _normalize_spaces(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip()
+
+
+def _is_unknown_author(value: str | None) -> bool:
+    if value is None:
+        return True
+    return _normalize_spaces(value).lower() in _UNKNOWN_AUTHOR_VALUES
+
+
+def _clean_author_blob(blob: str) -> str:
+    text = _normalize_spaces(blob)
+    text = _AUTHOR_FOOTNOTE_PATTERN.sub(" ", text)
+    text = re.sub(r"\bby\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip(" ,;")
+    return text
+
+
+def _is_probable_person_name(name: str) -> bool:
+    text = _normalize_spaces(name)
+    if not text:
+        return False
+    low = text.lower()
+    if any(token in low for token in _AUTHOR_NOISE_TOKENS):
+        return False
+    words = text.split()
+    if len(words) < 2 or len(words) > 6:
+        return False
+    for word in words:
+        cleaned = word.strip(".")
+        if not cleaned:
+            return False
+        if cleaned.lower() in _AUTHOR_JOIN_WORDS:
+            return False
+        if cleaned.isupper() and len(cleaned) > 1:
+            return False
+        if len(cleaned) == 1 and word.endswith(".") and cleaned.isalpha():
+            continue
+        if not cleaned[0].isupper():
+            return False
+    return True
+
+
+def extract_author_names(text: str) -> List[str]:
+    """Extract likely person names from a short author text blob."""
+    blob = _clean_author_blob(text)
+    if not blob:
+        return []
+    names: List[str] = []
+    seen = set()
+    for match in _AUTHOR_NAME_PATTERN.finditer(blob):
+        candidate = _normalize_spaces(match.group(0)).strip(" ,;")
+        if not _is_probable_person_name(candidate):
+            continue
+        key = candidate.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(candidate)
+    return names
+
+
+def _looks_like_author_line(line: str) -> bool:
+    text = _normalize_spaces(line)
+    if not text:
+        return False
+    low = text.lower()
+    if ":" in text and not low.startswith("by "):
+        return False
+    if any(token in low for token in ("http", "doi", "abstract", "keywords", "jel", "copyright", "@")):
+        return False
+    if sum(1 for ch in text if ch.isdigit()) > 6:
+        return False
+    if len(text.split()) > 24:
+        return False
+    if low.startswith("by "):
+        return True
+    if ";" in text or "," in text or " and " in low or " & " in text:
+        return True
+    return False
+
+
+def _name_token_ratio(text: str) -> float:
+    tokens = re.findall(r"[A-Za-z][A-Za-z.'`-]*", text or "")
+    if not tokens:
+        return 0.0
+    good = 0
+    for token in tokens:
+        cleaned = token.strip(".")
+        low = cleaned.lower()
+        if low in _AUTHOR_JOIN_WORDS:
+            good += 1
+            continue
+        if token[0].isupper() and (not cleaned.isupper() or len(cleaned) == 1):
+            good += 1
+    return good / len(tokens)
+
+
+def _looks_like_author_continuation(line: str) -> bool:
+    text = _normalize_spaces(line)
+    if not _looks_like_author_line(text):
+        return False
+    if sum(1 for ch in text if ch.isdigit()) > 0:
+        return False
+    return _name_token_ratio(text) >= 0.75
+
+
+def _author_candidate_score(blob: str, names_count: int) -> Tuple[int, int]:
+    low = blob.lower()
+    signal = 0
+    if low.startswith("by "):
+        signal += 3
+    if ";" in blob or "," in blob:
+        signal += 2
+    if " and " in low or " & " in blob:
+        signal += 1
+    return names_count, signal
+
+
+def infer_author_names_from_pages(page_texts: List[str]) -> List[str]:
+    """Infer author names from early page text when PDF metadata is weak."""
+    if not page_texts:
+        return []
+    first_page = page_texts[0] or ""
+    lines = [_normalize_spaces(raw) for raw in first_page.splitlines() if _normalize_spaces(raw)]
+    if not lines:
+        return []
+
+    candidates: List[str] = []
+    scan_lines = lines[:70]
+    for idx, line in enumerate(scan_lines):
+        low = line.lower()
+        if any(low.startswith(marker) for marker in _AUTHOR_SCAN_STOP_MARKERS):
+            scan_lines = scan_lines[:idx]
+            break
+    for idx, line in enumerate(scan_lines):
+        if not _looks_like_author_line(line):
+            continue
+        blob = line
+        if line.lower().startswith("by "):
+            joined = [line]
+            for j in range(idx + 1, min(len(scan_lines), idx + 4)):
+                nxt = scan_lines[j]
+                if not _looks_like_author_continuation(nxt):
+                    break
+                joined.append(nxt)
+            blob = " ".join(joined)
+        elif line.endswith(",") and idx + 1 < len(scan_lines) and _looks_like_author_line(scan_lines[idx + 1]):
+            blob = f"{line} {scan_lines[idx + 1]}"
+        candidates.append(blob)
+
+    best: List[str] = []
+    best_score = (-1, -1)
+    for blob in candidates:
+        names = extract_author_names(blob)
+        score = _author_candidate_score(blob, len(names))
+        if score > best_score:
+            best = names
+            best_score = score
+
+    if best:
+        return best
+
+    for line in scan_lines[:20]:
+        names = extract_author_names(line)
+        if len(names) >= 2 and len(names) > len(best):
+            best = names
+    return best
+
+
+def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
+    names: List[str] = []
+    seen = set()
+    if not openalex_meta:
+        return names
+    for author_entry in openalex_meta.get("authorships") or []:
+        if not isinstance(author_entry, dict):
+            continue
+        author_obj = author_entry.get("author") or {}
+        name = _normalize_spaces(str(author_obj.get("display_name") or ""))
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        names.append(name)
+    return names
+
+
+def _select_best_author_names(candidates: List[Tuple[str, List[str]]]) -> List[str]:
+    priority = {"openalex": 3, "page_text": 2, "pdfinfo": 1}
+    best_names: List[str] = []
+    best_score = (-1, -1)
+    for source, names in candidates:
+        if not names:
+            continue
+        score = (len(names), priority.get(source, 0))
+        if score > best_score:
+            best_score = score
+            best_names = names
+    return best_names
+
+
+def _format_author_names(names: List[str], *, max_names: int = 8) -> str:
+    if not names:
+        return "Unknown"
+    if len(names) > max_names:
+        return ", ".join(names[:max_names]) + " et al."
+    return ", ".join(names)
+
+
 
 
 def extract_dois_from_text(text: str) -> List[str]:
@@ -246,185 +489,6 @@ def extract_repec_handles_from_text(text: str) -> List[str]:
     return handles
 
 
-def fetch_references_from_crossref(doi: str, timeout: int = 10, cache_db_url: str | None = None) -> List[str]:
-    """Query Crossref for a DOI and return referenced DOIs.
-
-    If Crossref returns `message.reference`, this extracts "DOI" fields.
-
-    Args:
-        doi: Source DOI.
-        timeout: Request timeout in seconds.
-        cache_db_url: Optional database URL for cached Crossref responses.
-
-    Returns:
-        List[str]: Referenced DOIs, lowercased. Empty on failure.
-    """
-    if not doi:
-        return []
-    # Crossref expects DOI path-encoded (slashes allowed) — use as-is but URL-quote
-    # Optionally use cached Crossref responses with backoff
-    if cache_db_url:
-        from ragonometrics.integrations.crossref_cache import fetch_crossref_with_cache
-
-        raw = fetch_crossref_with_cache(doi, cache_db_url)
-        if not raw:
-            return []
-        data = requests.utils.json.loads(raw)
-    else:
-        url = f"https://api.crossref.org/works/{requests.utils.requote_uri(doi)}"
-        data = None
-        for attempt in range(3):
-            try:
-                resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Ragonometrics/0.1 (mailto:example@example.com)"})
-                resp.raise_for_status()
-                data = resp.json()
-                break
-            except requests.RequestException as exc:
-                if attempt == 2:
-                    # optional failure logging
-                    db_url = os.environ.get("DATABASE_URL")
-                    if db_url:
-                        try:
-                            from ragonometrics.indexing import metadata
-
-                            conn = psycopg2.connect(db_url)
-                            metadata.record_failure(conn, "crossref", str(exc), {"doi": doi})
-                            conn.close()
-                        except Exception:
-                            pass
-                    return []
-                # backoff
-                try:
-                    import time
-
-                    time.sleep(0.5 * (attempt + 1))
-                except Exception:
-                    pass
-        if data is None:
-            return []
-    message = data.get("message") or {}
-    references = message.get("reference") or []
-    cited = []
-    for ref in references:
-        ref_doi = ref.get("DOI") or ref.get("doi")
-        if ref_doi:
-            cited.append(ref_doi.lower())
-    return cited
-
-
-def build_doi_network_from_paper(paper: Paper, max_fetch: int = 20) -> Dict[str, List[str]]:
-    """Build a DOI citation network from a paper's text.
-
-    Args:
-        paper: Paper to analyze.
-        max_fetch: Maximum number of source DOIs to query in Crossref.
-
-    Returns:
-        Dict[str, List[str]]: Mapping of source DOI to cited DOIs.
-    """
-    network: Dict[str, List[str]] = {}
-    text = paper.text
-    source_dois = extract_dois_from_text(text)
-    if not source_dois:
-        return network
-
-    for doi in source_dois[:max_fetch]:
-        cited = fetch_references_from_crossref(doi)
-        network[doi] = cited
-
-    return network
-
-
-def init_doi_db(db_url: str):
-    """Initialize Postgres tables for DOI networks.
-
-    Args:
-        db_url: libpq-style database URL (e.g., from `DATABASE_URL`).
-
-    Returns:
-        connection: Open psycopg2 connection.
-    """
-    conn = psycopg2.connect(db_url)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS papers (
-            id SERIAL PRIMARY KEY,
-            path TEXT,
-            title TEXT,
-            author TEXT,
-            extracted_at TEXT
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS dois (
-            doi TEXT PRIMARY KEY
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS citations (
-            source_doi TEXT,
-            target_doi TEXT,
-            PRIMARY KEY (source_doi, target_doi)
-        )
-        """
-    )
-    conn.commit()
-    return conn
-
-
-def store_network_in_db(conn, paper: Paper, network: Dict[str, List[str]]) -> None:
-    """Persist a DOI network for a paper into Postgres.
-
-    Args:
-        conn: Open psycopg2 connection.
-        paper: Paper metadata to store.
-        network: Mapping of source DOI to cited DOIs.
-    """
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO papers (path, title, author, extracted_at) VALUES (%s, %s, %s, %s)",
-        (str(paper.path), paper.title, paper.author, datetime.utcnow().isoformat()),
-    )
-
-    # Upsert DOIs and insert citation edges
-    for src, targets in network.items():
-        cur.execute("INSERT INTO dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (src,))
-        for tgt in targets:
-            cur.execute("INSERT INTO dois (doi) VALUES (%s) ON CONFLICT (doi) DO NOTHING", (tgt,))
-            cur.execute(
-                "INSERT INTO citations (source_doi, target_doi) VALUES (%s, %s) ON CONFLICT (source_doi, target_doi) DO NOTHING",
-                (src, tgt),
-            )
-
-    conn.commit()
-
-
-def build_and_store_doi_network(paper: Paper, db_url: Optional[str] = None, max_fetch: int = 20) -> Dict[str, List[str]]:
-    """Build a DOI network and optionally persist it.
-
-    Args:
-        paper: Paper to analyze.
-        db_url: Optional Postgres database URL for persistence.
-        max_fetch: Maximum number of source DOIs to query in Crossref.
-
-    Returns:
-        Dict[str, List[str]]: In-memory network mapping.
-    """
-    network = build_doi_network_from_paper(paper, max_fetch=max_fetch)
-    if db_url:
-        conn = init_doi_db(db_url)
-        try:
-            store_network_in_db(conn, paper, network)
-        finally:
-            conn.close()
-    return network
-
-
 def embed_texts(
     client: OpenAI,
     texts: List[str],
@@ -433,6 +497,10 @@ def embed_texts(
     *,
     session_id: str | None = None,
     request_id: str | None = None,
+    run_id: str | None = None,
+    step: str | None = None,
+    question_id: str | None = None,
+    meta: Dict[str, Any] | None = None,
 ) -> List[List[float]]:
     """Embed a list of texts in batches.
 
@@ -468,11 +536,15 @@ def embed_texts(
             record_usage(
                 model=model,
                 operation="embeddings",
+                step=step,
+                question_id=question_id,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 total_tokens=total_tokens,
                 session_id=session_id,
                 request_id=request_id,
+                run_id=run_id,
+                meta=meta,
             )
         except Exception:
             pass
@@ -509,6 +581,9 @@ def expand_queries(
     *,
     session_id: str | None = None,
     request_id: str | None = None,
+    run_id: str | None = None,
+    step: str | None = None,
+    question_id: str | None = None,
 ) -> List[str]:
     """Optionally expand a query using a lightweight LLM prompt."""
     mode = os.environ.get("QUERY_EXPANSION", "").strip().lower()
@@ -525,12 +600,15 @@ def expand_queries(
             usage_context="query_expansion",
             session_id=session_id,
             request_id=request_id,
+            run_id=run_id,
+            step=step,
+            question_id=question_id,
         )
     except Exception:
         return [query]
     candidates: List[str] = [query]
     for line in raw.splitlines():
-        line = line.strip().lstrip("-*•").strip()
+        line = line.strip().lstrip("-*â€¢").strip()
         if not line:
             continue
         if line not in candidates:
@@ -548,6 +626,9 @@ def rerank_with_llm(
     settings: Settings,
     session_id: str | None = None,
     request_id: str | None = None,
+    run_id: str | None = None,
+    step: str | None = None,
+    question_id: str | None = None,
 ) -> List[str] | None:
     """Use an LLM to rerank items by relevance.
 
@@ -569,6 +650,9 @@ def rerank_with_llm(
             usage_context="rerank",
             session_id=session_id,
             request_id=request_id,
+            run_id=run_id,
+            step=step,
+            question_id=question_id,
         )
     except Exception:
         return None
@@ -589,6 +673,9 @@ def top_k_context(
     *,
     session_id: str | None = None,
     request_id: str | None = None,
+    run_id: str | None = None,
+    step: str | None = None,
+    question_id: str | None = None,
     return_stats: bool = False,
 ) -> str | tuple[str, Dict[str, float | str | int]]:
     """Select top-k relevant chunk text for a query.
@@ -606,7 +693,16 @@ def top_k_context(
     Returns:
         str | tuple[str, dict]: Context string, or (context, retrieval stats) when requested.
     """
-    queries = expand_queries(query, client, settings, session_id=session_id, request_id=request_id)
+    queries = expand_queries(
+        query,
+        client,
+        settings,
+        session_id=session_id,
+        request_id=request_id,
+        run_id=run_id,
+        step=step,
+        question_id=question_id,
+    )
 
     # If a Postgres-backed retriever is available, prefer hybrid retrieval
     db_url = os.environ.get("DATABASE_URL")
@@ -655,7 +751,7 @@ def top_k_context(
                     ids = [h[0] for h in hits]
                     placeholders = ",".join(["%s"] * len(ids))
                     cur.execute(
-                        f"SELECT id, text, page, start_word, end_word FROM vectors WHERE id IN ({placeholders})",
+                        f"SELECT id, text, page, start_word, end_word FROM indexing.vectors WHERE id IN ({placeholders})",
                         tuple(ids),
                     )
                     rows = cur.fetchall()
@@ -678,6 +774,9 @@ def top_k_context(
                             settings=settings,
                             session_id=session_id,
                             request_id=request_id,
+                            run_id=run_id,
+                            step=step,
+                            question_id=question_id,
                         )
                         if order:
                             order_map = {oid: i for i, oid in enumerate(order)}
@@ -720,11 +819,14 @@ def top_k_context(
         record_usage(
             model=settings.embedding_model,
             operation="query_embedding",
+            step=step,
+            question_id=question_id,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=total_tokens,
             session_id=session_id,
             request_id=request_id,
+            run_id=run_id,
         )
     except Exception:
         pass
@@ -765,6 +867,9 @@ def top_k_context(
             settings=settings,
             session_id=session_id,
             request_id=request_id,
+            run_id=run_id,
+            step=step,
+            question_id=question_id,
         )
         if order:
             order_map = {oid: i for i, oid in enumerate(order)}
@@ -876,9 +981,12 @@ def load_papers(
     papers: List[Paper] = []
     for path in iterator:
         metadata = run_pdfinfo(path)
+        pdfinfo_author = _normalize_spaces(metadata.get("author") or "")
         page_texts = run_pdftotext_pages(path)
         normalized_pages = [normalize_text(p) for p in page_texts if p is not None]
         text = "\n\n".join(p for p in normalized_pages if p)
+        page_text_author_names = infer_author_names_from_pages(page_texts)
+        pdfinfo_author_names = extract_author_names(pdfinfo_author)
         openalex_meta: Dict[str, Any] | None = None
         citec_meta: Dict[str, Any] | None = None
         openalex_ok = False
@@ -902,21 +1010,25 @@ def load_papers(
             citec_meta = None
 
         title = metadata.get("title") or path.stem
-        author = metadata.get("author") or "Unknown"
+        author = pdfinfo_author if not _is_unknown_author(pdfinfo_author) else "Unknown"
+        openalex_names: List[str] = []
         if openalex_meta:
             oa_title = openalex_meta.get("display_name") or openalex_meta.get("title")
             if (not title or title == path.stem) and oa_title:
                 title = oa_title
-            authorships = openalex_meta.get("authorships") or []
-            names = []
-            for author_entry in authorships:
-                if isinstance(author_entry, dict):
-                    author_obj = author_entry.get("author") or {}
-                    name = author_obj.get("display_name")
-                    if name:
-                        names.append(name)
-            if (author.lower() in {"unknown", "none"} or not author) and names:
-                author = ", ".join(names[:3]) + (" et al." if len(names) > 3 else "")
+            openalex_names = _openalex_author_names(openalex_meta)
+
+        selected_author_names = _select_best_author_names(
+            [
+                ("openalex", openalex_names),
+                ("page_text", page_text_author_names),
+                ("pdfinfo", pdfinfo_author_names),
+            ]
+        )
+        if selected_author_names:
+            author = _format_author_names(selected_author_names)
+        elif _is_unknown_author(author):
+            author = "Unknown"
 
         papers.append(
             Paper(
@@ -963,4 +1075,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 

@@ -38,7 +38,9 @@ Runtime + workflow settings (env-only)
 | --- | --- | --- | --- | --- |
 | `RAG_CONFIG` | Path to alternate config file. | [`config.toml`](https://github.com/badbayesian/ragonometrics/blob/main/config.toml) | path | Used in [`ragonometrics/core/main.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/core/main.py). |
 | `OPENAI_API_KEY` | OpenAI API key for embeddings + chat. | unset | string | Required for most runs. |
-| `LLM_MODELS` | Extra models shown in Streamlit dropdown. | empty | CSV string | Example: `gpt-5-nano,gpt-4.1-mini`. |
+| `LLM_MODELS` | Extra models shown in Streamlit dropdown. | empty | CSV string | Example: `gpt-5,gpt-4.1-mini`. |
+| `MATH_LATEX_REVIEW_ENABLED` | Enable post-answer review that formats math/function notation to LaTeX in UI answers. | `1` | bool | Set `0` to disable. |
+| `MATH_LATEX_REVIEW_MODEL` | Model override for the math-format review pass. | `OPENAI_MODEL` | string | Falls back to the selected chat model when unset. |
 | `STREAMLIT_USERNAME` | Optional UI username. | unset | string | Login disabled if missing. |
 | `STREAMLIT_PASSWORD` | Optional UI password. | unset | string | Login disabled if missing. |
 | `OPENALEX_API_KEY` | OpenAlex API key. | unset | string | Required for higher rate limits. |
@@ -54,9 +56,27 @@ Runtime + workflow settings (env-only)
 | `WORKFLOW_REPORT_QUESTIONS` | Enable structured report questions. | `1` | bool | Use `0` to disable. |
 | `WORKFLOW_REPORT_QUESTIONS_SET` | Report question set to run. | `structured` | enum | `structured|agentic|both|none`. |
 | `WORKFLOW_REPORT_QUESTION_WORKERS` | Concurrency for report questions. | `8` | int | |
+| `WORKSTREAM_ID` / `WORKFLOW_WORKSTREAM_ID` | Workstream grouping id for lineage/comparison runs. | empty | string | Also available as CLI `--workstream-id`. |
+| `WORKSTREAM_ARM` / `WORKFLOW_ARM` | Variant arm label (for example `gpt-5`, `gpt-5-nano`). | empty | string | Also available as CLI `--arm`. |
+| `WORKSTREAM_PARENT_RUN_ID` | Parent/baseline run id for comparisons. | empty | string | Also available as CLI `--parent-run-id`. |
+| `WORKFLOW_TRIGGER_SOURCE` | Run trigger source label. | auto | string | Also available as CLI `--trigger-source`. |
+| `GIT_SHA` | Override git commit stored with the run. | auto-detected | string | |
+| `GIT_BRANCH` | Override git branch stored with the run. | auto-detected | string | |
+| `WORKFLOW_RENDER_AUDIT_ARTIFACTS` | Enable audit markdown/pdf artifact rendering. | `1` | bool | |
+| `WORKFLOW_RENDER_AUDIT_PDF` | Enable PDF rendering for audit artifacts. | `1` | bool | Requires `pandoc` + TeX engine in PATH. |
 | `DISKANN_QUERY_RESCORE` | Optional `pgvectorscale` query-time rescore count. | unset | int | Applied with `SET LOCAL diskann.query_rescore`. |
 | `DISKANN_QUERY_SEARCH_LIST_SIZE` | Optional `pgvectorscale` search list size. | unset | int | Applied with `SET LOCAL diskann.query_search_list_size`. |
 | `PREP_HASH_FILES` | Hash PDF files during prep. | `1` | bool | Set `0` for faster scans. |
 | `PREP_VALIDATE_TEXT` | Run text extraction during prep. | `0` | bool | Enables empty-text detection. |
 | `PREP_FAIL_ON_EMPTY` | Fail workflow if corpus is empty. | `0` | bool | Treats no PDFs or no text as failure. |
 | `PREP_VALIDATE_ONLY` | Exit after prep step. | `0` | bool | Writes report and skips ingest/agentic/index. |
+
+Config Persistence
+------------------
+Workflow runs persist resolved config values in Postgres:
+- `workflow.run_records.config_hash` (for `record_kind='run'`)
+- `workflow.run_records.config_effective_json` (for `record_kind='run'`)
+- `workflow.run_records.metadata_json` (includes `config_path` when present)
+
+The full run report JSON (including the full `config` snapshot) is also stored in:
+- `workflow.run_records.payload_json` (for `record_kind='report'`)

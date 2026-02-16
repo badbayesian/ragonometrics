@@ -6,8 +6,13 @@ intentionally lightweight and meant to be adapted to your environment.
 
 Targets
 -------
-- AWS: ECS/Fargate + RDS + S3 + ElastiCache (Redis)
-- GCP: Cloud Run or GKE + Cloud SQL + GCS + Memorystore (Redis)
+- AWS: ECS/Fargate + RDS + S3
+- GCP: Cloud Run or GKE + Cloud SQL + GCS
+
+Queueing model
+--------------
+- Async workflow/index jobs are Postgres-backed (`workflow.async_jobs`) and processed by the queue worker.
+- No Redis dependency is required for runtime queueing.
 
 Layout
 ------
@@ -24,4 +29,10 @@ Notes
 -----
 - These stubs do not create IAM policies, secrets, or networking by default.
 - Store secrets in a managed secrets service (AWS Secrets Manager / GCP Secret Manager).
-- Prefer private networking between the app and Postgres/Redis.
+- Prefer private networking between the app and Postgres.
+
+Architecture Docs
+-----------------
+- System architecture diagram: [`docs/architecture/architecture.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md)
+- Workflow architecture diagram: [`docs/architecture/workflow_architecture.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md)
+- Postgres ERD: [`docs/architecture/data-model-erd.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/data-model-erd.md)

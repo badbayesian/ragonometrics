@@ -1,0 +1,86 @@
+{
+  "run_id": "661e3268c040443097a0d957c91fd053",
+  "started_at": "2026-02-16T03:14:09.168069+00:00",
+  "papers_dir": "papers\\Use_of_Cumulative_Sums_of_Squares_for_Re.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@localhost:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5-nano",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5-nano",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "workstream_id": "smoke-run-records",
+  "arm": "gpt-5-nano",
+  "parent_run_id": null,
+  "trigger_source": "smoke-test",
+  "git_sha": "2571f6171c93f8373200420cb220227d4cd2addc",
+  "git_branch": "simplify/pipeline-main-components-audit",
+  "usage_store": {
+    "database_url": true
+  },
+  "prep": {
+    "status": "completed",
+    "reason": null,
+    "stats": {
+      "num_files": 1,
+      "total_size_bytes": 1881364,
+      "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+      "hashing_enabled": true,
+      "validate_text": false,
+      "duplicate_count": 0,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "pdfinfo_available": true
+    },
+    "warnings": [],
+    "manifest_path": "reports\\prep-manifest-661e3268c040443097a0d957c91fd053.json"
+  },
+  "paper_set_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+  "finished_at": "2026-02-16T03:14:09.937761+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": true,
+    "status": "stored"
+  },
+  "audit_artifacts": {
+    "enabled": true,
+    "status": "completed",
+    "markdown": {
+      "status": "generated",
+      "path": "reports\\audit-workflow-report-661e3268c040443097a0d957c91fd053.md"
+    },
+    "pdf": {
+      "status": "generated",
+      "path": "reports\\audit-workflow-report-661e3268c040443097a0d957c91fd053-latex.pdf",
+      "tex_path": "reports\\audit-workflow-report-661e3268c040443097a0d957c91fd053.tex"
+    }
+  },
+  "report_path": "reports\\workflow-report-661e3268c040443097a0d957c91fd053.json"
+}

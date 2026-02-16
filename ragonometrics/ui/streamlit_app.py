@@ -1,4 +1,4 @@
-"""Streamlit UI for interactive RAG over papers with citations and DOI network. Uses main pipeline functions for retrieval and answers."""
+"""Streamlit UI for interactive RAG over papers with citations and usage tracking."""
 
 from __future__ import annotations
 
@@ -20,8 +20,6 @@ from openai import OpenAI, BadRequestError
 from ragonometrics.core.main import (
     Settings,
     Paper,
-    build_and_store_doi_network,
-    build_doi_network_from_paper,
     embed_texts,
     load_papers,
     load_settings,
@@ -30,12 +28,9 @@ from ragonometrics.core.main import (
 )
 from ragonometrics.integrations.openalex import format_openalex_context
 from ragonometrics.integrations.citec import format_citec_context
-from ragonometrics.core.prompts import RESEARCHER_QA_PROMPT
+from ragonometrics.core.prompts import MATH_LATEX_REVIEW_PROMPT, RESEARCHER_QA_PROMPT
 from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
 from ragonometrics.pipeline.token_usage import DEFAULT_USAGE_DB, get_recent_usage, get_usage_by_model, get_usage_summary, record_usage
-
-import networkx as nx
-import plotly.graph_objects as go
 
 try:
     from pdf2image import convert_from_path
@@ -291,6 +286,112 @@ def stream_openai_answer(
             time.sleep(0.5 * (attempt + 1))
 
 
+_MATH_SIGNAL_PATTERN = re.compile(
+    r"(?:"
+    r"[A-Za-z]_\{[^}]+\}|"
+    r"[A-Za-z]_[A-Za-z0-9]+|"
+    r"[A-Za-z]\^\{[^}]+\}|"
+    r"\bp\([^)\n]*\|[^)\n]*\)|"
+    r"\bargmax\b|\bargmin\b|"
+    r"\u2211|\u222b|\u221a|\u2248|\u2260|\u2264|\u2265|"
+    r"\bE\[[^\]]+\]"
+    r")"
+)
+
+
+def _truthy_env(name: str, default: bool) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    text = value.strip().lower()
+    if text in {"1", "true", "yes", "y", "on"}:
+        return True
+    if text in {"0", "false", "no", "n", "off", ""}:
+        return False
+    return default
+
+
+def _should_review_math_latex(answer: str) -> bool:
+    if not answer or not answer.strip():
+        return False
+    if "$" in answer and (_MATH_SIGNAL_PATTERN.search(answer) is None):
+        return False
+    if _MATH_SIGNAL_PATTERN.search(answer):
+        return True
+    # catch plain assignments/ranges often written without delimiters
+    if re.search(r"\b[A-Za-z][A-Za-z0-9]*\s*=\s*[^,\n]{1,40}", answer):
+        return True
+    return False
+
+
+def _estimate_review_max_tokens(answer: str) -> int:
+    # Roughly map characters to tokens; keep bounded for latency/cost.
+    approx = int(len(answer) / 3.0) + 128
+    return max(256, min(3072, approx))
+
+
+def maybe_review_math_latex(
+    *,
+    client: OpenAI,
+    answer: str,
+    source_model: str,
+    session_id: Optional[str],
+    request_id: Optional[str],
+) -> str:
+    """Optionally run an AI formatting pass so math renders with LaTeX."""
+    if not _truthy_env("MATH_LATEX_REVIEW_ENABLED", True):
+        return answer
+    if not _should_review_math_latex(answer):
+        return answer
+
+    review_model = os.environ.get("MATH_LATEX_REVIEW_MODEL", "").strip() or source_model
+    max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
+    payload = {
+        "model": review_model,
+        "instructions": MATH_LATEX_REVIEW_PROMPT,
+        "input": f"Answer:\n{answer}",
+        "max_output_tokens": _estimate_review_max_tokens(answer),
+    }
+
+    for attempt in range(max_retries + 1):
+        try:
+            resp = client.responses.create(**payload)
+            reviewed = _response_text_from_final_response(resp).strip()
+            if not reviewed:
+                return answer
+            try:
+                usage = getattr(resp, "usage", None)
+                input_tokens = output_tokens = total_tokens = 0
+                if usage is not None:
+                    if isinstance(usage, dict):
+                        input_tokens = int(usage.get("input_tokens") or 0)
+                        output_tokens = int(usage.get("output_tokens") or 0)
+                        total_tokens = int(usage.get("total_tokens") or 0)
+                    else:
+                        input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
+                        output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
+                        total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
+                if total_tokens == 0:
+                    total_tokens = input_tokens + output_tokens
+                record_usage(
+                    model=review_model,
+                    operation="math_latex_review",
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
+                    session_id=session_id,
+                    request_id=request_id,
+                )
+            except Exception:
+                pass
+            return reviewed
+        except Exception:
+            if attempt >= max_retries:
+                return answer
+            time.sleep(0.5 * (attempt + 1))
+    return answer
+
+
 def scroll_chat_to_top() -> None:
     """Request a smooth scroll to the top of the Streamlit app."""
     components.html(
@@ -429,7 +530,7 @@ def auth_gate() -> None:
 
 def main():
     """Run the Streamlit app."""
-    st.title("Ragonometrics — Paper Chatbot")
+    st.title("Ragonometrics -- Paper Chatbot")
 
     settings = load_settings()
     auth_gate()
@@ -476,7 +577,7 @@ def main():
         paper, chunks, chunk_embeddings = load_and_prepare(selected_path, settings)
 
     st.subheader(paper.title)
-    st.caption(f"Author: {paper.author} — {paper.path.name}")
+    st.caption(f"Author: {paper.author} -- {paper.path.name}")
 
     openalex_context = format_openalex_context(paper.openalex)
     citec_context = format_citec_context(paper.citec)
@@ -585,7 +686,6 @@ def main():
 
                         if cached is not None:
                             answer = cached
-                            answer_placeholder.markdown(answer)
                         else:
                             openalex_context = format_openalex_context(paper.openalex)
                             citec_context = format_citec_context(paper.citec)
@@ -612,7 +712,7 @@ def main():
                                     usage_context="answer",
                                     session_id=st.session_state.session_id,
                                     request_id=request_id,
-                                    on_delta=lambda txt: answer_placeholder.markdown(txt + "▌"),
+                                    on_delta=lambda txt: answer_placeholder.markdown(txt + "|"),
                                 )
                             except BadRequestError as exc:
                                 err = str(exc).lower()
@@ -630,27 +730,36 @@ def main():
                                         usage_context="answer",
                                         session_id=st.session_state.session_id,
                                         request_id=request_id,
-                                        on_delta=lambda txt: answer_placeholder.markdown(txt + "▌"),
+                                        on_delta=lambda txt: answer_placeholder.markdown(txt + "|"),
                                     )
                                 else:
                                     raise
 
-                            answer_placeholder.markdown(answer)
+                        reviewed_answer = maybe_review_math_latex(
+                            client=client,
+                            answer=answer,
+                            source_model=selected_model,
+                            session_id=st.session_state.session_id,
+                            request_id=request_id,
+                        )
+                        if reviewed_answer:
+                            answer = reviewed_answer
+                        answer_placeholder.markdown(answer)
 
-                            if cache_allowed and cache_key is not None:
-                                set_cached_answer(
-                                    DEFAULT_CACHE_PATH,
-                                    cache_key=cache_key,
-                                    query=query,
-                                    paper_path=str(paper.path),
-                                    model=selected_model,
-                                    context=context,
-                                    answer=answer,
-                                )
+                        if cache_allowed and cache_key is not None:
+                            set_cached_answer(
+                                DEFAULT_CACHE_PATH,
+                                cache_key=cache_key,
+                                query=query,
+                                paper_path=str(paper.path),
+                                model=selected_model,
+                                context=context,
+                                answer=answer,
+                            )
 
                         citations = parse_context_chunks(context)
                         if citations:
-                            with st.expander("Citations & Snapshots", expanded=False):
+                            with st.expander("Snapshots", expanded=False):
                                 st.caption(
                                     f"Showing {len(citations)} chunks (top_k={retrieval_settings.top_k}, total_chunks={len(chunks)})"
                                 )
@@ -717,7 +826,7 @@ def main():
                     with st.chat_message("assistant"):
                         st.markdown(a)
                         if citations:
-                            with st.expander("Citations & Snapshots", expanded=False):
+                            with st.expander("Snapshots", expanded=False):
                                 st.caption(
                                     f"Showing {len(citations)} chunks (top_k={retrieval_settings.top_k}, total_chunks={len(chunks)})"
                                 )

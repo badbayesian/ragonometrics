@@ -1,0 +1,146 @@
+{
+  "run_id": "60658975eb134d069c52a1f7f9a41d53",
+  "started_at": "2026-02-16T05:31:11.484326+00:00",
+  "papers_dir": "papers\\Use_of_Cumulative_Sums_of_Squares_for_Re.pdf",
+  "config": {
+    "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+    "max_papers": 6,
+    "max_words": 30000,
+    "chunk_words": 350,
+    "chunk_overlap": 75,
+    "top_k": 10,
+    "batch_size": 64,
+    "embedding_model": "text-embedding-3-large",
+    "chat_model": "gpt-5-nano",
+    "config_path": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\config.toml",
+    "config_hash": "8d63faf73797db1e19a30727d3482d381e1228b44649dd760b815556e9b3b8b1",
+    "config_effective": {
+      "papers_dir": "\\\\THEBUTLER\\Media\\repos\\ragonometrics\\papers",
+      "max_papers": 6,
+      "max_words": 30000,
+      "chunk_words": 350,
+      "chunk_overlap": 75,
+      "top_k": 10,
+      "batch_size": 64,
+      "embedding_model": "text-embedding-3-large",
+      "chat_model": "gpt-5-nano",
+      "database_url": "postgres://postgres:postgres@localhost:5432/ragonometrics",
+      "bm25_weight": 0.45,
+      "reranker_model": "gpt-5-nano",
+      "rerank_top_n": 30,
+      "query_expansion": "1",
+      "query_expand_model": "gpt-5-nano",
+      "section_aware_chunking": true,
+      "force_ocr": false,
+      "index_idempotent_skip": true,
+      "allow_unverified_index": false
+    }
+  },
+  "workstream_id": null,
+  "arm": null,
+  "parent_run_id": null,
+  "trigger_source": "workflow_sync",
+  "git_sha": "2571f6171c93f8373200420cb220227d4cd2addc",
+  "git_branch": "simplify/pipeline-main-components-audit",
+  "usage_store": {
+    "database_url": true
+  },
+  "db_url_resolution": {
+    "preferred_present": true,
+    "env_present": true,
+    "selected_source": "env_DATABASE_URL",
+    "selected_reachable": true,
+    "fallback_used": true
+  },
+  "prep": {
+    "stats": {
+      "num_files": 1,
+      "corpus_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+      "validate_text": false,
+      "duplicate_count": 0,
+      "hashing_enabled": true,
+      "empty_file_count": 0,
+      "empty_text_count": 0,
+      "total_size_bytes": 1881364,
+      "pdfinfo_available": true
+    },
+    "reason": null,
+    "status": "completed",
+    "warnings": [],
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:41.885090+00:00"
+    },
+    "manifest_path": "reports\\prep-manifest-661e3268c040443097a0d957c91fd053.json"
+  },
+  "paper_set_hash": "5f8df89d3695858097ecae0e151ea277f490e3ad831113e01010c76e2243a47e",
+  "ingest": {
+    "num_pdfs": 1,
+    "num_papers": 1,
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:42.027792+00:00"
+    }
+  },
+  "enrich": {
+    "citec": 0,
+    "openalex": 0,
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:42.111120+00:00"
+    }
+  },
+  "econ_data": {
+    "status": "fetched",
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:42.210736+00:00"
+    },
+    "series_counts": {
+      "GDPC1": 0,
+      "FEDFUNDS": 0
+    }
+  },
+  "agentic": {
+    "status": "skipped"
+  },
+  "index": {
+    "reason": "db_unreachable",
+    "status": "skipped",
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:46.439265+00:00"
+    },
+    "database_url": true,
+    "database_reachable": false
+  },
+  "evaluate": {
+    "max_chunks": 33,
+    "min_chunks": 33,
+    "_reused_from": {
+      "run_id": "35b0ead84f514fed90f6390b6cef9edb",
+      "finished_at": "2026-02-16T04:52:46.537997+00:00"
+    },
+    "avg_chunks_per_paper": 33.0
+  },
+  "finished_at": "2026-02-16T05:31:16.586316+00:00",
+  "report_store": {
+    "database_url": true,
+    "database_reachable": true,
+    "status": "stored"
+  },
+  "audit_artifacts": {
+    "enabled": true,
+    "status": "completed",
+    "markdown": {
+      "status": "generated",
+      "path": "reports\\audit-workflow-report-60658975eb134d069c52a1f7f9a41d53.md"
+    },
+    "pdf": {
+      "status": "generated",
+      "path": "reports\\audit-workflow-report-60658975eb134d069c52a1f7f9a41d53-latex.pdf",
+      "tex_path": "reports\\audit-workflow-report-60658975eb134d069c52a1f7f9a41d53.tex"
+    }
+  },
+  "report_path": "reports\\workflow-report-60658975eb134d069c52a1f7f9a41d53.json"
+}

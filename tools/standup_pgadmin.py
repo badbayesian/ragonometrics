@@ -1,0 +1,343 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+from urllib.parse import urlparse
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_COMPOSE_FILE = REPO_ROOT / "compose.yml"
+DEFAULT_SERVERS_JSON = REPO_ROOT / "deploy" / "pgadmin" / "servers.json"
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Stand up pgAdmin and auto-register the Ragonometrics Postgres server.",
+        epilog=(
+            "Examples:\n"
+            "  python tools/standup_pgadmin.py\n"
+            "  python tools/standup_pgadmin.py --write-only\n"
+            "  python tools/standup_pgadmin.py --server-name local-rag --open"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--compose-file",
+        default=str(DEFAULT_COMPOSE_FILE),
+        help="Path to docker compose file (default: compose.yml at repo root).",
+    )
+    parser.add_argument(
+        "--servers-json",
+        default=str(DEFAULT_SERVERS_JSON),
+        help="Path to output pgAdmin servers.json.",
+    )
+    parser.add_argument(
+        "--server-name",
+        default="ragonometrics-postgres",
+        help="Display name of the Postgres server in pgAdmin.",
+    )
+    parser.add_argument(
+        "--db-host",
+        default=None,
+        help="Postgres host from pgAdmin container perspective (default inferred).",
+    )
+    parser.add_argument("--db-port", type=int, default=None, help="Postgres port (default inferred).")
+    parser.add_argument("--db-name", default=None, help="Database name (default inferred).")
+    parser.add_argument("--db-user", default=None, help="Database user (default inferred).")
+    parser.add_argument(
+        "--pgadmin-email",
+        default=None,
+        help="pgAdmin login email (default from env or compose defaults).",
+    )
+    parser.add_argument(
+        "--pgadmin-password",
+        default=None,
+        help="pgAdmin login password (default from env or compose defaults).",
+    )
+    parser.add_argument(
+        "--pgadmin-port",
+        type=int,
+        default=None,
+        help="Host port for pgAdmin (default: env PGADMIN_HOST_PORT or first free from 5050).",
+    )
+    parser.add_argument(
+        "--write-only",
+        action="store_true",
+        help="Only write servers.json, do not run docker compose or import.",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open pgAdmin URL in browser after startup.",
+    )
+    return parser.parse_args()
+
+
+def read_dotenv(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    out: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if not key:
+            continue
+        out[key] = value
+    return out
+
+
+def merged_env(repo_root: Path) -> dict[str, str]:
+    env = dict(os.environ)
+    dotenv_path = repo_root / ".env"
+    dotenv_values = read_dotenv(dotenv_path)
+    for key, value in dotenv_values.items():
+        env.setdefault(key, value)
+    return env
+
+
+def infer_db_fields(env: dict[str, str]) -> dict[str, object]:
+    raw_url = env.get("DATABASE_URL", "").strip()
+    db = {
+        "host": "postgres",
+        "port": 5432,
+        "name": env.get("POSTGRES_DB", "ragonometrics"),
+        "user": env.get("POSTGRES_USER", "postgres"),
+        "password": env.get("POSTGRES_PASSWORD", "postgres"),
+    }
+    if raw_url:
+        parsed = urlparse(raw_url)
+        if parsed.hostname:
+            # pgAdmin runs inside compose network, so localhost in URL should map to service name.
+            if parsed.hostname in {"localhost", "127.0.0.1"}:
+                db["host"] = "postgres"
+            else:
+                db["host"] = parsed.hostname
+        if parsed.port:
+            db["port"] = parsed.port
+        if parsed.path and parsed.path.strip("/"):
+            db["name"] = parsed.path.strip("/")
+        if parsed.username:
+            db["user"] = parsed.username
+        if parsed.password:
+            db["password"] = parsed.password
+    return db
+
+
+def write_servers_json(
+    output_path: Path,
+    server_name: str,
+    db_host: str,
+    db_port: int,
+    db_name: str,
+    db_user: str,
+) -> None:
+    payload = {
+        "Servers": {
+            "1": {
+                "Name": server_name,
+                "Group": "Ragonometrics",
+                "Host": db_host,
+                "Port": int(db_port),
+                "MaintenanceDB": db_name,
+                "Username": db_user,
+                "SSLMode": "prefer",
+                "Shared": True,
+                "Comment": "Generated by tools/standup_pgadmin.py",
+            }
+        }
+    }
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def run_cmd(cmd: list[str], cwd: Path, env: dict[str, str], input_text: str | None = None) -> None:
+    completed = subprocess.run(
+        cmd,
+        cwd=str(cwd),
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        input=input_text,
+    )
+    if completed.returncode != 0:
+        stderr = (completed.stderr or "").strip()
+        stdout = (completed.stdout or "").strip()
+        detail = stderr or stdout or "no output"
+        raise RuntimeError(f"Command failed ({completed.returncode}): {' '.join(cmd)}\n{detail}")
+
+
+def detect_running_pgadmin_port(compose_file: Path, cwd: Path, env: dict[str, str]) -> int | None:
+    cmd = ["docker", "compose", "-f", str(compose_file), "port", "pgadmin", "80"]
+    completed = subprocess.run(cmd, cwd=str(cwd), env=env, check=False, capture_output=True, text=True)
+    if completed.returncode != 0:
+        return None
+    raw = (completed.stdout or "").strip()
+    if not raw:
+        return None
+    # Expected formats include "0.0.0.0:5051" or "[::]:5051".
+    tail = raw.split(":")[-1]
+    try:
+        return int(tail)
+    except Exception:
+        return None
+
+
+def is_port_free(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.2)
+        return sock.connect_ex(("127.0.0.1", port)) != 0
+
+
+def choose_pgadmin_port(preferred: int) -> int:
+    if is_port_free(preferred):
+        return preferred
+    for candidate in range(preferred + 1, preferred + 21):
+        if is_port_free(candidate):
+            return candidate
+    raise RuntimeError(f"No free host port found in range {preferred}-{preferred + 20} for pgAdmin.")
+
+
+def import_servers(compose_file: Path, pgadmin_email: str, cwd: Path, env: dict[str, str]) -> None:
+    cmd = [
+        "docker",
+        "compose",
+        "-f",
+        str(compose_file),
+        "exec",
+        "-T",
+        "pgadmin",
+        "/venv/bin/python",
+        "/pgadmin4/setup.py",
+        "load-servers",
+        "/tmp/servers.json",
+        "--user",
+        pgadmin_email,
+        "--replace",
+    ]
+    run_cmd(cmd, cwd=cwd, env=env)
+
+
+def push_servers_json(
+    compose_file: Path,
+    servers_json: Path,
+    cwd: Path,
+    env: dict[str, str],
+) -> None:
+    content = servers_json.read_text(encoding="utf-8")
+    cmd = [
+        "docker",
+        "compose",
+        "-f",
+        str(compose_file),
+        "exec",
+        "-T",
+        "pgadmin",
+        "sh",
+        "-lc",
+        "cat > /tmp/servers.json",
+    ]
+    run_cmd(cmd, cwd=cwd, env=env, input_text=content)
+
+
+def main() -> int:
+    args = parse_args()
+    repo_root = REPO_ROOT
+    compose_file = Path(args.compose_file).resolve()
+    servers_json = Path(args.servers_json).resolve()
+
+    env = merged_env(repo_root)
+    db_defaults = infer_db_fields(env)
+
+    db_host = args.db_host or str(db_defaults["host"])
+    db_port = int(args.db_port or int(db_defaults["port"]))
+    db_name = args.db_name or str(db_defaults["name"])
+    db_user = args.db_user or str(db_defaults["user"])
+    pgadmin_email = (
+        args.pgadmin_email
+        or env.get("PGADMIN_DEFAULT_EMAIL")
+        or "admin@example.com"
+    )
+    pgadmin_password = args.pgadmin_password or env.get("PGADMIN_DEFAULT_PASSWORD") or "ragonometrics"
+    base_port = int(args.pgadmin_port or env.get("PGADMIN_HOST_PORT", "5050"))
+    running_port = detect_running_pgadmin_port(compose_file=compose_file, cwd=repo_root, env=env)
+    pgadmin_port = running_port if running_port is not None else choose_pgadmin_port(base_port)
+
+    write_servers_json(
+        output_path=servers_json,
+        server_name=args.server_name,
+        db_host=db_host,
+        db_port=db_port,
+        db_name=db_name,
+        db_user=db_user,
+    )
+    print(f"[ok] Wrote servers config: {servers_json}")
+
+    if args.write_only:
+        print("[ok] Write-only mode enabled, skipping docker startup.")
+        return 0
+
+    if not compose_file.exists():
+        print(f"[error] Compose file not found: {compose_file}")
+        return 1
+
+    env_for_compose = dict(env)
+    env_for_compose["PGADMIN_DEFAULT_EMAIL"] = pgadmin_email
+    env_for_compose["PGADMIN_DEFAULT_PASSWORD"] = pgadmin_password
+    env_for_compose["PGADMIN_HOST_PORT"] = str(pgadmin_port)
+
+    try:
+        run_cmd(
+            ["docker", "compose", "-f", str(compose_file), "up", "-d", "postgres", "pgadmin"],
+            cwd=repo_root,
+            env=env_for_compose,
+        )
+        last_error: Exception | None = None
+        for _ in range(15):
+            try:
+                push_servers_json(
+                    compose_file=compose_file,
+                    servers_json=servers_json,
+                    cwd=repo_root,
+                    env=env_for_compose,
+                )
+                import_servers(
+                    compose_file=compose_file,
+                    pgadmin_email=pgadmin_email,
+                    cwd=repo_root,
+                    env=env_for_compose,
+                )
+                last_error = None
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                time.sleep(2)
+        if last_error is not None:
+            raise RuntimeError(last_error)
+        url = f"http://localhost:{pgadmin_port}"
+        print(f"[ok] pgAdmin is up: {url}")
+        print(f"[ok] Login email: {pgadmin_email}")
+        print("[ok] Server loaded in pgAdmin: ragonometrics-postgres")
+        if args.open:
+            try:
+                import webbrowser
+
+                webbrowser.open(url)
+            except Exception:
+                pass
+        return 0
+    except Exception as exc:  # noqa: BLE001
+        print(f"[error] {exc}")
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

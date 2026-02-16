@@ -1,0 +1,45 @@
+{
+  "run_id": "9524aedd98dc4ec1b169715645fd16ce",
+  "created_at": "2026-02-07T05:10:14.901710+00:00",
+  "corpus_hash": "b7da815edd38d6fb6a40360a2982d16efa1c11d4dcb280d5cdc353530829b7f6",
+  "hashing_enabled": true,
+  "validate_text": false,
+  "stats": {
+    "num_files": 3,
+    "total_size_bytes": 25102711,
+    "corpus_hash": "b7da815edd38d6fb6a40360a2982d16efa1c11d4dcb280d5cdc353530829b7f6",
+    "hashing_enabled": true,
+    "validate_text": false,
+    "duplicate_count": 0,
+    "empty_file_count": 0,
+    "empty_text_count": 0,
+    "pdfinfo_available": true
+  },
+  "warnings": [],
+  "duplicates": [],
+  "empty_files": [],
+  "empty_text_files": [],
+  "files": [
+    {
+      "path": "\\papers\\ejmr_paper_nber.pdf",
+      "size_bytes": 8974795,
+      "mtime": 1689716051.9831374,
+      "pages": 50,
+      "sha256": "6bfe3743dbe23643b0a12216c12b870b237427b18f6b3ca5c734cf03b343d525"
+    },
+    {
+      "path": "\\papers\\ejmr_slides_nber.pdf",
+      "size_bytes": 15829581,
+      "mtime": 1689716141.9518902,
+      "pages": 57,
+      "sha256": "799a49b0c85b492bd2d19863c27a09ffd1d22d4b16a8efd31722556fcf4a89d7"
+    },
+    {
+      "path": "\\papers\\The_Alt-Right_Neoliberalism_Libertarianism_and_the_Fascist_Temptation_Melinda_Cooper.pdf",
+      "size_bytes": 298335,
+      "mtime": 1685074671.4981983,
+      "pages": 22,
+      "sha256": "0bdf48e570af615bf89f3c65e5c52e22bf1dafc8f016e2513761eb6076aff750"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 import faiss
 import numpy as np
@@ -14,6 +14,7 @@ from ragonometrics.core.main import (
     Paper,
     Settings,
     embed_texts,
+    extract_dois_from_text,
     load_papers,
     load_settings,
     prepare_chunks_for_paper,
@@ -59,11 +60,78 @@ def _to_pgvector_literal(values: np.ndarray) -> str:
     return "[" + ",".join(f"{float(v):.10f}" for v in values.tolist()) + "]"
 
 
+def _dedupe_keep_order(values: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for value in values:
+        v = str(value or "").strip()
+        if not v:
+            continue
+        key = v.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(v)
+    return out
+
+
+def _split_author_names(author_text: str) -> List[str]:
+    text = str(author_text or "").strip()
+    if not text:
+        return []
+    tmp = text.replace(" and ", ", ").replace(" & ", ", ").replace(";", ",")
+    return _dedupe_keep_order([p.strip() for p in tmp.split(",") if p.strip()])
+
+
+def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
+    if not openalex_meta:
+        return []
+    names: List[str] = []
+    for item in openalex_meta.get("authorships") or []:
+        if not isinstance(item, dict):
+            continue
+        author_obj = item.get("author") or {}
+        name = str(author_obj.get("display_name") or "").strip()
+        if name:
+            names.append(name)
+    return _dedupe_keep_order(names)
+
+
+def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
+    if not openalex_meta:
+        return None
+    primary = openalex_meta.get("primary_location") or {}
+    source = primary.get("source") or {}
+    venue = source.get("display_name")
+    if venue:
+        return str(venue)
+    host = openalex_meta.get("host_venue") or {}
+    venue = host.get("display_name")
+    return str(venue) if venue else None
+
+
+def _openalex_source_url(openalex_meta: Dict[str, Any] | None) -> str | None:
+    if not openalex_meta:
+        return None
+    primary = openalex_meta.get("primary_location") or {}
+    landing = primary.get("landing_page_url")
+    if landing:
+        return str(landing)
+    oa_id = openalex_meta.get("id")
+    return str(oa_id) if oa_id else None
+
+
 def build_index(
     settings: Settings,
     paper_paths: List[Path],
-    index_path: Path = Path("vectors.index"),
+    index_path: Path = Path("vectors-3072.index"),
     meta_db_url: str | None = None,
+    *,
+    workflow_run_id: str | None = None,
+    workstream_id: str | None = None,
+    arm: str | None = None,
+    paper_set_hash: str | None = None,
+    index_build_reason: str | None = None,
 ):
     """Build vector indexes from paper paths and persist metadata to Postgres.
 
@@ -82,6 +150,7 @@ def build_index(
     paper_paths = sorted(paper_paths, key=lambda p: str(p).lower())
     all_vectors: List[np.ndarray] = []
     metadata_rows = []
+    paper_metadata_rows: List[Dict[str, Any]] = []
     next_id = 0
     doc_ids: List[str] = []
     paper_manifests: List[dict] = []
@@ -114,12 +183,67 @@ def build_index(
         file_hash = _sha256_bytes(file_bytes)
         doc_id = _sha256_text(f"{file_hash}:{text_hash}")
         doc_ids.append(doc_id)
+        dois = extract_dois_from_text(paper.text)
+        openalex_meta = paper.openalex or {}
+        citec_meta = paper.citec or {}
+        openalex_doi = str(openalex_meta.get("doi") or "").strip() or None
+        primary_doi = openalex_doi or (dois[0] if dois else None)
+        openalex_authors = _openalex_author_names(openalex_meta if openalex_meta else None)
+        author_names = openalex_authors or _split_author_names(paper.author)
+        publication_year = openalex_meta.get("publication_year")
+        try:
+            publication_year = int(publication_year) if publication_year is not None else None
+        except Exception:
+            publication_year = None
+        paper_metadata_rows.append(
+            {
+                "doc_id": doc_id,
+                "path": str(path),
+                "title": paper.title,
+                "author": paper.author,
+                "authors": author_names,
+                "primary_doi": primary_doi,
+                "dois": dois,
+                "openalex_id": str(openalex_meta.get("id") or "") or None,
+                "openalex_doi": openalex_doi,
+                "publication_year": publication_year,
+                "venue": _openalex_venue(openalex_meta if openalex_meta else None),
+                "repec_handle": str(citec_meta.get("repec_handle") or "") or None,
+                "source_url": _openalex_source_url(openalex_meta if openalex_meta else None),
+                "openalex_json": openalex_meta if openalex_meta else None,
+                "citec_json": citec_meta if citec_meta else None,
+                "metadata_json": {
+                    "doc_id": doc_id,
+                    "file_sha256": file_hash,
+                    "text_sha256": text_hash,
+                    "title": paper.title,
+                    "author": paper.author,
+                    "authors": author_names,
+                    "dois": dois,
+                    "openalex_present": bool(openalex_meta),
+                    "citec_present": bool(citec_meta),
+                },
+            }
+        )
         chunks = prepare_chunks_for_paper(paper, settings)
         if not chunks:
             continue
 
         texts = [c["text"] if isinstance(c, dict) else str(c) for c in chunks]
-        embeddings = embed_texts(client, texts, settings.embedding_model, settings.batch_size)
+        embeddings = embed_texts(
+            client,
+            texts,
+            settings.embedding_model,
+            settings.batch_size,
+            run_id=workflow_run_id,
+            step="index_embeddings",
+            question_id="INDEX",
+            meta={
+                "workstream_id": workstream_id,
+                "arm": arm,
+                "paper_path": str(path),
+            },
+        )
 
         vecs = np.array(embeddings, dtype=np.float32)
         vecs = normalize(vecs)
@@ -217,40 +341,29 @@ def build_index(
         chunk_overlap=settings.chunk_overlap,
         normalized=True,
         idempotency_key=idempotency_key,
+        workflow_run_id=workflow_run_id,
+        workstream_id=workstream_id,
+        arm=arm,
+        paper_set_hash=paper_set_hash,
+        index_build_reason=index_build_reason or "index_build",
     )
     run_conn.close()
     if os.environ.get("INDEX_IDEMPOTENT_SKIP", "1") == "1":
         # if a run with same idempotency key already exists and vectors are present, skip
         try:
-            cur.execute("SELECT 1 FROM vectors WHERE pipeline_run_id = %s LIMIT 1", (run_id,))
+            cur.execute("SELECT 1 FROM indexing.vectors WHERE pipeline_run_id = %s LIMIT 1", (run_id,))
             if cur.fetchone():
                 log_event("index_skip", {"reason": "idempotent", "run_id": run_id})
                 conn.close()
                 return
         except Exception:
             pass
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS vectors (
-            id BIGINT PRIMARY KEY,
-            doc_id TEXT,
-            chunk_id TEXT,
-            chunk_hash TEXT,
-            paper_path TEXT,
-            page INTEGER,
-            start_word INTEGER,
-            end_word INTEGER,
-            text TEXT,
-            embedding VECTOR,
-            pipeline_run_id INTEGER,
-            created_at TEXT
-        )
-        """
-    )
+    cur.execute("CREATE SCHEMA IF NOT EXISTS indexing")
+    cur.execute("CREATE SCHEMA IF NOT EXISTS ingestion")
     for paper_meta in paper_manifests:
         cur.execute(
             """
-            INSERT INTO documents (doc_id, path, title, author, extracted_at, file_hash, text_hash)
+            INSERT INTO ingestion.documents (doc_id, path, title, author, extracted_at, file_hash, text_hash)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (doc_id) DO UPDATE SET
                 path = EXCLUDED.path,
@@ -270,13 +383,34 @@ def build_index(
                 paper_meta["text_sha256"],
             ),
         )
+    for paper_meta in paper_metadata_rows:
+        metadata.upsert_paper_metadata(
+            conn,
+            doc_id=paper_meta["doc_id"],
+            path=paper_meta["path"],
+            title=paper_meta["title"],
+            author=paper_meta["author"],
+            authors=paper_meta.get("authors"),
+            primary_doi=paper_meta.get("primary_doi"),
+            dois=paper_meta.get("dois"),
+            openalex_id=paper_meta.get("openalex_id"),
+            openalex_doi=paper_meta.get("openalex_doi"),
+            publication_year=paper_meta.get("publication_year"),
+            venue=paper_meta.get("venue"),
+            repec_handle=paper_meta.get("repec_handle"),
+            source_url=paper_meta.get("source_url"),
+            openalex_json=paper_meta.get("openalex_json"),
+            citec_json=paper_meta.get("citec_json"),
+            metadata_json=paper_meta.get("metadata_json"),
+            extracted_at=datetime.utcnow().isoformat(),
+        )
     # Upsert rows
     # upsert rows and attach pipeline_run_id
     for row in metadata_rows:
         id_, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, embedding, _, created_at = row
         cur.execute(
             """
-            INSERT INTO vectors (
+            INSERT INTO indexing.vectors (
                 id, doc_id, chunk_id, chunk_hash, paper_path, page, start_word, end_word, text, embedding, pipeline_run_id, created_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -363,7 +497,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--papers-dir", type=str, default=None)
-    parser.add_argument("--index-path", type=str, default="vectors.index")
+    parser.add_argument("--index-path", type=str, default="vectors-3072.index")
     parser.add_argument("--meta-db-url", type=str, default=None)
     parser.add_argument("--limit", type=int, default=0, help="Limit number of papers to index (0 = all)")
     args = parser.parse_args()

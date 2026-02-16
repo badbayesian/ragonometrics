@@ -59,7 +59,7 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
-    cur.execute("SELECT shard_name, path, index_id FROM index_shards WHERE is_active = TRUE ORDER BY created_at DESC")
+    cur.execute("SELECT shard_name, path, index_id FROM indexing.index_shards WHERE is_active = TRUE ORDER BY created_at DESC")
     rows = cur.fetchall()
     conn.close()
     res = []
@@ -81,7 +81,7 @@ def _load_texts_for_shards(db_url: str) -> Tuple[List[str], List[int]]:
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
-    cur.execute("SELECT id, text FROM vectors ORDER BY id")
+    cur.execute("SELECT id, text FROM indexing.vectors ORDER BY id")
     rows = cur.fetchall()
     conn.close()
     ids = [r[0] for r in rows]
@@ -112,7 +112,7 @@ def _embedding_search_pg(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple
         cur.execute(
             """
             SELECT id, (1 - (embedding <=> %s::vector)) AS score
-            FROM vectors
+            FROM indexing.vectors
             WHERE embedding IS NOT NULL
             ORDER BY embedding <=> %s::vector
             LIMIT %s
