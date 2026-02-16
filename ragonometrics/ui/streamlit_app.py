@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import time
+import math
+import json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
@@ -11,10 +13,11 @@ from dataclasses import replace
 import hashlib
 import html
 import re
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
+import psycopg2
 from openai import OpenAI, BadRequestError
 
 from ragonometrics.core.main import (
@@ -26,7 +29,7 @@ from ragonometrics.core.main import (
     prepare_chunks_for_paper,
     top_k_context,
 )
-from ragonometrics.integrations.openalex import format_openalex_context
+from ragonometrics.integrations.openalex import format_openalex_context, request_json as openalex_request_json
 from ragonometrics.integrations.citec import format_citec_context
 from ragonometrics.core.prompts import MATH_LATEX_REVIEW_PROMPT, RESEARCHER_QA_PROMPT
 from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
@@ -62,6 +65,59 @@ def list_papers(papers_dir: Path) -> List[Path]:
     return sorted(papers_dir.glob("*.pdf"))
 
 
+def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
+    """Load OpenAlex metadata for a paper from Postgres enrichment table.
+
+    Args:
+        path (Path): Paper path selected in the UI.
+
+    Returns:
+        Optional[Dict[str, Any]]: Stored OpenAlex payload when available.
+    """
+    db_url = (os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        return None
+
+    normalized_path = str(path).replace("\\", "/")
+    basename_suffix = f"%/{path.name.lower()}"
+    conn = None
+    try:
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT openalex_json
+            FROM enrichment.paper_openalex_metadata
+            WHERE match_status = 'matched'
+              AND (
+                    lower(replace(paper_path, '\\', '/')) = lower(%s)
+                 OR lower(replace(paper_path, '\\', '/')) LIKE %s
+              )
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (normalized_path, basename_suffix),
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        payload = row[0]
+        if isinstance(payload, dict):
+            return payload
+        if isinstance(payload, str):
+            try:
+                parsed = json.loads(payload)
+            except Exception:
+                return None
+            return parsed if isinstance(parsed, dict) else None
+        return None
+    except Exception:
+        return None
+    finally:
+        if conn is not None:
+            conn.close()
+
+
 @st.cache_data
 def load_and_prepare(path: Path, settings: Settings):
     """Load a paper, prepare chunks/embeddings, and cache the result.
@@ -75,6 +131,10 @@ def load_and_prepare(path: Path, settings: Settings):
     """
     papers = load_papers([path])
     paper = papers[0]
+    if not isinstance(paper.openalex, dict) or not paper.openalex:
+        db_openalex = _db_openalex_metadata_for_paper(path)
+        if isinstance(db_openalex, dict) and db_openalex:
+            paper = replace(paper, openalex=db_openalex)
     chunks = prepare_chunks_for_paper(paper, settings)
     if not chunks:
         return paper, [], []
@@ -180,6 +240,593 @@ def suggested_paper_questions(paper: Paper) -> List[str]:
     if paper.title:
         questions[0] = f'What is the main research question in "{paper.title}"?'
     return questions
+
+
+def _openalex_author_names(meta: Optional[dict]) -> List[str]:
+    """Extract author display names from an OpenAlex metadata payload.
+
+    Args:
+        meta (Optional[dict]): OpenAlex work payload.
+
+    Returns:
+        List[str]: Ordered author display names.
+    """
+    if not isinstance(meta, dict):
+        return []
+    names: List[str] = []
+    for authorship in meta.get("authorships") or []:
+        if not isinstance(authorship, dict):
+            continue
+        author_obj = authorship.get("author") or {}
+        name = str(author_obj.get("display_name") or "").strip()
+        if name:
+            names.append(name)
+    return names
+
+
+def _openalex_venue(meta: Optional[dict]) -> str:
+    """Return a best-effort venue name from OpenAlex metadata.
+
+    Args:
+        meta (Optional[dict]): OpenAlex work payload.
+
+    Returns:
+        str: Venue name when present; otherwise empty string.
+    """
+    if not isinstance(meta, dict):
+        return ""
+    primary = meta.get("primary_location") or {}
+    source = primary.get("source") or {}
+    venue = str(source.get("display_name") or "").strip()
+    if venue:
+        return venue
+    host = meta.get("host_venue") or {}
+    return str(host.get("display_name") or "").strip()
+
+
+def render_openalex_metadata_tab(paper: Paper) -> None:
+    """Render the OpenAlex metadata tab for the selected paper.
+
+    Args:
+        paper (Paper): Selected paper object.
+    """
+    st.subheader("OpenAlex Metadata")
+    st.caption("Metadata shown below is the raw OpenAlex payload associated with this paper.")
+    meta = paper.openalex
+    if not isinstance(meta, dict) or not meta:
+        st.info("No OpenAlex metadata found for this paper.")
+        return
+
+    id_value = str(meta.get("id") or "")
+    title_value = str(meta.get("display_name") or meta.get("title") or "")
+    year_value = meta.get("publication_year")
+    doi_value = str(meta.get("doi") or "")
+    cited_by_value = meta.get("cited_by_count")
+    refs_value = meta.get("referenced_works_count")
+    venue_value = _openalex_venue(meta)
+    primary = meta.get("primary_location") or {}
+    landing_url = str(primary.get("landing_page_url") or "")
+    authors = _openalex_author_names(meta)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"**OpenAlex ID:** `{id_value or 'n/a'}`")
+        st.markdown(f"**Title:** {title_value or 'n/a'}")
+        st.markdown(f"**Publication Year:** {year_value if year_value is not None else 'n/a'}")
+        st.markdown(f"**DOI:** {doi_value or 'n/a'}")
+    with col2:
+        st.markdown(f"**Venue:** {venue_value or 'n/a'}")
+        st.markdown(f"**Cited By Count:** {cited_by_value if cited_by_value is not None else 'n/a'}")
+        st.markdown(f"**Referenced Works Count:** {refs_value if refs_value is not None else 'n/a'}")
+        if landing_url:
+            st.markdown(f"**Landing URL:** {landing_url}")
+        else:
+            st.markdown("**Landing URL:** n/a")
+
+    st.markdown("**Authors**")
+    if authors:
+        for idx, author in enumerate(authors, start=1):
+            st.markdown(f"{idx}. {author}")
+    else:
+        st.caption("No author list available in OpenAlex payload.")
+
+    st.markdown("---")
+    st.markdown("**Raw OpenAlex JSON**")
+    st.json(meta, expanded=False)
+
+
+def _openalex_work_id(value: Any) -> str:
+    """Normalize an OpenAlex work identifier to ``W...`` format.
+
+    Args:
+        value (Any): Work id string or URL.
+
+    Returns:
+        str: OpenAlex work key (for example ``W2032518524``), or empty string.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.startswith("https://openalex.org/"):
+        text = text.rsplit("/", 1)[-1]
+    return text
+
+
+def _openalex_work_url(value: Any) -> str:
+    """Build an OpenAlex work URL from id/URL variants.
+
+    Args:
+        value (Any): OpenAlex id, API URL, or canonical URL.
+
+    Returns:
+        str: Canonical ``https://openalex.org/W...`` URL when resolvable.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    text = text.split("?", 1)[0].rstrip("/")
+    if text.startswith("https://openalex.org/"):
+        return text
+    if text.startswith("https://api.openalex.org/"):
+        key = text.rsplit("/", 1)[-1]
+        if key:
+            return f"https://openalex.org/{key}"
+        return ""
+    key = _openalex_work_id(text)
+    if key:
+        return f"https://openalex.org/{key}"
+    return ""
+
+
+def _openalex_request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 20) -> Optional[Dict[str, Any]]:
+    """Call OpenAlex and return JSON payload.
+
+    Args:
+        url (str): Endpoint URL.
+        params (Optional[Dict[str, Any]]): Query parameters.
+        timeout (int): Request timeout in seconds.
+
+    Returns:
+        Optional[Dict[str, Any]]: Parsed payload on success.
+    """
+    data = openalex_request_json(url, params=params, timeout=timeout)
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _openalex_work_summary(work_id: str, *, include_references: bool = False) -> Optional[Dict[str, Any]]:
+    """Fetch a compact OpenAlex work payload.
+
+    Args:
+        work_id (str): OpenAlex work id (``W...`` or URL).
+        include_references (bool): Whether to include ``referenced_works``.
+
+    Returns:
+        Optional[Dict[str, Any]]: Work payload.
+    """
+    key = _openalex_work_id(work_id)
+    if not key:
+        return None
+    fields = ["id", "display_name", "publication_year", "doi", "cited_by_count"]
+    if include_references:
+        fields.append("referenced_works")
+    url = f"https://api.openalex.org/works/{key}"
+    payload = _openalex_request_json(url, params={"select": ",".join(fields)})
+    return payload if isinstance(payload, dict) else None
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _openalex_citation_network(center_work_id: str, max_references: int, max_citing: int) -> Dict[str, Any]:
+    """Build OpenAlex citation neighborhood for one center work.
+
+    Args:
+        center_work_id (str): OpenAlex center work id or URL.
+        max_references (int): Max number of referenced papers (left side).
+        max_citing (int): Max number of citing papers (right side).
+
+    Returns:
+        Dict[str, Any]: ``center``, ``references``, and ``citing`` lists.
+    """
+    center = _openalex_work_summary(center_work_id, include_references=True)
+    if not center:
+        return {"center": None, "references": [], "citing": []}
+
+    all_reference_ids = center.get("referenced_works") or []
+    reference_candidate_cap = max(
+        int(max_references),
+        int(os.environ.get("OPENALEX_NETWORK_REFERENCE_CANDIDATES", "200")),
+    )
+    references: List[Dict[str, Any]] = []
+    for ref in all_reference_ids[:reference_candidate_cap]:
+        ref_summary = _openalex_work_summary(str(ref), include_references=False)
+        if ref_summary:
+            references.append(ref_summary)
+    references.sort(key=lambda w: int(w.get("cited_by_count") or 0), reverse=True)
+    references = references[: max(0, int(max_references))]
+
+    center_key = _openalex_work_id(center.get("id"))
+    citing: List[Dict[str, Any]] = []
+    if center_key and max_citing > 0:
+        search = _openalex_request_json(
+            "https://api.openalex.org/works",
+            params={
+                "filter": f"cites:{center_key}",
+                "per-page": int(max_citing),
+                "select": "id,display_name,publication_year,doi,cited_by_count",
+                "sort": "cited_by_count:desc",
+            },
+        )
+        results = (search or {}).get("results") if isinstance(search, dict) else None
+        if isinstance(results, list):
+            citing = [item for item in results if isinstance(item, dict)]
+    citing.sort(key=lambda w: int(w.get("cited_by_count") or 0), reverse=True)
+    citing = citing[: max(0, int(max_citing))]
+
+    return {"center": center, "references": references, "citing": citing}
+
+
+def _work_title(work: Dict[str, Any]) -> str:
+    """Return display title for one OpenAlex work payload.
+
+    Args:
+        work (Dict[str, Any]): OpenAlex work.
+
+    Returns:
+        str: Work title fallback.
+    """
+    return str(work.get("display_name") or work.get("title") or work.get("id") or "Unknown paper")
+
+
+def _work_label(work: Dict[str, Any], *, max_chars: int = 80) -> str:
+    """Return a short plot label for an OpenAlex work.
+
+    Args:
+        work (Dict[str, Any]): OpenAlex work.
+        max_chars (int): Maximum text length.
+
+    Returns:
+        str: Label with optional year.
+    """
+    title = _work_title(work)
+    if len(title) > max_chars:
+        title = title[: max_chars - 3].rstrip() + "..."
+    year = work.get("publication_year")
+    return f"{title} ({year})" if year else title
+
+
+def _network_ys(n: int) -> List[float]:
+    """Generate vertically distributed y-coordinates for side nodes.
+
+    Args:
+        n (int): Number of nodes.
+
+    Returns:
+        List[float]: Y positions.
+    """
+    if n <= 0:
+        return []
+    if n == 1:
+        return [0.0]
+    top = 1.0
+    bottom = -1.0
+    step = (top - bottom) / (n - 1)
+    return [top - idx * step for idx in range(n)]
+
+
+def _citation_node_size(cited_by_count: Any) -> float:
+    """Compute displayed node size from citation count.
+
+    Args:
+        cited_by_count (Any): Citation count value.
+
+    Returns:
+        float: Pixel size for the visual node marker.
+    """
+    try:
+        value = float(cited_by_count or 0.0)
+    except Exception:
+        value = 0.0
+    value = max(value, 1.0)
+    return max(14.0, min(44.0, 8.0 + math.sqrt(value)))
+
+
+def _citation_count_int(value: Any) -> int:
+    """Coerce citation count into a non-negative integer.
+
+    Args:
+        value (Any): Citation count candidate.
+
+    Returns:
+        int: Non-negative citation count.
+    """
+    try:
+        parsed = int(float(value or 0))
+    except Exception:
+        parsed = 0
+    return max(parsed, 0)
+
+
+def _sort_works_by_size_desc(works: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Sort works from largest to smallest visual node size.
+
+    Args:
+        works (List[Dict[str, Any]]): OpenAlex works.
+
+    Returns:
+        List[Dict[str, Any]]: Sorted works.
+    """
+    return sorted(
+        works,
+        key=lambda item: (
+            -_citation_node_size(item.get("cited_by_count")),
+            -_citation_count_int(item.get("cited_by_count")),
+            _work_title(item).lower(),
+        ),
+    )
+
+
+def _work_hover_html(work: Dict[str, Any], group_label: str) -> str:
+    """Build HTML tooltip content for one work node.
+
+    Args:
+        work (Dict[str, Any]): OpenAlex work payload.
+        group_label (str): Display group label.
+
+    Returns:
+        str: HTML tooltip text.
+    """
+    title = html.escape(_work_title(work))
+    openalex_id = html.escape(str(work.get("id") or "n/a"))
+    year = html.escape(str(work.get("publication_year") or "n/a"))
+    cited_by = html.escape(str(work.get("cited_by_count") or 0))
+    doi = html.escape(str(work.get("doi") or "n/a"))
+    return (
+        f"<b>{html.escape(group_label)}</b><br>"
+        f"{title}<br>"
+        f"Year: {year}<br>"
+        f"Citations: {cited_by}<br>"
+        f"DOI: {doi}<br>"
+        f"<span style='font-family:monospace'>{openalex_id}</span>"
+    )
+
+
+def _citation_network_html(center: Dict[str, Any], references: List[Dict[str, Any]], citing: List[Dict[str, Any]]) -> str:
+    """Build citation neighborhood as draggable vis-network HTML.
+
+    Args:
+        center (Dict[str, Any]): Center paper.
+        references (List[Dict[str, Any]]): Referenced papers.
+        citing (List[Dict[str, Any]]): Papers citing the center paper.
+
+    Returns:
+        str: HTML snippet containing a draggable network.
+    """
+    graph_id = f"citation-network-{uuid4().hex}"
+    ref_y = _network_ys(len(references))
+    cit_y = _network_ys(len(citing))
+    y_scale = 300
+    left_x = -580
+    center_x = 0
+    right_x = 580
+
+    center_id = _openalex_work_id(center.get("id")) or "center"
+    nodes: List[Dict[str, Any]] = [
+        {
+            "id": center_id,
+            "label": _work_label(center, max_chars=56),
+            "title": _work_hover_html(center, "Selected Paper"),
+            "openalex_url": _openalex_work_url(center.get("id")),
+            "x": center_x,
+            "y": 0,
+            "size": _citation_node_size(center.get("cited_by_count")),
+            "group": "selected",
+        }
+    ]
+    edges: List[Dict[str, Any]] = []
+
+    for idx, (work, y) in enumerate(zip(references, ref_y)):
+        node_id = _openalex_work_id(work.get("id")) or f"ref-{idx}"
+        nodes.append(
+            {
+                "id": node_id,
+                "label": _work_label(work, max_chars=56),
+                "title": _work_hover_html(work, "Reference (cited by selected paper)"),
+                "openalex_url": _openalex_work_url(work.get("id")),
+                "x": left_x,
+                "y": int(y * y_scale),
+                "size": _citation_node_size(work.get("cited_by_count")),
+                "group": "reference",
+            }
+        )
+        edges.append({"from": center_id, "to": node_id, "arrows": "to"})
+
+    for idx, (work, y) in enumerate(zip(citing, cit_y)):
+        node_id = _openalex_work_id(work.get("id")) or f"cit-{idx}"
+        nodes.append(
+            {
+                "id": node_id,
+                "label": _work_label(work, max_chars=56),
+                "title": _work_hover_html(work, "Citing paper (cites selected paper)"),
+                "openalex_url": _openalex_work_url(work.get("id")),
+                "x": right_x,
+                "y": int(y * y_scale),
+                "size": _citation_node_size(work.get("cited_by_count")),
+                "group": "citing",
+            }
+        )
+        edges.append({"from": node_id, "to": center_id, "arrows": "to"})
+
+    payload_nodes = json.dumps(nodes)
+    payload_edges = json.dumps(edges)
+    return f"""
+<div style="margin: 0 0 8px 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-weight: 600;">
+  <div style="text-align: left; color: #C44536;">References (Left)</div>
+  <div style="text-align: center; color: #2A6F97;">Selected Paper (Center)</div>
+  <div style="text-align: right; color: #2A9D8F;">Cited By (Right)</div>
+</div>
+<div id="{graph_id}" style="width: 100%; height: 660px; border: 1px solid #e5e7eb; border-radius: 8px; background: #ffffff;"></div>
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+  (function() {{
+    const container = document.getElementById("{graph_id}");
+    const nodes = new vis.DataSet({payload_nodes});
+    const edges = new vis.DataSet({payload_edges});
+    const data = {{ nodes, edges }};
+    const options = {{
+      autoResize: true,
+      physics: false,
+      interaction: {{
+        dragNodes: true,
+        dragView: true,
+        zoomView: true,
+        hover: true,
+      }},
+      nodes: {{
+        shape: "dot",
+        font: {{
+          color: "#1f2937",
+          size: 13,
+          face: "Arial",
+          multi: "html"
+        }},
+        borderWidth: 1,
+        borderWidthSelected: 2
+      }},
+      groups: {{
+        selected: {{ color: {{ background: "#2A6F97", border: "#1f4f6e" }} }},
+        reference: {{ color: {{ background: "#C44536", border: "#8c2f25" }} }},
+        citing: {{ color: {{ background: "#2A9D8F", border: "#1f756a" }} }}
+      }},
+      edges: {{
+        color: {{ color: "rgba(100, 116, 139, 0.45)" }},
+        smooth: {{
+          enabled: true,
+          type: "cubicBezier",
+          forceDirection: "horizontal",
+          roundness: 0.35
+        }},
+        arrows: {{
+          to: {{
+            enabled: true,
+            scaleFactor: 0.45
+          }}
+        }}
+      }}
+    }};
+    const network = new vis.Network(container, data, options);
+    network.on("hoverNode", function(params) {{
+      const node = nodes.get(params.node);
+      container.style.cursor = node && node.openalex_url ? "pointer" : "default";
+    }});
+    network.on("blurNode", function() {{
+      container.style.cursor = "default";
+    }});
+    network.on("click", function(params) {{
+      if (!params.nodes || params.nodes.length === 0) return;
+      const node = nodes.get(params.nodes[0]);
+      if (!node || !node.openalex_url) return;
+      window.open(node.openalex_url, "_blank", "noopener,noreferrer");
+    }});
+  }})();
+</script>
+"""
+
+
+def _works_rows(works: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Convert OpenAlex works into table rows.
+
+    Args:
+        works (List[Dict[str, Any]]): OpenAlex works.
+
+    Returns:
+        List[Dict[str, Any]]: Table rows.
+    """
+    rows: List[Dict[str, Any]] = []
+    for idx, item in enumerate(works, start=1):
+        rows.append(
+            {
+                "rank": idx,
+                "title": _work_title(item),
+                "node_size": round(_citation_node_size(item.get("cited_by_count")), 2),
+                "cited_by_count": _citation_count_int(item.get("cited_by_count")),
+                "year": item.get("publication_year"),
+                "doi": item.get("doi"),
+                "openalex_id": item.get("id"),
+            }
+        )
+    return rows
+
+
+def render_openalex_citation_network_tab(paper: Paper) -> None:
+    """Render interactive citation network around the selected paper.
+
+    Args:
+        paper (Paper): Selected paper.
+    """
+    st.subheader("Citation Network")
+    st.caption(
+        "Center node is the selected paper, left nodes are papers it cites, "
+        "and right nodes are papers that cite it (OpenAlex)."
+    )
+    st.caption(
+        "Nodes on each side are ranked by their own citation count and truncated to the top 10. "
+        "Node size is sqrt(cited_by_count). Drag nodes to rearrange the graph. "
+        "Click any node to open that paper on OpenAlex."
+    )
+
+    meta = paper.openalex
+    work_id = ""
+    if isinstance(meta, dict):
+        work_id = str(meta.get("id") or "").strip()
+    if not work_id:
+        st.info("No OpenAlex work id found for this paper, so the citation network is unavailable.")
+        return
+
+    max_references = 10
+    max_citing = 10
+
+    with st.spinner("Loading citation neighborhood from OpenAlex..."):
+        network = _openalex_citation_network(work_id, int(max_references), int(max_citing))
+
+    center = network.get("center")
+    references = _sort_works_by_size_desc(network.get("references") or [])
+    citing = _sort_works_by_size_desc(network.get("citing") or [])
+    if not isinstance(center, dict) or not center:
+        st.warning("Unable to load OpenAlex data for this paper.")
+        return
+
+    reset_key = re.sub(r"[^a-zA-Z0-9_-]+", "_", _openalex_work_id(work_id) or "paper")
+    control_col, help_col = st.columns([1, 4])
+    with control_col:
+        if st.button("Reset layout", key=f"reset-network-{reset_key}"):
+            st.rerun()
+    with help_col:
+        st.caption("Tip: drag nodes to explore local structure, then use reset to restore lane layout.")
+
+    components.html(_citation_network_html(center, references, citing), height=710, scrolling=False)
+
+    summary_cols = st.columns(3)
+    summary_cols[0].metric("Center Paper", 1)
+    summary_cols[1].metric("References Shown", len(references))
+    summary_cols[2].metric("Citing Papers Shown", len(citing))
+
+    st.markdown("---")
+    left_col, right_col = st.columns(2)
+    with left_col:
+        st.markdown("**Referenced Papers (Left)**")
+        rows = _works_rows(references)
+        if rows:
+            st.dataframe(rows, width="stretch")
+        else:
+            st.caption("No referenced papers returned.")
+    with right_col:
+        st.markdown("**Citing Papers (Right)**")
+        rows = _works_rows(citing)
+        if rows:
+            st.dataframe(rows, width="stretch")
+        else:
+            st.caption("No citing papers returned.")
 
 
 def _response_text_from_final_response(response: object) -> str:
@@ -724,7 +1371,9 @@ def main():
         if st.sidebar.button(starter, key=f"paper_starter_{selected_path.name}_{idx}", use_container_width=True):
             st.session_state["queued_query"] = starter
 
-    tab_chat, tab_usage = st.tabs(["Chat", "Usage"])
+    tab_chat, tab_metadata, tab_network, tab_usage = st.tabs(
+        ["Chat", "OpenAlex Metadata", "Citation Network", "Usage"]
+    )
 
     with tab_chat:
         st.caption("Conversation mode is on. Follow-up questions use recent chat turns for continuity.")
@@ -943,6 +1592,12 @@ def main():
                                     with tab:
                                         key_prefix = f"citation_{history_id}_{c_idx}"
                                         render_citation_snapshot(citation_path, c, key_prefix=key_prefix, query=q or "")
+
+    with tab_metadata:
+        render_openalex_metadata_tab(paper)
+
+    with tab_network:
+        render_openalex_citation_network_tab(paper)
 
     with tab_usage:
         st.subheader("Token Usage")

@@ -85,6 +85,54 @@ CREATE TABLE IF NOT EXISTS enrichment.openalex_cache (
 CREATE INDEX IF NOT EXISTS enrichment_openalex_cache_fetched_at_idx
     ON enrichment.openalex_cache(fetched_at DESC);
 
+CREATE TABLE IF NOT EXISTS enrichment.openalex_http_cache (
+    request_key TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    params_json JSONB NOT NULL,
+    status_code INTEGER NOT NULL,
+    response JSONB NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS enrichment_openalex_http_cache_fetched_at_idx
+    ON enrichment.openalex_http_cache(fetched_at DESC);
+CREATE INDEX IF NOT EXISTS enrichment_openalex_http_cache_status_idx
+    ON enrichment.openalex_http_cache(status_code);
+
+CREATE TABLE IF NOT EXISTS enrichment.openalex_title_overrides (
+    id BIGSERIAL PRIMARY KEY,
+    title_pattern TEXT NOT NULL,
+    match_type TEXT NOT NULL DEFAULT 'contains',
+    openalex_work_id TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 0,
+    note TEXT,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (match_type IN ('contains', 'exact'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS enrichment_openalex_title_overrides_unique_idx
+    ON enrichment.openalex_title_overrides(title_pattern, match_type, openalex_work_id);
+CREATE INDEX IF NOT EXISTS enrichment_openalex_title_overrides_enabled_idx
+    ON enrichment.openalex_title_overrides(enabled, priority DESC, updated_at DESC);
+
+INSERT INTO enrichment.openalex_title_overrides (
+    title_pattern, match_type, openalex_work_id, priority, note, enabled
+)
+SELECT
+    'use of cumulative sums of squares',
+    'contains',
+    'https://api.openalex.org/w2075304461',
+    100,
+    'Canonical override for Inclan and Tiao cumulative sums paper.',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM enrichment.openalex_title_overrides
+    WHERE title_pattern = 'use of cumulative sums of squares'
+      AND match_type = 'contains'
+      AND openalex_work_id = 'https://api.openalex.org/w2075304461'
+);
+
 CREATE TABLE IF NOT EXISTS enrichment.citec_cache (
     cache_key TEXT PRIMARY KEY,
     repec_handle TEXT,

@@ -8,10 +8,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Mapping
 
-try:
-    import tomllib
-except ImportError:  # pragma: no cover - fallback for older Python
-    import tomli as tomllib  # type: ignore
+import tomllib
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

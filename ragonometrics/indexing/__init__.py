@@ -1,4 +1,4 @@
-"""Indexing and retrieval components (FAISS build, metadata, manifests, migrations) for RAG artifacts."""
+"""Indexing and retrieval components (FAISS build, metadata, manifests) for RAG artifacts."""
 
 from .indexer import build_index
 from .manifest import build_index_version, build_run_manifest, write_index_version_sidecar, write_run_manifest

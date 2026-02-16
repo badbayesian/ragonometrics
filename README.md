@@ -86,6 +86,7 @@ Filesystem artifacts:
 - `reports/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
 
 Note: teams can post-process or move artifacts into `reports/workflow/`, `reports/prep/`, and `reports/audit/`; runtime writes to `reports/` by default.
+Generated LaTeX intermediates (for example `.tex` and `.xdv`) are local build artifacts and are not tracked in git.
 
 Primary Postgres tables:
 - `workflow.run_records`

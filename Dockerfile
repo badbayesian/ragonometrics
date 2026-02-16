@@ -10,14 +10,29 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Install runtime dependencies from pyproject.toml.
+# Install packaging toolchain once.
 RUN pip install --no-cache-dir pip setuptools wheel
 
-# Copy the project into the image
+# Install runtime dependencies in a cacheable layer.
+# This step only invalidates when pyproject.toml changes.
+COPY pyproject.toml /app/pyproject.toml
+RUN python - <<'PY'
+import subprocess
+import sys
+import tomllib
+from pathlib import Path
+
+pyproject = tomllib.loads(Path("/app/pyproject.toml").read_text(encoding="utf-8"))
+deps = pyproject.get("project", {}).get("dependencies", [])
+if deps:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", *deps])
+PY
+
+# Copy the project into the image.
 COPY . /app
 
-# Install package (editable keeps dev volume mounts in sync when using docker-compose)
-RUN pip install --no-cache-dir -e .
+# Install the local package without re-resolving dependencies.
+RUN pip install --no-cache-dir --no-deps -e .
 
 ENV PAPERS_DIR=/app/papers
 

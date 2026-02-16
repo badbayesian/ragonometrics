@@ -50,6 +50,7 @@ bench/sweep/
 
 # Generated LaTeX report artifacts (keep local only)
 reports/**/*.tex
+reports/**/*.xdv
 
 # FAISS/metadata artifacts
 vectors_*.index
