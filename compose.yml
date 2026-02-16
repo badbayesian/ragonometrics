@@ -46,20 +46,19 @@ services:
       - ${PAPERS_HOST_DIR}:/app/papers:rw
     restart: "no"
     depends_on:
-      - redis
       - postgres
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
 
   rq-worker:
     build: .
-    command: rq worker -u redis://redis:6379 default
+    command: python -m ragonometrics.integrations.rq_queue worker --queue-name default --poll-seconds 2
     environment:
       <<: *app_env
+      PAPERS_DIR: /app/papers
+    volumes:
+      - ${PAPERS_HOST_DIR}:/app/papers:rw
+      - ./reports:/app/reports:rw
     depends_on:
-      - redis
+      - postgres
     restart: unless-stopped
 
   workflow:
@@ -71,9 +70,7 @@ services:
     volumes:
       - ${PAPERS_HOST_DIR}:/app/papers:rw
       - ./reports:/app/reports:rw
-      - ./sqlite:/app/sqlite:rw
     depends_on:
-      - redis
       - postgres
     restart: "no"
 
@@ -89,8 +86,24 @@ services:
       - pgdata:/home/postgres/pgdata
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:8
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-ragonometrics}
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_HOST_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   papers:
     driver: local
   pgdata:
+    driver: local
+  pgadmin_data:
     driver: local

@@ -31,6 +31,8 @@ from ragonometrics.pipeline.pipeline import extract_json
 from ragonometrics.pipeline.state import (
     DEFAULT_STATE_DB,
     create_workflow_run,
+    find_similar_completed_step,
+    find_similar_report_question_items,
     record_step,
     set_workflow_status,
 )
@@ -96,6 +98,42 @@ def _can_connect_db(db_url: str) -> bool:
         return False
 
 
+def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict[str, Any]]:
+    preferred = (preferred_db_url or "").strip() or None
+    env_db = (os.environ.get("DATABASE_URL") or "").strip() or None
+    candidates: List[tuple[str, str]] = []
+    seen: set[str] = set()
+    for source, url in (("meta_db_url", preferred), ("env_DATABASE_URL", env_db)):
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        candidates.append((source, url))
+
+    info: Dict[str, Any] = {
+        "preferred_present": bool(preferred),
+        "env_present": bool(env_db),
+        "selected_source": None,
+        "selected_reachable": False,
+        "fallback_used": False,
+    }
+
+    for source, url in candidates:
+        if _can_connect_db(url):
+            info["selected_source"] = source
+            info["selected_reachable"] = True
+            info["fallback_used"] = bool(preferred) and source != "meta_db_url"
+            return url, info
+
+    # No reachable candidate. Keep deterministic preference order.
+    if preferred:
+        info["selected_source"] = "meta_db_url"
+        return preferred, info
+    if env_db:
+        info["selected_source"] = "env_DATABASE_URL"
+        return env_db, info
+    return None, info
+
+
 def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Path:
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"workflow-report-{run_id}.json"
@@ -116,6 +154,18 @@ def _bool_env(name: str, default: bool) -> bool:
     if value in {"0", "false", "no", "off"}:
         return False
     return default
+
+
+def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_at: str | None) -> Dict[str, Any]:
+    if isinstance(step_output, dict):
+        out = dict(step_output)
+    else:
+        out = {"value": step_output}
+    out["_reused_from"] = {
+        "run_id": source_run_id,
+        "finished_at": source_finished_at,
+    }
+    return out
 
 
 def _tail(text: str, limit: int = 800) -> str:
@@ -891,18 +941,50 @@ def _answer_report_questions(
     chunk_embeddings: List[List[float]],
     citations_context: str,
     run_id: str | None = None,
-) -> List[Dict[str, str]]:
+    reusable_items_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
     questions = _build_report_questions()
     if not questions:
         return []
+    reusable_items_by_id = reusable_items_by_id or {}
+    results: List[Dict[str, Any] | None] = [None] * len(questions)
+    pending: List[tuple[int, Dict[str, str]]] = []
+    for idx, item in enumerate(questions):
+        reuse_entry = reusable_items_by_id.get(item["id"])
+        if not isinstance(reuse_entry, dict):
+            pending.append((idx, item))
+            continue
+        reused_item = reuse_entry.get("item")
+        if not isinstance(reused_item, dict):
+            pending.append((idx, item))
+            continue
+        reused_question = str(reused_item.get("question") or "").strip()
+        if reused_question != str(item.get("question") or "").strip():
+            pending.append((idx, item))
+            continue
+        reused_result = dict(reused_item)
+        reused_result["id"] = item["id"]
+        reused_result["category"] = item["category"]
+        reused_result["question"] = item["question"]
+        if reused_result.get("question_tokens_estimate") is None:
+            reused_result["question_tokens_estimate"] = _estimate_tokens(item["question"])
+        source_run_id = str(reuse_entry.get("source_run_id") or "")
+        source_finished_at = reuse_entry.get("source_finished_at")
+        results[idx] = _with_reuse_marker(
+            reused_result,
+            source_run_id=source_run_id,
+            source_finished_at=source_finished_at,
+        )
+    if not pending:
+        return [item for item in results if item is not None]
     try:
         worker_cap = int(os.environ.get("WORKFLOW_REPORT_QUESTION_WORKERS", "8"))
     except Exception:
         worker_cap = 8
-    max_workers = max(1, min(worker_cap, len(questions)))
+    max_workers = max(1, min(worker_cap, len(pending)))
     if max_workers == 1:
-        return [
-            _answer_report_question_item(
+        for idx, item in _progress_iter(pending, "Report questions", total=len(pending)):
+            results[idx] = _answer_report_question_item(
                 client=client,
                 model=model,
                 settings=settings,
@@ -912,9 +994,7 @@ def _answer_report_questions(
                 item=item,
                 run_id=run_id,
             )
-            for item in _progress_iter(questions, "Report questions", total=len(questions))
-        ]
-    results: List[Dict[str, Any] | None] = [None] * len(questions)
+        return [item for item in results if item is not None]
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         future_map = {
             pool.submit(
@@ -928,7 +1008,7 @@ def _answer_report_questions(
                 item=item,
                 run_id=run_id,
             ): idx
-            for idx, item in enumerate(questions)
+            for idx, item in pending
         }
         for future in _progress_iter(as_completed(future_map), "Report questions", total=len(future_map)):
             idx = future_map[future]
@@ -1088,14 +1168,58 @@ def run_workflow(
         "git_sha": resolved_git_sha,
         "git_branch": resolved_git_branch,
     }
-    db_url = meta_db_url or os.environ.get("DATABASE_URL")
+    requested_db_url = meta_db_url or os.environ.get("DATABASE_URL")
+    db_url, db_url_resolution = _resolve_meta_db_url(requested_db_url)
     summary["usage_store"] = {"database_url": bool(db_url)}
+    summary["db_url_resolution"] = db_url_resolution
+    step_reuse_enabled = _bool_env("WORKFLOW_REUSE_STEPS", True)
+    papers_cache: List[Any] | None = None
+
+    def _ensure_papers_loaded() -> List[Any]:
+        nonlocal papers_cache
+        if papers_cache is None:
+            papers_cache = load_papers(pdfs, progress=True, progress_desc="Ingesting papers")
+        return papers_cache
+
+    def _find_reusable_step(
+        step_name: str,
+        *,
+        match_question: bool = False,
+        match_report_question_set: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        if not step_reuse_enabled:
+            return None
+        try:
+            return find_similar_completed_step(
+                state_db,
+                step=step_name,
+                exclude_run_id=run_id,
+                config_hash=settings.config_hash,
+                papers_dir=str(papers_dir),
+                paper_set_hash=summary.get("paper_set_hash"),
+                workstream_id=resolved_workstream_id,
+                arm=resolved_arm,
+                question=question_seed,
+                report_question_set=report_question_mode_seed,
+                match_question=match_question,
+                match_report_question_set=match_report_question_set,
+            )
+        except Exception:
+            return None
 
     # Step 0: Prep (corpus profiling)
     prep_start = _utc_now()
     record_step(state_db, run_id=run_id, step="prep", status="running", started_at=prep_start)
     pdfs = _resolve_paper_paths(Path(papers_dir))
-    prep_out = prep_corpus(pdfs, report_dir=report_dir, run_id=run_id)
+    reused_prep = _find_reusable_step("prep")
+    if reused_prep:
+        prep_out = _with_reuse_marker(
+            reused_prep.get("output") or {},
+            source_run_id=str(reused_prep.get("run_id") or ""),
+            source_finished_at=reused_prep.get("finished_at"),
+        )
+    else:
+        prep_out = prep_corpus(pdfs, report_dir=report_dir, run_id=run_id)
     record_step(
         state_db,
         run_id=run_id,
@@ -1104,6 +1228,7 @@ def run_workflow(
         started_at=prep_start,
         finished_at=_utc_now(),
         output=prep_out,
+        status_reason="reused_from_prior_run" if reused_prep else None,
     )
     summary["prep"] = prep_out
     paper_set_hash = None
@@ -1164,8 +1289,16 @@ def run_workflow(
     # Step 1: Ingest
     ingest_start = _utc_now()
     record_step(state_db, run_id=run_id, step="ingest", status="running", started_at=ingest_start)
-    papers = load_papers(pdfs, progress=True, progress_desc="Ingesting papers")
-    ingest_out = {"num_pdfs": len(pdfs), "num_papers": len(papers)}
+    reused_ingest = _find_reusable_step("ingest")
+    if reused_ingest:
+        ingest_out = _with_reuse_marker(
+            reused_ingest.get("output") or {},
+            source_run_id=str(reused_ingest.get("run_id") or ""),
+            source_finished_at=reused_ingest.get("finished_at"),
+        )
+    else:
+        papers = _ensure_papers_loaded()
+        ingest_out = {"num_pdfs": len(pdfs), "num_papers": len(papers)}
     record_step(
         state_db,
         run_id=run_id,
@@ -1174,15 +1307,25 @@ def run_workflow(
         started_at=ingest_start,
         finished_at=_utc_now(),
         output=ingest_out,
+        status_reason="reused_from_prior_run" if reused_ingest else None,
     )
     summary["ingest"] = ingest_out
 
     # Step 2: Enrich
     enrich_start = _utc_now()
     record_step(state_db, run_id=run_id, step="enrich", status="running", started_at=enrich_start)
-    openalex_count = sum(1 for p in papers if getattr(p, "openalex", None))
-    citec_count = sum(1 for p in papers if getattr(p, "citec", None))
-    enrich_out = {"openalex": openalex_count, "citec": citec_count}
+    reused_enrich = _find_reusable_step("enrich")
+    if reused_enrich:
+        enrich_out = _with_reuse_marker(
+            reused_enrich.get("output") or {},
+            source_run_id=str(reused_enrich.get("run_id") or ""),
+            source_finished_at=reused_enrich.get("finished_at"),
+        )
+    else:
+        papers = _ensure_papers_loaded()
+        openalex_count = sum(1 for p in papers if getattr(p, "openalex", None))
+        citec_count = sum(1 for p in papers if getattr(p, "citec", None))
+        enrich_out = {"openalex": openalex_count, "citec": citec_count}
     record_step(
         state_db,
         run_id=run_id,
@@ -1191,23 +1334,32 @@ def run_workflow(
         started_at=enrich_start,
         finished_at=_utc_now(),
         output=enrich_out,
+        status_reason="reused_from_prior_run" if reused_enrich else None,
     )
     summary["enrich"] = enrich_out
 
     # Step 3: Econ data (optional)
     econ_start = _utc_now()
     record_step(state_db, run_id=run_id, step="econ_data", status="running", started_at=econ_start)
-    econ_out: Dict[str, Any] = {"status": "skipped"}
-    series_env = os.environ.get("ECON_SERIES_IDS", "").strip()
-    series_ids = [s.strip() for s in series_env.split(",") if s.strip()] if series_env else []
-    if os.environ.get("FRED_API_KEY") or series_ids:
-        if not series_ids:
-            series_ids = ["GDPC1", "FEDFUNDS"]
-        series_counts = {}
-        for series_id in series_ids:
-            obs = fetch_fred_series(series_id, limit=120)
-            series_counts[series_id] = len(obs)
-        econ_out = {"status": "fetched", "series_counts": series_counts}
+    reused_econ = _find_reusable_step("econ_data")
+    if reused_econ:
+        econ_out = _with_reuse_marker(
+            reused_econ.get("output") or {},
+            source_run_id=str(reused_econ.get("run_id") or ""),
+            source_finished_at=reused_econ.get("finished_at"),
+        )
+    else:
+        econ_out = {"status": "skipped"}
+        series_env = os.environ.get("ECON_SERIES_IDS", "").strip()
+        series_ids = [s.strip() for s in series_env.split(",") if s.strip()] if series_env else []
+        if os.environ.get("FRED_API_KEY") or series_ids:
+            if not series_ids:
+                series_ids = ["GDPC1", "FEDFUNDS"]
+            series_counts = {}
+            for series_id in series_ids:
+                obs = fetch_fred_series(series_id, limit=120)
+                series_counts[series_id] = len(obs)
+            econ_out = {"status": "fetched", "series_counts": series_counts}
     record_step(
         state_db,
         run_id=run_id,
@@ -1216,6 +1368,7 @@ def run_workflow(
         started_at=econ_start,
         finished_at=_utc_now(),
         output=econ_out,
+        status_reason="reused_from_prior_run" if reused_econ else None,
     )
     summary["econ_data"] = econ_out
 
@@ -1240,7 +1393,19 @@ def run_workflow(
     record_step(state_db, run_id=run_id, step="agentic", status="running", started_at=agentic_start)
     agentic_out: Dict[str, Any] = {"status": "skipped"}
     agentic_quota_error: Exception | None = None
-    if agentic_enabled:
+    reused_agentic = (
+        _find_reusable_step("agentic", match_question=True, match_report_question_set=True)
+        if agentic_enabled
+        else None
+    )
+    if reused_agentic:
+        agentic_out = _with_reuse_marker(
+            reused_agentic.get("output") or {},
+            source_run_id=str(reused_agentic.get("run_id") or ""),
+            source_finished_at=reused_agentic.get("finished_at"),
+        )
+    elif agentic_enabled:
+        papers = _ensure_papers_loaded()
         if not papers:
             agentic_out = {"status": "skipped", "reason": "no_papers"}
         else:
@@ -1306,8 +1471,26 @@ def run_workflow(
                     report_questions_enabled,
                 )
                 report_questions_enabled = report_question_mode != "none"
-                report_questions: List[Dict[str, str]] = []
+                report_questions: List[Dict[str, Any]] = []
                 report_questions_error = None
+                reusable_structured_questions: Dict[str, Dict[str, Any]] = {}
+                if step_reuse_enabled and report_question_mode in {"structured", "both"}:
+                    try:
+                        reusable_structured_questions = find_similar_report_question_items(
+                            state_db,
+                            exclude_run_id=run_id,
+                            config_hash=settings.config_hash,
+                            papers_dir=str(papers_dir),
+                            paper_set_hash=summary.get("paper_set_hash"),
+                            workstream_id=resolved_workstream_id,
+                            arm=resolved_arm,
+                            question=question,
+                            report_question_set=report_question_mode,
+                            match_question=True,
+                            match_report_question_set=False,
+                        )
+                    except Exception:
+                        reusable_structured_questions = {}
                 if report_question_mode in {"structured", "both"}:
                     try:
                         report_questions = _answer_report_questions(
@@ -1318,6 +1501,7 @@ def run_workflow(
                             chunk_embeddings=chunk_embeddings,
                             citations_context=citations_context,
                             run_id=run_id,
+                            reusable_items_by_id=reusable_structured_questions,
                         )
                     except Exception as exc:
                         report_questions_error = str(exc)
@@ -1331,6 +1515,11 @@ def run_workflow(
                     run_id=run_id,
                 )
                 report_question_summary = _summarize_confidence_scores(report_questions)
+                report_questions_reused_count = sum(
+                    1
+                    for item in report_questions
+                    if isinstance(item, dict) and isinstance(item.get("_reused_from"), dict)
+                )
                 agentic_out = {
                     "status": "completed",
                     "question": question,
@@ -1341,6 +1530,7 @@ def run_workflow(
                     "report_questions_enabled": report_questions_enabled,
                     "report_questions_set": report_question_mode,
                     "report_questions": report_questions,
+                    "report_questions_reused_count": report_questions_reused_count,
                     "report_question_confidence": report_question_summary,
                     "report_questions_error": report_questions_error,
                     "citations_enabled": citations_enabled,
@@ -1360,6 +1550,7 @@ def run_workflow(
         started_at=agentic_start,
         finished_at=_utc_now(),
         output=agentic_out,
+        status_reason="reused_from_prior_run" if reused_agentic else None,
     )
     summary["agentic"] = agentic_out
     if agentic_quota_error is not None:
@@ -1376,10 +1567,17 @@ def run_workflow(
     # Step 5: Index (optional)
     index_start = _utc_now()
     record_step(state_db, run_id=run_id, step="index", status="running", started_at=index_start)
+    reused_index = _find_reusable_step("index")
     db_ok = bool(db_url) and _can_connect_db(db_url)
     index_out: Dict[str, Any] = {"database_url": bool(db_url), "database_reachable": db_ok}
     index_quota_error: Exception | None = None
-    if db_ok and pdfs:
+    if reused_index:
+        index_out = _with_reuse_marker(
+            reused_index.get("output") or {},
+            source_run_id=str(reused_index.get("run_id") or ""),
+            source_finished_at=reused_index.get("finished_at"),
+        )
+    elif db_ok and pdfs:
         try:
             build_index(
                 settings,
@@ -1411,6 +1609,7 @@ def run_workflow(
         started_at=index_start,
         finished_at=_utc_now(),
         output=index_out,
+        status_reason="reused_from_prior_run" if reused_index else None,
     )
     summary["index"] = index_out
     if index_quota_error is not None:
@@ -1427,15 +1626,24 @@ def run_workflow(
     # Step 6: Evaluate (lightweight stats)
     eval_start = _utc_now()
     record_step(state_db, run_id=run_id, step="evaluate", status="running", started_at=eval_start)
-    chunk_counts = []
-    for paper in papers:
-        chunks = prepare_chunks_for_paper(paper, settings)
-        chunk_counts.append(len(chunks))
-    eval_out = {
-        "avg_chunks_per_paper": (sum(chunk_counts) / len(chunk_counts)) if chunk_counts else 0,
-        "max_chunks": max(chunk_counts) if chunk_counts else 0,
-        "min_chunks": min(chunk_counts) if chunk_counts else 0,
-    }
+    reused_evaluate = _find_reusable_step("evaluate")
+    if reused_evaluate:
+        eval_out = _with_reuse_marker(
+            reused_evaluate.get("output") or {},
+            source_run_id=str(reused_evaluate.get("run_id") or ""),
+            source_finished_at=reused_evaluate.get("finished_at"),
+        )
+    else:
+        papers = _ensure_papers_loaded()
+        chunk_counts = []
+        for paper in papers:
+            chunks = prepare_chunks_for_paper(paper, settings)
+            chunk_counts.append(len(chunks))
+        eval_out = {
+            "avg_chunks_per_paper": (sum(chunk_counts) / len(chunk_counts)) if chunk_counts else 0,
+            "max_chunks": max(chunk_counts) if chunk_counts else 0,
+            "min_chunks": min(chunk_counts) if chunk_counts else 0,
+        }
     record_step(
         state_db,
         run_id=run_id,
@@ -1444,6 +1652,7 @@ def run_workflow(
         started_at=eval_start,
         finished_at=_utc_now(),
         output=eval_out,
+        status_reason="reused_from_prior_run" if reused_evaluate else None,
     )
     summary["evaluate"] = eval_out
 

@@ -1,0 +1,4142 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\section{\texorpdfstring{Audit Report: Workflow \texttt{244fa702caf64375acdc62e98da68ddf}}{Audit Report: Workflow 244fa702caf64375acdc62e98da68ddf}}\label{audit-report-workflow-244fa702caf64375acdc62e98da68ddf}
+
+\subsection{Overview}\label{overview}
+
+\begin{itemize}
+\tightlist
+\item
+  Source JSON: \texttt{reports\textbackslash{}workflow-report-244fa702caf64375acdc62e98da68ddf.json}
+\item
+  Run ID: \texttt{244fa702caf64375acdc62e98da68ddf}
+\item
+  Papers input: \texttt{papers\textbackslash{}Calorie\ Posting\ in\ Chain\ Restaurants\ -\ Bollinger\ et\ al.\ (2011).pdf}
+\item
+  Started at: \texttt{2026-02-16T05:03:34.038923+00:00}
+\item
+  Finished at: \texttt{2026-02-16T05:04:49.669886+00:00}
+\item
+  Duration: \texttt{0:01:15.630963}
+\end{itemize}
+
+\subsection{Effective Configuration}\label{effective-configuration}
+
+\begin{itemize}
+\tightlist
+\item
+  Chat model: \texttt{gpt-5-nano}
+\item
+  Embedding model: \texttt{text-embedding-3-large}
+\item
+  Top K: \texttt{10}
+\item
+  Chunk words / overlap: \texttt{350} / \texttt{75}
+\item
+  Batch size: \texttt{64}
+\item
+  Database URL configured: \texttt{True}
+\end{itemize}
+
+\subsection{Step Outcomes}\label{step-outcomes}
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{prep}: \texttt{completed}
+\item
+  \texttt{ingest}: \texttt{num\_pdfs=1,\ num\_papers=1}
+\item
+  \texttt{enrich}: \texttt{openalex=0,\ citec=0}
+\item
+  \texttt{econ\_data}: \texttt{fetched}
+\item
+  \texttt{agentic}: \texttt{completed}
+\item
+  \texttt{index}: \texttt{indexed}
+\item
+  \texttt{report\_store}: \texttt{pending}
+\end{itemize}
+
+\subsection{Agentic Summary}\label{agentic-summary}
+
+\begin{itemize}
+\tightlist
+\item
+  Status: \texttt{completed}
+\item
+  Main question: What are the paper\textquotesingle s main contribution, identification strategy, key results, and limitations?
+\item
+  Report question set: \texttt{structured}
+\item
+  Structured questions generated: \texttt{83}
+\item
+  Confidence mean/median: \texttt{0.27966773663401223} / \texttt{0.2842025482871281}
+\item
+  Confidence labels: low=74, medium=9, high=0
+\end{itemize}
+
+\subsubsection{Final Answer}\label{final-answer}
+
+\begin{itemize}
+\item
+  Main contributions
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Provides causal evidence on calorie-posting effects using a large, multi-city Starbucks dataset, decomposing effects into extensive and intensive margins and documenting distributional patterns. Also links consumer knowledge (survey) to responsiveness and includes cross-city placebo checks to gauge spillovers. (Policy context: NYC mandate and posting costs; page 4; Data scope: page 9; Mechanisms and margins: page 18; Consumer knowledge: pages 35--36)
+  \end{itemize}
+\item
+  Identification strategy
+
+  \begin{itemize}
+  \tightlist
+  \item
+    uses a binary POST indicator for NYC stores after calorie posting, with flexible week effects and store/region fixed effects to isolate the post-treatment change; compares NYC to control regions over time to trace timing and persistence; employs a placebo test in Seattle where postings did not occur. Time path analysis covers up to 11 months post-posting. (Regression framework and robustness: page 13; Seattle placebo: page 13; Time path: page 9; Cross-city/robust specs: page 10)
+  \end{itemize}
+\item
+  Key results
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Overall effect: calorie posting reduces calories per transaction, with an average decline of about 4.6 calories per store-day; part of the reduction is offset by higher transaction counts (extensive and intensive margins). (Principal findings: page 13)
+  \item
+    Mechanisms: the reduction is driven largely by the extensive margin---roughly three-quarters of the total calorie decrease comes from consumers not buying food items; changes in items per transaction and calories per item align with shifts away from higher-calorie items. (Mechanisms and margins: page 18)
+  \item
+    Distributional/heterogeneity: calorie reductions are larger at higher quantiles; absolute decreases are bigger at the top end, but percent changes stay around 5--6\% from the 75th to 99th percentile. (Heterogeneity: page 22)
+  \item
+    Cross-city check: in Seattle (no calorie postings), beverage calories per transaction fell by 4.6 calories (SE ≈ 0.3) while food calories rose by 0.8 calories (SE ≈ 0.2), suggesting limited system-wide spillovers and targeted effects where postings occurred. (Cross-city: page 13)
+  \end{itemize}
+\item
+  Data scope and related evidence
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Dataset includes over 100 million Starbucks transactions across Boston, NYC, and Philadelphia over 14 months; about 1.5 million individuals; plus a consumer knowledge survey; time-path analysis extends up to 11 months post-posting. (Data and scope: page 9)
+  \item
+    Consumer knowledge/survey data (Stanford) link reading of calories to potential responsiveness, complementing the transaction results. (Consumer knowledge: pages 35--36)
+  \end{itemize}
+\item
+  Limitations and caveats
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Explicit limitations are not enumerated in the provided excerpts; however, the Seattle placebo and cross-city checks imply potential concerns about spillovers and generalizability. The main analysis is anchored in NYC postings with control regions, and results are derived from Starbucks data, which may limit broader external validity. (Seattle placebo: page 13; Cross-city/robustness: page 10; Data scope: page 9)
+  \end{itemize}
+\end{itemize}
+
+If you'd like, I can extract exact coefficient estimates and confidence intervals from the described specifications.
+
+\subsubsection{Sub-Answers}\label{sub-answers}
+
+\paragraph{Sub-answer 1}\label{sub-answer-1}
+
+\begin{itemize}
+\item
+  Question: ResponseTextConfig(format=ResponseFormatText(type=\textquotesingle text\textquotesingle), verbosity=\textquotesingle medium\textquotesingle)
+\item
+  Question tokens estimate: \texttt{19}
+\item
+  Answer:
+\item
+  Policy context and motivation
+
+  \begin{itemize}
+  \tightlist
+  \item
+    NYC requires calorie information at the point of purchase; posting on menus could be costly, with reported compliance cost around \$2,000 per Wendy's store; there are indirect costs from city-specific menus. (page 4, words 275-576)
+  \item
+    Some evidence suggests limited consumer attention to posted calories (0.1\% attentive in a study of brochures/posters vs. menu postings). (page 4, words 0-?; context line mentions Roberto et al. 2009)
+  \end{itemize}
+\item
+  Data and scope
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Study uses a large-scale data set: over 100 million Starbucks transactions in Boston, NYC, and Philadelphia over 14 months; 1.5 million individual transactions; plus a consumer knowledge survey. (page 9, words 0-349)
+  \item
+    Time-path analyzed for up to 11 months after calorie posting. (page 9, words 0-349)
+  \end{itemize}
+\item
+  Principal findings on calories per transaction
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Calorie posting reduces calories per transaction, evident from basic plots comparing NYC vs control cities (Figure 1). (page 10, words 0-186)
+  \item
+    On average, calorie posting reduces calories per store-day by about 4.6 units, with the decrease partly offset by increases in transactions, i.e., a mix of extensive and intensive margin effects. (page 13, words 0-349)
+  \end{itemize}
+\item
+  Mechanisms and margins
+
+  \begin{itemize}
+  \tightlist
+  \item
+    The reduction largely reflects the extensive margin: nearly three-quarters of the total calorie reduction comes from consumers opting not to buy food items. (page 18, words 0-349)
+  \item
+    Table 4 indicates changes in items per transaction and calories per item, consistent with shifts away from higher-calorie items. (page 18, words 0-349)
+  \end{itemize}
+\item
+  Heterogeneity and distributional effects
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Quantile analysis shows calorie reductions are larger at higher quantiles of calories per transaction; the absolute decrease is larger at the top end, but the percent change is relatively stable around 5--6\% from 75th to 99th percentile. (page 22, words 0-349)
+  \end{itemize}
+\item
+  Cross-city and placebo checks
+
+  \begin{itemize}
+  \tightlist
+  \item
+    In Seattle (where calories were not posted on menus), beverage calories per transaction fell by 4.6 calories (SE ≈ 0.3), while food calories rose by 0.8 calories (SE ≈ 0.2), indicating limited systemwide spillovers and some targeted effects where calories were posted. (page 13, words 0-349)
+  \end{itemize}
+\item
+  Regression framework and robustness
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Analyses rely on a binary POST indicator (NYC stores after posting) plus flexible week effects and fixed effects; additional specifications compare NYC vs control regions over time to track timing and persistence of effects. (page 13, words 0-349; page 10, words 0-186)
+  \end{itemize}
+\item
+  Consumer knowledge and survey data
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Appendix includes a consumer survey (Stanford University) to gauge factors in purchase decisions and whether consumers read calorie information, linking knowledge to potential responsiveness. (page 35-36, words 0-349)
+  \end{itemize}
+\end{itemize}
+
+If you'd like, I can pull out exact coefficient ranges or reproduce a compact summary table with the key effect sizes and their confidence intervals.
+
+\subsection{Structured Q\&A Appendix}\label{structured-qa-appendix}
+
+This section mirrors \texttt{agentic.report\_questions} for audit traceability.
+
+\subsubsection{A01: What is the main research question of the paper?}\label{a01-what-is-the-main-research-question-of-the-paper}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.3159934745743112)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{explicit\ research-question\ statement}
+\item
+  Data source: Starbucks transaction and cardholder data (NYC, Boston, Philadelphia)
+\item
+  Answer:
+\end{itemize}
+
+The main research question is whether mandatory calorie posting at chain restaurants affects consumers' behavior, specifically calories per transaction.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+"whether calorie posting affects people's behavior is an empirical question."
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Introduction, note=Directly states the empirical question of whether calorie posting affects behavior.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A02: What is the paper\textquotesingle s primary contribution relative to the existing literature?}\label{a02-what-is-the-papers-primary-contribution-relative-to-the-existing-literature}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.29764919438622633)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{data\ scale\ and\ mechanism\ analysis\ vs\ prior\ literature}
+\item
+  Data source: Starbucks transaction data in NYC, Boston, Philadelphia; anonymous cardholder data; in-store surveys
+\item
+  Answer:
+\end{itemize}
+
+The paper\textquotesingle s primary contribution relative to the existing literature is establishing, with a much larger and richer dataset than prior NYC/short-run studies, that mandatory calorie posting reduces calories per transaction and that the mechanism includes both learning and salience, while also disaggregating intensive-margin vs composition effects and showing the effects across a broad scope (city, chain, and time) and on profitability.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+the dataset we study is much larger and broader---the universe of over 100 million transactions at Starbucks in Boston, NYC, and Philadelphia over a 14-month period.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=9, words=0-349, section=Literature and data contributions, note=The authors emphasize their contribution lies in a dataset that is much larger and broader than prior NYC studies, including over 100 million transactions and individual-level data.
+  \item
+    page=8, words=0-349, section=Literature and data contributions, note=Directly contrasts with prior studies and highlights the scale and breadth of their data as a key contribution.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A03: What is the central hypothesis being tested?}\label{a03-what-is-the-central-hypothesis-being-tested}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.29005770191274693)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{hypothesis}
+\item
+  Answer:
+\end{itemize}
+
+The central hypothesis is that mandatory calorie posting affects consumer behavior by reducing calories per transaction (i.e., posting calories influences what consumers choose, with learning or salience as potential mechanisms).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Ultimately, whether calorie posting affects people's behavior is an empirical question.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Introduction / Hypothesis discussion, note=States the empirical question of whether calorie posting affects behavior.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A04: What are the main outcomes of interest (dependent variables)?}\label{a04-what-are-the-main-outcomes-of-interest-dependent-variables}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.3044486824352848)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual\ evidence\ from\ the\ study\ defining\ dependent\ variables\ and\ reporting\ results}
+\item
+  Data source: Transaction data and cardholder data from Starbucks calorie posting study
+\item
+  Answer:
+\end{itemize}
+
+The main dependent variables are calories per transaction, specifically log(beverage calories per transaction), log(food calories per transaction), and log(beverage + food calories) (total calories per transaction).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+In the top row, the dependent variable is log(beverage calories per transaction).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Regression specification, note=Defines y\_sct as calories per transaction and the POST dummy; basis for identifying effects within-city.
+  \item
+    page=12, words=0-349, section=Dependent variables and results, note=Top row: log(beverage calories per transaction); second row: log(food calories per transaction); bottom row: log(beverage + food calories).
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A05: What are the key treatment/exposure variables (independent variables)?}\label{a05-what-are-the-key-treatmentexposure-variables-independent-variables}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.2439615861309941)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{model\ specification\ /\ treatment\ variable\ definition}
+\item
+  Data source: Transaction data and cardholder data from Starbucks stores
+\item
+  Answer:
+\end{itemize}
+
+The key treatment/exposure variable is the calorie-posting indicator (POST): a dummy equal to one for NYC stores on/after April 1, 2008 when calories were posted.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POS Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=POS-posted, section=Regression specification / Equation (1), note=Defines the POST dummy as one if calories were posted (NYC stores after April 1, 2008).
+  \item
+    page=11, words=y\_sct-ε\_sct, section=Equation (1) specification, note=Shows the regression form where POST is included as γ POS Tc t.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A06: What setting/context does the paper study (country, market, period)?}\label{a06-what-settingcontext-does-the-paper-study-country-market-period}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{medium\ (0.3532150662340793)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Starbucks transaction and cardholder data (NYC, Boston, Philadelphia) around NYC calorie-posting policy.
+\item
+  Answer:
+\end{itemize}
+
+Country: United States; Market: chain-restaurant dining (Starbucks) in New York City, with Boston and Philadelphia as controls; Period: around the NYC calorie-posting policy implemented April 1, 2008, using data from January 2008 through February 2009 (pre- and post-policy).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The law was first implemented in New York City (NYC) in mid-2008.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=1, words=0-349, section=Introduction, note=Contextualizes NYC calorie-posting policy and the national relevance.
+  \item
+    page=5, words=0-349, section=Data, note=Describes dataset scope: NYC stores and controls in Boston/Philadelphia, pre/post period.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A07: What is the main mechanism proposed by the authors?}\label{a07-what-is-the-main-mechanism-proposed-by-the-authors}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.2858951228579513)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual\_evidence}
+\item
+  Data source: Starbucks transaction data and cardholder data (NYC and control cities).
+\item
+  Answer:
+\end{itemize}
+
+The main mechanism is a combination of learning and salience effects: calorie posting changes purchases because it reduces the cost of learning about calories (learning) and also reminds or highlights calories at the point of purchase (salience).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Hence, we find evidence in support of both learning and salience as part of the mechanism for why calorie posting causes consumers to reduce calories per transaction.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=25, words=0-349, section=IV. A. Why is There an Effect?, note=Introduces learning vs. salience as competing explanations and mentions the possibility of a combined mechanism.
+  \item
+    page=30, words=0-349, section=IV. Discussion, note=States that survey evidence supports salience and commuter evidence supports learning; concludes there is evidence for both mechanisms.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A08: What alternative mechanisms are discussed?}\label{a08-what-alternative-mechanisms-are-discussed}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.22570611463556833)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: American Economic Journal: Economic Policy, Vol. 3 No. 1, Bollinger et al., calorie posting in chain restaurants
+\item
+  Answer:
+\end{itemize}
+
+The alternative mechanisms discussed are learning effects and salience effects (and the possibility that both operate together).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+One reason why calorie posting may affect consumer choice is a learning effect. Another possible explanation is a salience effect; behavior may be driven by a combination of learning and salience effects.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 25, words=0-349, section=A. Why is There an Effect?, note=Discusses alternative mechanisms: learning vs salience (and their combination).
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A09: What are the main policy implications claimed by the paper?}\label{a09-what-are-the-main-policy-implications-claimed-by-the-paper}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{medium\ (0.37698304853589215)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Policy\ implications\ and\ conclusions}
+\item
+  Data source: Starbucks NYC transaction data, Boston and Philadelphia control cities, anonymous cardholder data, and in-store surveys
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Assumes that the detected calorie reductions, learning/salience effects, and potential long-run innovations translate into meaningful public health benefits and that these benefits outweigh the costs of implementing posting; generalizability to other chains is uncertain.
+\item
+  Answer:
+\end{itemize}
+
+The main policy implications are that mandatory calorie posting yields a modest but persistent reduction in calories per transaction (about 6\% at Starbucks), largely through lower food calories, with beverage calories largely unchanged; Starbucks profits are, on average, unchanged; the policy has very low implementation costs; there is potential for long-run benefits via menu innovation and public education, which could be larger than the short-run effects; and a key caveat is that the policy is deemed good only if the benefits outweigh the costs (i.e., the policy is not obviously valuable if costs exceed benefits).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Mandatory calorie posting caused average calories per transaction to fall by 6 percent; the impact on Starbucks' profit is negligible on average, and costs are very low.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=34, words=0-349, section=IV. Discussion, note=Policy implications summarized in Discussion
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A10: What is the welfare interpretation (if any) of the results?}\label{a10-what-is-the-welfare-interpretation-if-any-of-the-results}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.31023471695865323)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Discussion/Policy\ implications}
+\item
+  Data source: Starbucks transaction data; NYC vs control cities; cardholder and store-level data
+\item
+  Answer:
+\end{itemize}
+
+Mandatory calorie posting appears to generate welfare-relevant health effects with little cost to consumers or firms: calories per transaction fell (about 14\% for food) while transaction frequency and Starbucks profits were largely unchanged, suggesting health benefits could come without major economic costs. However, obesity outcomes are not measured, and generalizability beyond Starbucks is limited.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+To summarize briefly, the analyses above show that mandatory calorie posting caused food calories per transaction to fall by 14 percent, on average, but had a negligible impact on beverage calories per transaction.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=24, words=275-564, section=IV. Discussion, note=Contains the welfare-relevant summary: calorie reductions with negligible profit impact; discusses margins and welfare implications
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A11: What are the main limitations acknowledged by the authors?}\label{a11-what-are-the-main-limitations-acknowledged-by-the-authors}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.2760082674201887)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Starbucks transaction data
+\item
+  Answer:
+\end{itemize}
+
+The authors acknowledge two main limitations: (1) they do not directly measure the effect of calorie posting on obesity because BMI data are not available in a timely way; they rely on crude estimates from medical literature. (2) the analysis uses data from only one chain (Starbucks), so it is unknown whether the effects would generalize to other chains, and they cannot determine whether consumers offset calorie reductions at Starbucks by eating differently elsewhere (e.g., at home).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+There are two important limitations to this research. First, we do not directly measure the effect of calorie posting on obesity itself.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Limitations, note=Two important limitations: obesity measurement and generalizability due to single-chain data.
+  \item
+    page=3, words=275-564, section=Limitations, note=Offsetting behavior not observed; home eating changes unknown.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{A12: What does the paper claim is novel about its data or identification?}\label{a12-what-does-the-paper-claim-is-novel-about-its-data-or-identification}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{A)\ Research\ question\ /\ contribution}
+\item
+  Confidence: \texttt{low\ (0.30991989936869746)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{data/identification\ novelty}
+\item
+  Data source: Starbucks transaction data (NYC, Boston, Philadelphia) and anonymous Starbucks cardholder data across the United States
+\item
+  Answer:
+\end{itemize}
+
+The paper claims that its data are novel because the detailed transaction data are \textquotesingle uniquely well-suited\textquotesingle{} to answer the question, and because it combines two data sources---transaction data and anonymous cardholder data---that let it identify how calorie posting affects individuals and isolate effects on the intensive and extensive margins from changes in consumer composition.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The detailed transaction data we use in this study are uniquely well-suited to answering this question.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Data and limitations, note=States that the detailed transaction data are uniquely well-suited to answering this question.
+  \item
+    page=5, words=0-349, section=Data description, note=Notes that the Starbucks data are rich enough to distinguish various responses and that the cardholder data allow assessment of individual behavioral changes.
+  \item
+    page=5, words=275-591, section=Data advantages / Identification, note=Highlights the advantage of cardholder data to assess how individuals change behavior and to isolate effects on intensive/extensive margins from consumer composition.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B01: What is the identification strategy (in one sentence)?}\label{b01-what-is-the-identification-strategy-in-one-sentence}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.2785943489056746)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Difference-in-differences\ with\ city-week\ fixed\ effects\ and\ store/individual\ fixed\ effects\ to\ isolate\ intensive-margin\ effects.}
+\item
+  Data source: Starbucks transaction data and cardholder data
+\item
+  Table/Figure: Table 3; Figure 2
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Assumes no differential shocks between NYC and control cities around the posting date; identification relies on within-city variation with appropriate fixed effects to isolate the posting effect.
+\item
+  Answer:
+\end{itemize}
+
+Identification is achieved by exploiting within-city, time variation in calorie posting (NYC after April 1, 2008) and comparing it to Boston/Philadelphia controls using fixed-effects regressions to isolate the effect on calories per transaction (with store fixed effects for transactions and individual fixed effects for cardholders).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+identification of the effect of calorie posting stems from within-city variation over time
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Identification strategy, note=Within-city variation over time; city-week level identification; NYC vs control cities.
+  \item
+    page=12, words=0-349, section=Estimation design, note=Cardholder data uses individual fixed effects; transaction data uses store fixed effects; identification via within-city variation.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B02: Is the design experimental, quasi-experimental, or observational?}\label{b02-is-the-design-experimental-quasi-experimental-or-observational}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.30511875764717833)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{quasi-experimental}
+\item
+  Data source: Starbucks transaction data and cardholder data across NYC, Boston and Philadelphia (with Seattle/Portland/SF used as controls in related analyses)
+\item
+  Answer:
+\end{itemize}
+
+Quasi-experimental (a natural experiment) design, using NYC as the treatment group and control cities with pre/post analysis and regression.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POS\_Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 11, words=0-349, section=II. Effect of Mandatory Calorie Posting on Calorie Consumption, note=Regression specification defines a post-treatment indicator (calorie posting) and treatment/control groups, indicating a quasi-experimental design.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B03: What is the source of exogenous variation used for identification?}\label{b03-what-is-the-source-of-exogenous-variation-used-for-identification}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.29846298986247766)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Natural\ experiment\ /\ difference-in-differences\ using\ the\ NYC\ calorie-posting\ policy\ as\ the\ treatment\ and\ Boston/Philadelphia\ as\ controls;\ within-city\ time\ variation\ identified\ by\ city-week\ effects.}
+\item
+  Data source: Transaction data and cardholder data (Starbucks stores in NYC, Boston, and Philadelphia).
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Parallel trends between NYC and control cities prior to posting are supported by a lack of pre-trend differences and are explicitly checked in the analysis.
+\item
+  Answer:
+\end{itemize}
+
+The exogenous variation comes from the calorie-posting policy implemented in NYC on April 1, 2008, with Boston and Philadelphia serving as control cities; identification relies on within-city time variation around that posting date (store/week fixed effects), i.e., a city-level difference-in-differences design.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POS Tc is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=1-25, section=Identification strategy, note=POS Tc is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008).
+  \item
+    page=12, words=0-30, section=Identification, note=Identification stems from within-city variation over time.
+  \item
+    page=6, words=150-210, section=Data Summary, note=Qualitatively, Boston and Philadelphia are reasonable controls for NYC.
+  \item
+    page=14, words=60-110, section=Results / Robustness, note=The policy variation is at the city-week level; within-city variation identifies the effect.
+  \item
+    page=14, words=280-320, section=Seattle robustness, note=Seattle provides robustness check with post-law data.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B04: What is the treatment definition and timing?}\label{b04-what-is-the-treatment-definition-and-timing}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.13185219280876276)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{regression\ specification\ description}
+\item
+  Data source: Starbucks transaction and cardholder data in NYC, Boston, and Philadelphia; Bollinger et al., American Economic Journal: Economic Policy (2011)
+\item
+  Answer:
+\end{itemize}
+
+The treatment is the mandatory calorie posting in New York City stores, defined by a post-treatment indicator that equals 1 for NYC stores on days after April 1, 2008 (i.e., after calorie posting began).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POST Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Methods: Regression specification, note=Defines POST as a dummy for calories posted after April 1, 2008 in NYC stores.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B05: What is the control/comparison group definition?}\label{b05-what-is-the-controlcomparison-group-definition}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.1800030198446593)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual}
+\item
+  Data source: Starbucks transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+The control/comparison group consists of Boston and Philadelphia (the control cities for NYC); in robustness checks, Seattle is compared with Portland and San Francisco as controls.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Boston and Philadelphia are reasonable controls for NYC.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=6, words=0-349, section=Table 1: Summary Statistics, note=Boston and Philadelphia are reasonable controls for NYC.
+  \item
+    page=14, words=275-350, section=Robustness/Seattle comparison, note=Seattle analysis uses control cities Portland and San Francisco.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B06: What is the estimating equation / baseline regression specification?}\label{b06-what-is-the-estimating-equation--baseline-regression-specification}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.308491997900624)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{regression\ equation\ described\ in\ text}
+\item
+  Data source: Starbucks transaction and cardholder data used in Bollinger et al., \textquotesingle Calorie Posting in Chain Restaurants\textquotesingle{} (AEJ Economic Policy, 2011)
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Identification relies on within-city variation over time; assumes posting date exogenously determines treated period; controls for seasonality/weather and uses fixed effects to address unobserved heterogeneity.
+\item
+  Answer:
+\end{itemize}
+
+y\_sct = x\_sct β + γPOST\_Tc t + ε\_sct, where y\_sct is a measure of calories per transaction at store s in city c on day t; POST\_Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008); x\_sct includes week fixed effects, day-of-week dummies, holiday dummies, temperature and temperature squared, and precipitation and precipitation squared. In the transaction data specification, store fixed effects are included (and in the cardholder data specification, individual fixed effects).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+y\_sct = x\_sct β + γPOST\_Tc t + ε\_sct, where y\_sct is a measure of calories per transaction at store s in city c on day t, POST\_Tc t is a dummy equal to one if calories were posted
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 11, words=275-522, section=Methods / Empirical strategy, note=Equation (1) defining the baseline regression
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B07: What fixed effects are included (unit, time, two-way, higher dimensional)?}\label{b07-what-fixed-effects-are-included-unit-time-two-way-higher-dimensional}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.2544411011640151)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual}
+\item
+  Data source: Transaction data and cardholder data (Starbucks calorie posting study)
+\item
+  Answer:
+\end{itemize}
+
+They include unit fixed effects for stores (store fixed effects) and, for cardholder data, individual fixed effects; time-related fixed effects include week fixed effects, plus day-of-week and holiday dummies (seasonality controls). In robustness checks they also use date fixed effects, which replace the day-of-week/week controls.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+store fixed effects to control for all time-invariant, store-specific heterogeneity.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=12, words=0-80, section=Store fixed effects, note=Store fixed effects to control for all time-invariant, store-specific heterogeneity; notes on city-week variation.
+  \item
+    page=11, words=0-60, section=Time fixed effects, note=Week fixed effects to control for seasonality; day-of-week dummies and holiday dummies included.
+  \item
+    page=12, words=0-60, section=Cardholder fixed effects, note=Individual consumer fixed effects used with cardholder data.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B08: What standard errors are used (robust, clustered; at what level)?}\label{b08-what-standard-errors-are-used-robust-clustered-at-what-level}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.2808639424011974)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{table\ note}
+\item
+  Data source: American Economic Journal: Economic Policy (Feb 2011)
+\item
+  Table/Figure: Table 9
+\item
+  Answer:
+\end{itemize}
+
+Robust standard errors; they are not clustered and are reported at the transaction (observation) level.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Robust standard errors in parentheses.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=29, words=0-349, section=Table 9, note=Robust standard errors in parentheses.
+  \item
+    page=29, words=0-349, section=Table 9, note=An observation is a transaction.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B09: What is the key identifying assumption (parallel trends, exclusion restriction, ignorability)?}\label{b09-what-is-the-key-identifying-assumption-parallel-trends-exclusion-restriction-ignorability}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.2723139807629138)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{parallel\ trends\ /\ diff-in-differences\ assumption}
+\item
+  Data source: Difference-in-differences analysis using NYC stores after April 1, 2008 and Boston/Philadelphia controls (transaction and cardholder data).
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Identification relies on parallel trends prior to calorie posting; NYC and controls show no differential pre-trends, supporting a valid counterfactual. The analysis uses fixed effects and controls to address other confounds.
+\item
+  Answer:
+\end{itemize}
+
+The key identifying assumption is the parallel trends (difference-in-differences) assumption: in the absence of calorie posting, NYC and the control cities (Boston/Philadelphia) would have followed similar trends in calories per transaction.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+First, with both datasets we see no evidence of pre-trend differences between NYC and Boston/Philadelphia.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=14, words=0-349, section=Figure 2 discussion / pre-trend, note=No evidence of pre-trend differences between NYC and Boston/Philadelphia.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B10: What evidence is provided to support the identifying assumption?}\label{b10-what-evidence-is-provided-to-support-the-identifying-assumption}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.24036484632117797)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Parallel-trends/diff-in-diff\ evidence;\ timing\ alignment\ with\ posting;\ cross-dataset\ robustness;\ within-individual\ variation}
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Supports the identifying assumption via parallel trends prior to posting, timing alignment with posting, and cross-dataset corroboration; robust controls and within-individual variation address potential confounds.
+\item
+  Answer:
+\end{itemize}
+
+Evidence supporting the identifying assumption includes (i) no pre-trend differences between NYC and control cities prior to calorie posting, and (ii) an immediate drop in calories per transaction after posting, corroborated by both transaction and cardholder data, with robustness checks across datasets.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+First, with both datasets we see no evidence of pre-trend differences between NYC and Boston/Philadelphia. Second, in both cases it is clear that the drop in calories per transaction occurred right around April 1, 2008.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=14, words=0-349, section=Identifying assumption / robustness (pre-trends and timing), note=States no pre-trend differences NYC vs controls; drop around posting date; corroborated by two datasets.
+  \item
+    page=12, words=275-624, section=Using cardholder vs transaction data to isolate intensive margin; addresses confounds, note=Cardholder data isolates intensive-margin effects; argues against confounding changes in composition; within-individual variation.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B11: Are there event-study or pre-trend tests? What do they show?}\label{b11-are-there-event-study-or-pre-trend-tests-what-do-they-show}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.31798632269597993)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{event-study\ /\ pre-trend\ tests\ described\ in\ the\ paper}
+\item
+  Data source: Cardholder and transaction data from Starbucks across Boston, NYC, and Philadelphia (prior to NYC calorie posting).
+\item
+  Table/Figure: Figure 2
+\item
+  Answer:
+\end{itemize}
+
+Yes. The study includes event-study/pre-trend tests showing no evidence of pre-trend differences between NYC and the control cities (Boston/Philadelphia); and the calorie-per-transaction drop occurs right after the posting date (April 1, 2008), persisting thereafter.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+no evidence of pre-trend differences between NYC and Boston/Philadelphia. Second, in both cases it is clear that the drop in calories per transaction occurred right around April 1, 2008.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Figure 2 pre-trend discussion, note=No evidence of pre-trend differences between NYC and Boston/Philadelphia.
+  \item
+    page=13, words=275-528, section=Event timing and impact discussion, note=Vertical line at April 1, 2008; drop in calories per transaction occurs around posting date.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B12: What instruments are used (if IV)? Define instrument and first stage.}\label{b12-what-instruments-are-used-if-iv-define-instrument-and-first-stage}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.09979825575888589)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{methodology}
+\item
+  Answer:
+\end{itemize}
+
+No instrumental variables are used. The analysis relies on a difference-in-differences-like design with a POST indicator for NYC after Apr 1, 2008, combined with store fixed effects and other controls; therefore there is no first-stage for an instrument.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The results shown in Table 3 are based on specifications in which calorie posting is binary---i.e., the POST variable is simply a dummy equal to one at NYC stores on every day after April 1, 2008.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=13, words=275-528, section=Methods/Results, note=Definition of POST and binary treatment; no instrument mentioned.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B13: What is the first-stage strength (F-stat, partial R\^{}2, relevance evidence)?}\label{b13-what-is-the-first-stage-strength-f-stat-partial-r2-relevance-evidence}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.24513026966018944)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{not\_reported\_in\_context}
+\item
+  Data source: Starbucks transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Not reported in the provided context.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We estimate regressions of the following form: (1) \hspace{0pt}y\hspace{0pt}sct\hspace{0pt} = \hspace{0pt}xs\hspace{0pt}ct\hspace{0pt}β + γPOS\hspace{0pt}Tc\hspace{0pt}t\hspace{0pt} + \hspace{0pt}εs\hspace{0pt}ct\hspace{0pt}
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564
+  \item
+    page=11, words=275-522
+  \item
+    page=12, words=275-624
+  \item
+    page=12, words=550-630
+  \item
+    page=13, words=0-349
+  \item
+    page=18, words=0-349
+  \item
+    page=18, words=275-541
+  \item
+    page=23, words=275-539
+  \item
+    page=25, words=275-599
+  \item
+    page=30, words=0-349
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B14: If RDD: what is the running variable and cutoff? bandwidth choice?}\label{b14-if-rdd-what-is-the-running-variable-and-cutoff-bandwidth-choice}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.22343987037482763)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{method\_description}
+\item
+  Data source: Transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+The paper does not use a regression discontinuity design. There is no running variable or cutoff for an RDD; instead, the analysis employs a post-treatment indicator (calorie posting after April 1, 2008) within a difference-in-differences framework.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POS\_t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=To-2008), section=A. Calories Per Transaction, note=Describes the regression specification with a post-treatment indicator; defines the NYC posting date of April 1, 2008
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{B15: If DiD: what is the timing variation (staggered adoption)? estimator used?}\label{b15-if-did-what-is-the-timing-variation-staggered-adoption-estimator-used}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{B)\ Identification\ strategy\ /\ causal\ design}
+\item
+  Confidence: \texttt{low\ (0.28889020046602576)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{methodology\ description}
+\item
+  Data source: Transaction data and cardholder data
+\item
+  Table/Figure: Figure 2; Table 3
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: There is no evidence of pre-trend differences between NYC and the control cities (First, with both datasets we see no evidence of pre-trend differences between NYC and Boston/Philadelphia), supporting the parallel trends assumption for the DiD design.
+\item
+  Answer:
+\end{itemize}
+
+Staggered adoption across cities: NYC stores began calorie posting on April 1, 2008, and Seattle began on January 1, 2009. The estimator is a Difference‑in‑Differences regression with a post‑treatment dummy (POST\_Tc t) and city/week fixed effects (a two‑way FE DiD).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+y\_sct = x\_sctβ + γPOST\_Tc t + ε\_sct, where y\_sct is a measure of calories per transaction at store s in city c on day t, POST\_Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Model specification (DiD regression), note=Defines the regression y\_sct = x\_sctβ + γPOST\_Tc t + ε\_sct and the POST\_Tc t dummy (calories posted) for NYC after 2008-04-01.
+  \item
+    page=16, words=275-558, section=Staggered adoption across cities, note=Notes Seattle\textquotesingle s calorie posting law dated 2009-01-01, illustrating staggered adoption vs NYC.
+  \item
+    page=13, words=275-528, section=Alternative specification, note=Describes an alternative approach with separate week dummies for NYC and controls to capture timing differences.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C01: What dataset(s) are used? (name sources explicitly)}\label{c01-what-datasets-are-used-name-sources-explicitly}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.28023930128603075)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Starbucks transaction data (NYC, Boston, Philadelphia) and anonymous Starbucks cardholder data; Seattle transaction data; in-store surveys
+\item
+  Answer:
+\end{itemize}
+
+The study uses two primary datasets: (1) the transaction data from all Starbucks company‑owned stores in NYC, Boston, and Philadelphia; and (2) cardholder data consisting of anonymous Starbucks cardholders tracked over time (with NYC pre/post posting). It also references a Seattle transaction dataset used as a robustness check and in-store survey data.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We refer to the first dataset as the transaction data and the second dataset as the cardholder data.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=A. Data Summary, note=Definition of the two datasets: transaction data and cardholder data.
+  \item
+    page=14, words=0-349, section=II. Effect of Mandatory Calorie Posting on Calorie Consumption, note=Seattle dataset mentioned as robustness check (post-law period) and within-city analyses.
+  \item
+    page=25, words=275-599, section=Appendix: Survey, note=In-store customer surveys (792 completed) used as additional data.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C02: What is the unit of observation (individual, household, firm, county, transaction, product)?}\label{c02-what-is-the-unit-of-observation-individual-household-firm-county-transaction-product}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.3225688568722501)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Calorie posting study using transaction and cardholder data (Bollinger et al., American Economic Journal: Economic Policy, 2011).
+\item
+  Answer:
+\end{itemize}
+
+transaction
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+For each transaction we observe the time and date, store location, items purchased, and price of each item.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data Summary, note=Describes observing all transactions at each location; unit of observation is transaction.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C03: What is the sample period and geographic coverage?}\label{c03-what-is-the-sample-period-and-geographic-coverage}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.23067771097921516)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{data\_summary}
+\item
+  Data source: Transaction data from Starbucks stores in NYC, Boston, and Philadelphia
+\item
+  Answer:
+\end{itemize}
+
+Sample period: January 1, 2008 to February 28, 2009; geographic coverage: NYC plus Boston and Philadelphia (all Starbucks company-owned stores in NYC and all 94 stores in Boston and Philadelphia).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+3 months before and 11 months after calorie posting commenced (i.e., January 1, 2008--February 28, 2009).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=A. Data Summary, note=States sample: 222 NYC stores and 94 stores in Boston/Philadelphia; period = 3 months pre and 11 months post calorie posting (Jan 1, 2008--Feb 28, 2009).
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C04: What are the sample restrictions / inclusion criteria?}\label{c04-what-are-the-sample-restrictions--inclusion-criteria}
+
+\begin{itemize}
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.2451827001199968)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{data\ description\ /\ sample\ selection\ criteria}
+\item
+  Data source: Starbucks transaction data and anonymous cardholder data (NYC, Boston, Philadelphia)
+\item
+  Answer:
+\item
+  Transaction data: includes all transactions from 222 NYC Starbucks stores and 94 stores in Boston and Philadelphia during the period January 1, 2008 to February 28, 2009; stores not open for the entire period are excluded and transactions with more than four units of any one item are excluded (balanced panel). - Cardholder data: a subsample of anonymous cardholders who averaged at least one transaction per week in one of NYC, Boston, or Philadelphia in the pre-calorie-posting period (7,520 in NYC; 3,772 in Boston/Philadelphia; combined 1.51 million transactions). These cardholders may not be representative of Starbucks customers in general. - Normalization for confidentiality is applied to NYC values in the tables/presentation.
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We define a subsample containing any individual that averaged at least one transaction per week in one of NYC, Boston, or Philadelphia, in the period before calorie posting in NYC.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data Summary / Sample scope, note=Transaction data cover all NYC stores and all Boston/Philadelphia stores; period before and after calorie posting; balanced panel.
+  \item
+    page=5, words=275-591, section=Cardholder data sample, note=Definition of subsample: individuals averaging ≥1 transaction per week in pre-posting period; counts: 7,520 NYC; 3,772 in Boston/Philadelphia; 1.51 million transactions total.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C05: What is the sample size (N) in the main analysis?}\label{c05-what-is-the-sample-size-n-in-the-main-analysis}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.2978690009143336)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual\_excerpt}
+\item
+  Data source: transaction data and cardholder data from Starbucks NYC, Boston, and Philadelphia
+\item
+  Answer:
+\end{itemize}
+
+1.51 million transactions
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+combined 1.51 million transactions for us to study.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=275-591, section=Data Summary, note=Statement indicating combined 1.51 million transactions in dataset used for main analysis.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C06: How is the key outcome measured? Any transformations (logs, z-scores, indices)?}\label{c06-how-is-the-key-outcome-measured-any-transformations-logs-z-scores-indices}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.3268006721752479)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Description\ of\ measurement\ and\ transformations\ of\ the\ primary\ outcome\ from\ the\ study}
+\item
+  Data source: Transaction data and cardholder data (Starbucks; NYC, Boston, Philadelphia)
+\item
+  Table/Figure: Table 3
+\item
+  Answer:
+\end{itemize}
+
+The key outcome is calories per transaction (including beverage calories per transaction, food calories per transaction, and total calories per transaction). It is measured as calories per transaction at store-day observations, and in some specifications is modeled using log transformations (e.g., log(beverage + food calories) or log(calories per transaction)). Coefficients are interpreted as percentage changes (e.g., a 11.2\% decrease) when the dependent variable is log-transformed. Additionally, a quantile-based approach regresses the log of the nth quantile of calories per transaction.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+ysct = xsctβ + γPOST Tc t + εsct, where ysct is a measure of calories per transaction at store s in city c on day t, POST Tc t is a dummy equal to one if calories were posted.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=275-591, section=Data and variables; primary outcome, note=Describes calories per transaction as the key variable and the datasets used.
+  \item
+    page=11, words=275-522, section=Regression specification, note=Defines ysct as calories per transaction and the POST dummy; shows regression form.
+  \item
+    page=12, words=275-624, section=Results with logs, note=Reports log specifications (log(beverage + food calories)) and percent-change interpretations (e.g., −0.119 corresponds to an 11.2\% decrease).
+  \item
+    page=22, words=0-349, section=Quantile analysis, note=Explains regressing the log of the nth quantile of calories per transaction.
+  \item
+    page=6, words=275-517, section=Baseline calorie measures, note=Provides baseline calories per transaction (drink, food, total) prior to posting.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C07: How is treatment/exposure measured? Any constructed variables?}\label{c07-how-is-treatmentexposure-measured-any-constructed-variables}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.29227057615324575)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Description\ of\ treatment/exposure\ construction\ (POST\ dummy)\ and\ identification\ strategy}
+\item
+  Data source: Transaction dataset and cardholder dataset (Starbucks data)
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Identification relies on within-city (city-week) variation over time; fixed effects control for seasonality and other factors; assumes NYC post period is exogenous to other changes within city-week.
+\item
+  Answer:
+\end{itemize}
+
+Treatment is measured with a post-treatment indicator POST that equals 1 for NYC stores on every day after April 1, 2008 when calories were posted. Exposure is identified from within-city time variation (city-week level). An alternative specification uses separate city-week dummies and omits POST to flex timing. Constructed variables include POST, store fixed effects, week fixed effects, day-of-week, holidays, and weather controls; the analysis uses both a transaction dataset (store-day level) and a cardholder dataset (individual fixed effects).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+POST Tc t is a dummy equal to one if calories were posted (i.e., NYC stores after April 1, 2008)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Regression specification, note=POST dummy defined as a daily indicator for NYC stores after calories are posted
+  \item
+    page=12, words=0-349, section=Identification strategy, note=Identification relies on within-city variation; policy variation is at the city-week level
+  \item
+    page=12, words=0-349, section=Robustness/alternative specification, note=Alternative approach uses separate week dummies for NYC and controls and excludes POST
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C08: Are there key covariates/controls? Which ones are always included?}\label{c08-are-there-key-covariatescontrols-which-ones-are-always-included}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.28700928116835767)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{regression\_controls}
+\item
+  Data source: Transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Yes. The key covariates/controls are week fixed effects, day-of-week dummies, holiday dummies, and weather variables (temperature and temperature squared, precipitation and precipitation squared). These controls are part of the regression specification (x\_sct) and are used consistently across the analyses with both transaction data and cardholder data, i.e., they are always included.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+x\_sct includes week fixed effects (to control for seasonality), day-of-week dummies, holiday dummies, temperature and temperature squared, and precipitation and precipitation squared.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Regression specification, note=Explicitly lists controls: week fixed effects, day-of-week dummies, holiday dummies, temperature and temperature squared, precipitation and precipitation squared.
+  \item
+    page=12, words=275-624, section=Regression discussion, note=Notes that weather controls are included and that the same controls are used for both transaction and cardholder data.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C09: How are missing data handled (dropping, imputation, weighting)?}\label{c09-how-are-missing-data-handled-dropping-imputation-weighting}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.27792692287479065)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{descriptive\ data\ handling\ in\ methods}
+\item
+  Data source: Starbucks transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Missing data are handled by dropping observations to form a balanced panel: observations from stores not open for the entire data period are excluded, and transactions with more than four units of any one item are dropped. There is no imputation or weighting described; about 2.2\% of transactions are excluded.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We exclude transactions at stores that were not open during the entire data period (i.e., we analyze the balanced panel), and we exclude transactions that included more than four units of any one item because we consider these purchases to be driven by fundamentally different processes (bulk purchases for an office, say). The excluded transactions represent only 2.2 percent of all transactions.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=6, words=0-349, section=Data cleaning / Balanced panel, note=States that they exclude stores not open during the entire data period to form a balanced panel and exclude transactions with more than four units of any one item; 2.2\% of transactions are excluded.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C10: Are weights used (survey weights, propensity weights)? How?}\label{c10-are-weights-used-survey-weights-propensity-weights-how}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.29540471022143683)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{methodology\ description}
+\item
+  Data source: transaction data and cardholder data (Starbucks NYC, Boston, Philadelphia)
+\item
+  Answer:
+\end{itemize}
+
+No weights are described or used; the analysis relies on regression specifications with fixed effects and controls, without mention of survey weights or propensity weights.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+To examine the effects of calorie posting while controlling for seasonality and other influences, we estimate regressions of the following form: (1) y\_sct = x\_sct β + γPOS Tc t + ε\_sct
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Methodology: Regression specification, note=States regression form and controls; no weighting mentioned.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C11: Are data linked/merged across sources? How is linkage performed?}\label{c11-are-data-linkedmerged-across-sources-how-is-linkage-performed}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.22246639621182168)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Transaction data; Cardholder data (anonymous) from Starbucks across NYC, Boston, Philadelphia
+\item
+  Answer:
+\end{itemize}
+
+The data are not merged into a single dataset; instead two sources are used---the transaction data (store-level transactions across NYC, Boston, and Philadelphia) and the anonymized cardholder data (individual-level purchase histories). Linkage is performed at the cardholder level by defining a subsample of cardholders who averaged at least one transaction per week in NYC, Boston, or Philadelphia, allowing analysis of within-individual changes across both data sources; results from the two sources are then compared rather than merged.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+There are 2.7 million anonymous individuals in this dataset.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data sources and linkage, note=Introduces two datasets (transaction data and cardholder data) and the existence of 2.7 million anonymous individuals; describes the cardholder data and its use.
+  \item
+    page=5, words=275-591, section=Data sources and linkage, note=Notes a subsample of cardholders (7,520 NYC and 3,772 Boston/Philadelphia) and 1.51 million transactions; highlights cross-dataset analysis.
+  \item
+    page=5, words=0-349, section=Data sources and linkage, note=States that the advantage of cardholder data is to assess how calorie information causes particular individuals to change behavior; frames comparison across datasets.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C12: What summary statistics are reported for main variables?}\label{c12-what-summary-statistics-are-reported-for-main-variables}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.3270899297372985)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{text}
+\item
+  Data source: Transaction data and Cardholder data (prior to calorie posting in NYC, April 1, 2008)
+\item
+  Table/Figure: Table 1
+\item
+  Answer:
+\end{itemize}
+
+Table 1 reports summary statistics for main variables, including: avg. weekly transactions per store, avg. weekly revenue per store, percent transactions with brewed coffee, percent transactions with beverage, percent transactions with food, avg. number of items per transaction, avg. number of drink items per transaction, avg. number of food items per transaction, food attach rate, avg. dollars per transaction, avg. calories per transaction, avg. drink calories per transaction, and avg. food calories per transaction.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Table 1---Summary Statistics for Transaction Data and Cardholder Data (Prior to policy change).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=6, words=0-349, section=Table 1---Summary Statistics for Transaction Data and Cardholder Data (Prior to policy change)
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{C13: Are there descriptive figures/maps that establish baseline patterns?}\label{c13-are-there-descriptive-figuresmaps-that-establish-baseline-patterns}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{C)\ Data,\ sample,\ and\ measurement}
+\item
+  Confidence: \texttt{low\ (0.2833644669735172)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{descriptive\ figures\ and\ table}
+\item
+  Data source: Starbucks transaction data and cardholder data for NYC, Boston, and Philadelphia
+\item
+  Table/Figure: Figure 1; Figure 2; Table 1
+\item
+  Answer:
+\end{itemize}
+
+Yes. The article uses descriptive figures to establish baseline patterns, including Figure 1 showing weekly average calories per transaction by city and Figure 2 comparing NYC to controls (no pre-trend differences), and a Table 1 with summary statistics.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Figure 1 shows average calories per transaction each week, distinguishing transactions in NYC from transactions in the control cities.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=9, words=0-349, section=II.A Calories Per Transaction, note=Figure 1: average calories per transaction per week, NYC vs control cities.
+  \item
+    page=14, words=0-349, section=II.A Calories Per Transaction, note=Figure 2: results by dataset; discussion of pre-trend differences.
+  \item
+    page=11, words=275-522, section=Figure 2 discussion, note=No evidence of pre-trend differences between NYC and controls.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D01: What is the headline main effect estimate (sign and magnitude)?}\label{d01-what-is-the-headline-main-effect-estimate-sign-and-magnitude}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{medium\ (0.42785311918531443)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Regression\ estimate\ from\ calorie\ posting\ study\ (Table\ 3;\ log-beverages\ +\ foods\ calories)}
+\item
+  Data source: Starbucks store-day transaction data and cardholder data
+\item
+  Table/Figure: Table 3
+\item
+  Answer:
+\end{itemize}
+
+-5.8\% decrease in average calories per transaction
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+finding a 5.8 percent decrease in average calories per transaction, equivalent to 14.4 calories.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=12, words=0-349, section=Table 3 results / headline effect, note=headline effect: 5.8\% decrease in average calories per transaction
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D02: What is the preferred specification and why is it preferred?}\label{d02-what-is-the-preferred-specification-and-why-is-it-preferred}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.18122989848182008)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Regression\ specification\ (methodology)}
+\item
+  Data source: Starbucks transaction data and Starbucks cardholder data (NYC, Boston, Philadelphia)
+\item
+  Answer:
+\end{itemize}
+
+The preferred specification is the regression y\_sct = x\_sct β + γ\_POS\_Tc t + ε\_sct, where y\_sct is a measure of calories per transaction, POS\_Tc t is a dummy for when calories were posted ( NYC stores after April 1, 2008 ), and x\_sct includes week fixed effects, day-of-week dummies, holiday dummies, temperature and temperature squared, and precipitation and precipitation squared. It is estimated separately for the transaction data and the cardholder data to control for seasonality and other influences and isolate the effect of calorie posting on calories per transaction.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+we estimate regressions of the following form: (1) y\_sct = x\_sct β + γPOS Tc t + ε\_sct, where y\_sct is a measure of calories per transaction...
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Regression specification, note=Equation (1) and description of y\_sct, POS\_Tc t, and controls including week fixed effects, day-of-week, holidays, and weather.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D03: How economically meaningful is the effect (percent change, elasticity, dollars)?}\label{d03-how-economically-meaningful-is-the-effect-percent-change-elasticity-dollars}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{medium\ (0.4587002143915059)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Empirical\ estimates\ from\ transaction\ and\ cardholder\ data\ in\ a\ natural-experiment\ on\ calorie\ posting}
+\item
+  Data source: Starbucks calorie posting study data (NYC and control cities); includes transaction data and cardholder data
+\item
+  Table/Figure: Table 3; Table 4; Table 6; Figure 3; Figure 4
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Extrapolates potential obesity impact using a crude calculation assuming a 6\% reduction in calories at all chain restaurants and that 25\% of calories come from chain restaurants
+\item
+  Answer:
+\end{itemize}
+
+The effect is modest overall but economically meaningful in parts. Beverages per transaction fell by about 0.3\% (not robust in all samples), while food calories per transaction declined by 13.7\% in the transaction data. Combined (beverage + food), average calories per transaction dropped \textasciitilde5.8\% (≈14.4 calories). Using cardholder data, beverage calories show no significant change, food calories per transaction decline by about 11.2\%, and total calories fall \textasciitilde5.0\%. About three quarters of the total calorie reduction comes from the extensive margin (fewer food purchases), with larger per-item reductions concentrated among higher-calorie purchases (quantile results show roughly 5--6\% reductions from the 75th to 99th percentiles; high-calorie purchasers saw around a 26\% reduction). The authors also document that average price per item rose after posting and profits were not significantly affected. They present a crude back-of-the-envelope calculation to assess whether a 6\% reduction at all chain restaurants could meaningfully affect obesity, but do not give a definitive conclusion in the excerpt.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+calorie posting caused a trivial decrease in beverage calories per transaction of 0.3 percent.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=12, words=0-349, section=Table 3 (transaction data), note=Beverage calories per transaction −0.3\%
+  \item
+    page=12, words=0-349, section=Table 3 (transaction data), note=Food calories per transaction −13.7\%
+  \item
+    page=12, words=0-349, section=Table 3 (transaction data), note=Total calories per transaction (log) −0.063 (\textasciitilde−5.8\%)
+  \item
+    page=12, words=275-624, section=Table 3 (cardholder data), note=Cardholder data: beverage calories not significantly different; food calories per transaction −11.2\%; total calories −5.0\%
+  \item
+    page=16, words=275-558, section=Table 4 / discussion, note=Three quarters of total calorie reduction due to extensive margin (not buying food items)
+  \item
+    page=22, words=0-349, section=Table 6 (quantiles), note=High-calorie purchases show \textasciitilde26\% reduction; percent change roughly 5--6\% from 75th to 99th percentile
+  \item
+    page=24, words=275-564, section=IV. Discussion, note=Price per item purchased increased; profits not significantly affected
+  \item
+    page=20, words=0-349, section=Results, note=No statistically significant change in purchase frequency in NYC vs control cities
+  \item
+    page=24, words=275-564, section=IV. Discussion, note=Crude calculation: if calories declined 6\% at all chain restaurants, given chain restaurants account for \textasciitilde25\% of calories, the authors discuss potential obesity impact
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D04: What are the key robustness checks and do results survive them?}\label{d04-what-are-the-key-robustness-checks-and-do-results-survive-them}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.2836027021129647)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{robustness\_checks}
+\item
+  Data source: American Economic Journal: Economic Policy (February 2011)
+\item
+  Table/Figure: Table 3; Figure 2; Table 5; Table 9
+\item
+  Answer:
+\end{itemize}
+
+Key robustness checks and whether results survive: (1) Date fixed effects vs week/day controls: adding date fixed effects leaves the transaction-calorie effects virtually unchanged (beverage calories: −0.004; food calories: −0.152; total: −0.063). (2) Absolute calories specification: results are almost identical to the log-specifications. (3) Serial correlation robustness: aggregating pre/post periods yields the same conclusions with significance \textgreater99\%. (4) Weather controls robustness: findings hold even when weather controls are dropped. (5) No pre-trend evidence: Figure 2 shows no pre-trend differences between NYC and controls. (6) Milk usage data: no significant impact on milk, supporting the calorie-posting story. (7) Heterogeneity checks: larger calorie reductions in higher-income and more-educated areas; female cardholders more responsive. (8) Commuters vs non-commuters: patterns persist outside NYC for some groups, suggesting learning vs salience effects are nuanced but overall calorie reductions remain. Overall, the main findings are robust across these alternative specifications and samples.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+As a robustness check, we include date fixed effects in the above specification... The estimates based on the transaction data are barely changed.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=12, words=0-60, section=robustness\_date\_fixed\_effects, note=As a robustness check, we include date fixed effects; transaction-data estimates barely changed.
+  \item
+    page=12, words=61-110, section=robustness\_absolute\_calories, note=Absolute calories specification yields almost identical results to the log specification.
+  \item
+    page=12, words=111-170, section=robustness\_serial\_correlation, note=To address serial correlation, pre/post aggregation still shows similar effects and significance \textgreater99\%.
+  \item
+    page=14, words=0-60, section=robustness\_pre\_trend, note=Figure 2 shows no pre-trend differences between NYC and controls.
+  \item
+    page=11, words=275-311, section=robustness\_weather\_controls, note=Weather controls have an insignificant impact; results unchanged if weather controls are excluded.
+  \item
+    page=20, words=0-60, section=robustness\_milk\_data, note=Milk usage data show no statistically significant impact, supporting no broad consumption shift.
+  \item
+    page=25, words=275-320, section=robustness\_heterogeneity, note=Heterogeneity: stronger effects in higher-income/educated areas; females more responsive.
+  \item
+    page=29, words=0-60, section=robustness\_commuters, note=Commuter vs non-commuter patterns: differences observed but overall calorie reductions persist in subgroups.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D05: What placebo tests are run and what do they show?}\label{d05-what-placebo-tests-are-run-and-what-do-they-show}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.21232835402329395)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{placebo\ tests\ (pre-trend\ check;\ seasonal/placebo\ check;\ Seattle\ non-posting\ city\ test)}
+\item
+  Data source: Cardholder data and transaction data from Starbucks; Seattle/NYC comparisons
+\item
+  Table/Figure: Figure 2
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Placebo tests rely on parallel trends between NYC and control groups prior to posting; lack of pre-trend supports causal interpretation
+\item
+  Answer:
+\end{itemize}
+
+They run placebo tests to check robustness of the calorie-posting effects: (1) a pre-treatment (pre-trend) test comparing NYC with control cities before posting shows no pre-trend differences, (2) a seasonal/placebo check around Christmas/New Year shows NYC is not different from controls during that period, suggesting the main effect is not driven by seasonality, and (3) a Seattle/non-posting-city test shows no significant impact, supporting that the observed effects arise from posting in NYC rather than other factors.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+First, with both datasets we see no evidence of pre-trend differences between NYC and Boston/Philadelphia.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=14, words=0-349, section=Results / Figure 2 robustness checks, note=No evidence of pre-trend differences between NYC and control cities; post-post effect aligns with posting date.
+  \item
+    page=14, words=0-349, section=Results / Figure 2 robustness checks, note=Seasonal period (Christmas/New Year) shows NYC behavior not different from controls, indicating results are not driven by seasonality.
+  \item
+    page=25, words=0-349, section=Seattle placebo test, note=Seattle (no posting) shows no significant impact, supporting causal interpretation.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D06: What falsification outcomes are tested (unaffected outcomes)?}\label{d06-what-falsification-outcomes-are-tested-unaffected-outcomes}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.2570038258376549)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{falsification\_outcome}
+\item
+  Answer:
+\end{itemize}
+
+The falsification outcomes tested (unaffected outcomes) include the frequency of cardholders' purchases in NYC relative to control cities, which showed no significant change, and the milk usage data, which also showed no statistically significant impact.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We found no statistically significant change in the frequency of cardholders' purchases in NYC relative to the control cities; indeed, the point estimate of the coefficient on calorie posting was very close to zero.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=20, words=0-349, section=B. Substitution Effects, note=Tests the outcome that purchases frequency did not change.
+  \item
+    page=20, words=0-349, section=B. Substitution Effects, note=Milk usage data showed no statistically significant impact.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D07: What heterogeneity results are reported (by income, size, baseline exposure, region)?}\label{d07-what-heterogeneity-results-are-reported-by-income-size-baseline-exposure-region}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{medium\ (0.37464915727731324)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Heterogeneity\ results\ from\ Tables\ 5\ and\ related\ text\ discussing\ income,\ baseline\ calories,\ and\ regional\ controls;\ plus\ Table\ 2\ examples\ of\ size-related\ changes.}
+\item
+  Data source: Transaction data and cardholder data from the Starbucks calorie posting study
+\item
+  Answer:
+\end{itemize}
+
+Heterogeneity results show: (i) by income, the calorie-posting effect is larger in higher-income zip codes (Posting × median income = −0.012, significant); (ii) by baseline exposure, higher-baseline-calorie customers exhibit larger reductions (medium-calorie: −0.298; high-calorie: −0.444; and higher-percentile analyses indicate bigger absolute drops for those with higher pre-posting calories); (iii) by size, the data indicate size-related shifts in beverage choices (e.g., 8.4\% in NYC switched to a smaller size while 11.6\% switched to a larger size); (iv) by region, using NYC as the treatment with Boston/Philadelphia as controls, there is no statistically significant change in purchase frequency in NYC relative to controls, though beverage-choice effects were observed, with female cardholders more responsive than males.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Posting × median income (in \$100,000) −0.012**; Posting × high calorie customer −0.444***; Philadelphia as controls. We found no statistically significant change in the frequency of cardholders' purchases in NYC relative to the control cities.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=21, words=Table 5---Heterogeneity-Notes, section=Heterogeneity in the Impact of Calorie Posting, note=Intro to heterogeneity results including income and baseline exposure interactions
+  \item
+    page=21, words=Posting × median income-0.012**, section=Table 5 results, note=Income interaction with posting
+  \item
+    page=21, words=Posting × high calorie customer-0.007, section=Table 5 results, note=Baseline exposure interaction showing larger reductions for high-calorie customers
+  \item
+    page=21, words=Posting × high calorie customer-−0.444***, section=Table 5 results, note=Largest negative interaction for high-baseline-calorie customers
+  \item
+    page=11, words=Smaller size-drink, section=Table 2, note=Illustrates size-related changes in beverage choices ( NYC vs control )
+  \item
+    page=11, words=8.4 percent-size drink, section=Table 2, note=NYC share switching to smaller size; contrasts with larger-size switching
+  \item
+    page=20, words=Philadelphia as controls-control cities, section=Region analysis, note=Region-specific comparison shows no statistically significant change in purchase frequency in NYC relative to controls
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D08: What mechanism tests are performed and what do they imply?}\label{d08-what-mechanism-tests-are-performed-and-what-do-they-imply}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.14262024086930683)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Regression-based\ mechanism\ test\ using\ commuter\ status\ and\ location\ interactions\ to\ distinguish\ salience\ vs\ learning\ (Table\ 9;\ post-period\ interactions).}
+\item
+  Data source: Starbucks transaction and cardholder data; NYC stores and control cities (Boston, Philadelphia).
+\item
+  Table/Figure: Table 9
+\item
+  Answer:
+\end{itemize}
+
+The authors test whether the calorie-posting mechanism operates through salience or through learning by examining commuters (who shop both in NYC and outside NYC) and non-commuters. They estimate a regression with post-period indicators and interactions by purchase location (NYC vs outside NYC) and commuter status. The key finding is that commuters reduce calories per transaction in NYC stores by about 7.7\% and also show a sizable (12.0\%) reduction outside NYC (though less precise). Since the effect extends to non-posted locations, the results support a learning mechanism rather than a pure salience effect.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The estimates indicate that commuters reduced their calories per transaction in NYC stores by roughly 7.7 percent, which is similar to the reduction for non-commuters in NYC (6.0 percent). We estimate the effect on commuters' non- NYC transactions to be even larger (12.0 percent reduction).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=29, words=275-442, section=IV, note=Mechanism test: Table 9 results show commuter effects in NYC and outside NYC after calorie posting; supports learning over salience.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D09: How sensitive are results to alternative samples/bandwidths/controls?}\label{d09-how-sensitive-are-results-to-alternative-samplesbandwidthscontrols}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{medium\ (0.3591894683289965)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Robustness\ checks\ /\ sensitivity\ analyses}
+\item
+  Data source: Transaction and cardholder data from Starbucks stores in NYC, Boston, and Philadelphia
+\item
+  Answer:
+\end{itemize}
+
+Robustness checks show the results are not sensitive to alternative samples, bandwidths, or controls: analyses using both transaction data and cardholder data; tests with absolute calories; aggregation pre/post to address serial correlation; and excluding weather controls. No pre-trend differences between NYC and controls were found, and the main effects persist across samples, though magnitudes differ (beverage calories often not significant in cardholder data; food calories −11.2\%; total calories −5\%).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The cardholder data allows us to isolate the effect due to changes in the intensive margin from the changes in consumer composition. The estimated effect on beverage calories is not significantly different from zero.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 11, words=0-349, section=Robustness checks (sample/data), note=Versions estimated separately with the transaction data and the cardholder data.
+  \item
+    page=page 12, words=275-624, section=Robustness, note=Aggregating pre/post calorie posting to address serial correlation; using absolute calories yields similar results.
+  \item
+    page=page 12, words=0-349, section=Robustness - beverage/food calories, note=Cardholder data: beverage calories not significantly different; food calories −11.2\%.
+  \item
+    page=page 12, words=275-624, section=Robustness - alternative dependent variable, note=We repeated the analysis using absolute calories; results almost identical.
+  \item
+    page=page 11, words=0-349, section=Weather controls robustness, note=Findings unchanged if we exclude weather controls.
+  \item
+    page=page 14, words=0-349, section=Pre-trend \& robustness, note=No evidence of pre-trend differences; estimates are similar across samples.
+  \item
+    page=page 14, words=0-349, section=General robustness, note=We obtain similar estimates of the effect of calorie posting.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{D10: What are the main takeaways in the conclusion (bullet summary)?}\label{d10-what-are-the-main-takeaways-in-the-conclusion-bullet-summary}
+
+\begin{itemize}
+\item
+  Category: \texttt{D)\ Results,\ magnitudes,\ heterogeneity,\ robustness}
+\item
+  Confidence: \texttt{low\ (0.2695900717709611)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{empirical\ analysis\ of\ transaction\ data\ and\ survey\ evidence;\ policy\ implications}
+\item
+  Data source: Starbucks transaction data; cardholder purchase records (NYC vs non-NYC; commuters)
+\item
+  Answer:
+\item
+  Mandatory calorie posting reduces average calories per transaction by 6\% at Starbucks, with the effect lasting over time and driven mainly by changes in food purchases rather than beverages.
+\item
+  The effect is larger for high-calorie consumers.
+\item
+  Learning and salience both contribute to the effect: surveys show increased sensitivity to calories, and some reductions occur in non-posting stores after NYC exposure, especially for commuters who had prior NYC encounters.
+\item
+  Profit impact is negligible on average; in some nearby-location contexts (e.g., near Dunkin Donuts), revenue may even rise.
+\item
+  Crude estimates suggest only modest potential effects on obesity, but long-run effects could be larger if restaurants offer more low-calorie options and public education benefits exist.
+\item
+  Policy costs are very low, so even small benefits could outweigh the costs; findings may not generalize beyond Starbucks since the study covers only one chain.
+\item
+  Overall conclusion: calorie posting has measurable but modest effects with mixed mechanisms and important implications for future menu Innovation and public awareness.
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We find that mandatory calorie posting causes average calories per transaction to fall by 6 percent at Starbucks.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=34, words=0-349, section=Conclusion/Discussion, note=Core conclusion: 6\% drop in calories per transaction, long-lasting, learning and salience both contribute.
+  \item
+    page=31, words=0-349, section=Is the Effect Big Enough to Matter?, note=Back-of-the-envelope calculation about potential obesity impact; overall small effect.
+  \item
+    page=30, words=0-349, section=Commuters analysis, note=Learning vs. salience evidence from commuters; NYC exposure effects on non-NYC stores.
+  \item
+    page=25, words=0-349, section=Why is There an Effect?, note=Explains learning and salience explanations; survey approach.
+  \item
+    page=24, words=275-564, section=IV. Discussion, note=Overall discussion and summary of results.
+  \item
+    page=38, words=275-448, section=Policy implications, note=Long-run potential benefits and public education considerations.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E01: What are the most important prior papers cited and why are they central here?}\label{e01-what-are-the-most-important-prior-papers-cited-and-why-are-they-central-here}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.27341031138679683)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{literature\_review}
+\item
+  Answer:
+\end{itemize}
+
+The most important prior papers cited are those that established and tested how nutrition/calorie information at the point of purchase affects consumer choices and, in some studies, health outcomes. Key works include Bassett et al. (2008), which provides NYC fast‑food calorie information data; Currie et al. (2010), which links fast‑food exposure to obesity outcomes; Downs, Loewenstein, and Wisdom (2009), which discuss strategies for promoting healthier choices; Ippolito and Mathios (1990, 1995), foundational analyses on information and health choices; Variyam and Cawley (2006), a classic treatment of nutrition labels and obesity; Kiesel and Villas-Boas (2008), which experiments with nutritional shelf labels; Jin and Leslie (2003, 2009), which study information disclosures such as hygiene grades; and Jacoby, Chestnut, and Silberman (1977), an early examination of consumer use of nutrition information. Together, these works undergird the article's exploration of learning vs. salience mechanisms, the potential for information to influence behavior beyond posting locations, and the broader policy relevance of calorie labeling.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The notion that increasing the provision of nutrition information may stimulate people to adopt healthier eating habits is an old idea.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=37, words=0-349, section=References, note=Bassett et al. (2008) NYC calorie information at fast-food chains; central empirical baseline.
+  \item
+    page=36, words=275-422, section=References, note=Currie et al. (2010) The Effect of Fast Food Restaurants on Obesity and Weight Gain.
+  \item
+    page=37, words=0-349, section=References, note=Downs, Loewenstein, Wisdom (2009) Strategies for Promoting Healthier Food Choices.
+  \item
+    page=37, words=0-349, section=References, note=Ippolito \& Mathios (1990, 1995) Information and Health Choices.
+  \item
+    page=37, words=550-649, section=References, note=Variyam \& Cawley (2006) Nutrition Labels and Obesity.
+  \item
+    page=37, words=550-649, section=References, note=Kiesel \& Villas-Boas (2008) Another Nutritional Label: Shelf Labels and Consumer Choice.
+  \item
+    page=37, words=0-349, section=References, note=Jacoby, Chestnut, and Silberman (1977) Consumer Use and Comprehension of Nutrition Information.
+  \item
+    page=37, words=0-349, section=References, note=Jin \& Leslie (2003) The Effect of Information on Product Quality: Restaurant Hygiene Grade Cards.
+  \item
+    page=37, words=0-349, section=References, note=Elbel et al. (2009) Calorie Labeling and Food Choices: A First Look in NYC.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E02: Which papers does this work most directly build on or extend?}\label{e02-which-papers-does-this-work-most-directly-build-on-or-extend}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.2387836351559931)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual\_evidence}
+\item
+  Answer:
+\end{itemize}
+
+It builds directly on the NYC calorie-posting literature, citing Bassett et al. (2008); Downs, Loewenstein \& Wisdom (2009); Elbel et al. (2009); Currie et al. (2010); and Anderson \& Matsa (2011) as key prior work, i.e., the studies examining calorie labeling/posting effects at chain restaurants (with background from earlier nutrition-information research).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Two recent papers by Michael L. Anderson and David A. Matsa (2011) and Janet Currie et al. (2010).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=8, words=0-349, section=NYC calorie labeling literature, note=Bassett et al. 2008 mentioned in NYC calorie information study background
+  \item
+    page=8, words=0-349, section=NYC calorie labeling literature, note=Ippolito \& Mathios (1990, 1995) cited as nutrition information impact studies
+  \item
+    page=8, words=0-349, section=NYC calorie labeling literature, note=Kiesel \& Villas-Boas (2008) cited regarding nutrition labeling experiments
+  \item
+    page=38, words=0-349, section=Background, note=Mathios (2000) on the impact of mandatory disclosure laws
+  \item
+    page=7, words=275-566, section=Earlier nutrition information studies, note=Jacoby, Chestnut, Silberman (1977) early nutrition information study
+  \item
+    page=8, words=275-554, section=NYC calorie labeling literature, note=Downs, Loewenstein, Wisdom (2009) receipts study in NYC context
+  \item
+    page=8, words=275-554, section=NYC calorie labeling literature, note=Elbel et al. (2009) calorie labeling study outside NYC restaurants
+  \item
+    page=8, words=275-554, section=NYC calorie labeling literature, note=Currie et al. (2010) study on fast-food restaurants and obesity
+  \item
+    page=8, words=275-554, section=NYC calorie labeling literature, note=Anderson \& Matsa (2011) related work on restaurant effects
+  \item
+    page=36, words=275-422, section=References, note=Anderson \& Matsa 2011 (reference in article)
+  \item
+    page=37, words=0-349, section=References, note=Bassett et al. 2008 (NYC calorie information at fast-food chains)
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E03: Which papers are used as benchmarks or comparisons in the results?}\label{e03-which-papers-are-used-as-benchmarks-or-comparisons-in-the-results}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.2604222121786964)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Literature\ benchmark\ /\ comparison\ cited\ in\ the\ results\ section.}
+\item
+  Answer:
+\end{itemize}
+
+Michael L. Anderson and David A. Matsa (2011) and Janet Currie et al. (2010).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Two recent papers by Michael L. Anderson and David A. Matsa (2011) and Janet Currie et al. (2010). Neither paper finds that fast food restaurants have a significant effect on obesity in general.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=8, words=0-349, section=Literature review / Results comparison, note=Two recent papers used as benchmarks; none finds a general effect of fast food on obesity.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E04: What data sources or datasets are cited and how are they used?}\label{e04-what-data-sources-or-datasets-are-cited-and-how-are-they-used}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.28898710712254194)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Data\ sources\ and\ usage\ within\ the\ study}
+\item
+  Data source: Transaction data; Cardholder data; Milk order data; In-store surveys
+\item
+  Answer:
+\end{itemize}
+
+The cited datasets are: (1) Transaction data for all Starbucks locations in NYC (222 stores) and Boston/Philadelphia (94 stores) covering 3 months before to 11 months after calorie posting, used to measure calories per transaction and to analyze changes in behavior across cities; (2) Cardholder data consisting of anonymous Starbucks cardholders (about 2.7 million total, with a subsample of 7,520 NYC and 3,772 Boston/Philadelphia individuals) used to isolate effects on intensive vs extensive margins and to control for changes in consumer composition; (3) Milk order data (daily quantities of regular, skim, nonfat milk) used to assess sources of calories and potential substitutions; (4) In-store customer surveys conducted in Seattle and San Francisco (792 completed surveys) used to test knowledge of calories and corroborate behavioral findings; (5) Cross-city comparisons and control cities (Boston/Philadelphia) to validate causal interpretation and time-path analyses of calorie posting effects.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Our transaction data cover all 222 Starbucks locations in NYC, and all 94 Starbucks locations in Boston and Philadelphia.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data Summary, note=Definition of the two datasets: transaction data and cardholder data; NYC/Boston/Philadelphia; 3 months before and 11 months after posting.
+  \item
+    page=5, words=275-591, section=Data Summary, note=Cardholder data used to assess individual-level behavioral changes and compare with transaction data.
+  \item
+    page=9, words=0-349, section=Context / Data scale, note=Dataset described as large and broad: over 100 million transactions across Boston, NYC, and Philadelphia.
+  \item
+    page=14, words=0-349, section=Results/Methods, note=Transaction data and cardholder data used to show pre/post trends and to contrast effects controlling for consumer composition.
+  \item
+    page=25, words=275-599, section=Survey data, note=In-store surveys in Seattle and San Francisco (792 completed) to test consumer knowledge; supports robustness of findings.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E05: What methodological or econometric references are cited (e.g., DiD, IV, RDD methods)?}\label{e05-what-methodological-or-econometric-references-are-cited-eg-did-iv-rdd-methods}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{medium\ (0.38555090495305183)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Econometric/methodology\ references\ (RCTs,\ field\ experiments,\ salience).}
+\item
+  Data source: Starbucks transaction and cardholder data
+\item
+  Table/Figure: Figure 2
+\item
+  Answer:
+\end{itemize}
+
+The paper cites methodological references including a randomized natural field experiment (Cai, Chen, Fang 2009) as an example of an RCT, and broader field-experiment/behavioral economics references such as DellaVigna (2009) and Chetty, Looney, and Kroft (2009) on salience; identification relies on within-city variation with fixed effects (a difference-in-differences--type approach).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+identification of the effect of calorie posting stems from within-city variation over time.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 11, words=275-522, section=Methodology (Identification), note=States identification stems from within-city variation over time.
+  \item
+    page=page 12, words=0-349, section=Methodology, note=Describes store fixed effects and within-city variation for identification.
+  \item
+    page=page 14, words=0-349, section=Context/Methodology, note=Mentions within-city variation and fixed effects; cites within references to methodological approach.
+  \item
+    page=page 37, words=0-349, section=References, note=Cai, Hongbin, Yuyu Chen, and Hanming Fang (2009) randomized natural field experiment.
+  \item
+    page=page 14, words=0-349, section=References, note=Chetty, Raj, Adam Looney, and Kory Kroft (2009) Salience and Taxation.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E06: Are there any seminal or classic references the paper positions itself against?}\label{e06-are-there-any-seminal-or-classic-references-the-paper-positions-itself-against}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.24683243268777266)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Literature\ framing\ /\ related\ research}
+\item
+  Answer:
+\end{itemize}
+
+Yes. The paper references seminal work such as Jacoby, Chestnut, and Silberman (1977) on consumer use of nutrition information, and it positions against the view that fast-food calorie labeling substantially affects obesity, citing Currie et al. (2010) and Anderson \& Matsa (2011) as not finding strong obesity effects.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+An early study by Jacob Jacoby, Robert W. Chestnut, and William Silberman (1977) presents evidence that consumers tend not to seek out nutrition information.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=7, words=275-566, section=Related Research, note=Cites Jacoby, Chestnut, and Silberman (1977) as an early study on nutrition information usage.
+  \item
+    page=8, words=0-349, section=Related Research, note=Mentions Currie et al. (2010) and Anderson \& Matsa (2011) arguing no significant obesity effect from fast-food labeling.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E07: Are there citations to code, data repositories, or appendices that are essential to the claims?}\label{e07-are-there-citations-to-code-data-repositories-or-appendices-that-are-essential-to-the-claims}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.2969280517961589)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Appendix\ reference\ (questionnaire)}
+\item
+  Data source: Appendix (two-page questionnaire)
+\item
+  Answer:
+\end{itemize}
+
+Yes. The claims reference an Appendix containing the in-store survey questionnaire (The actual two-page questionnaire is shown in the Appendix). There is no citation of code or data repositories in the provided context.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The questionnaire is shown in the Appendix.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=7, words=275-566, section=Appendix, note=Appendix contains the questionnaire referenced in the survey section
+  \item
+    page=25, words=275-599, section=Appendix, note=Appendix shows the actual two-page questionnaire and links to survey methods
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{E08: What gaps in the literature do the authors say these citations leave open?}\label{e08-what-gaps-in-the-literature-do-the-authors-say-these-citations-leave-open}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{E)\ Citations\ and\ related\ literature}
+\item
+  Confidence: \texttt{low\ (0.2925432110580015)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{literature\ gaps}
+\item
+  Data source: Starbucks transaction data; NYC and control cities referenced in related literature.
+\item
+  Answer:
+\end{itemize}
+
+The cited literature largely focuses on nutrition labeling of packaged foods, with NYC studies often small and inconclusive; gaps remain regarding long-run effects of calorie posting, generalizability beyond a single chain, obesity outcomes, heterogeneity in consumer responses, substitution patterns (e.g., smaller sizes, lower-calorie items, fewer items), and effects on restaurant profits.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+There are two important limitations to this research. First, we do not directly measure the effect of calorie posting on obesity itself. A second limitation is that we have data for only one chain (Starbucks).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=7, words=Two-transaction., section=NYC literature gaps, note=NYC studies show no significant impact; limited sample and scope imply gaps in long-run effects and generalizability.
+  \item
+    page=9, words=Since-profitability., section=Gaps addressed by this study, note=Authors highlight need to study time-path, longevity, heterogeneity, substitution, and profits; these are gaps in prior work.
+  \item
+    page=3, words=However,-research., section=Limitations in prior research, note=Two main limitations discussed: obesity impact not measured and data from only one chain; gaps in generalizability.
+  \item
+    page=8, words=Neither-general., section=Obesity impact gap, note=Prior work finds no significant obesity impact; gap remains on obesity outcomes.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{F01: Are replication files or code provided? If so, where?}\label{f01-are-replication-files-or-code-provided-if-so-where}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{F)\ Replication\ and\ transparency}
+\item
+  Confidence: \texttt{low\ (0.1675737647641879)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{absence\_of\_information}
+\item
+  Data source: Starbucks transaction data in NYC, Boston, and Philadelphia; cardholder data
+\item
+  Answer:
+\end{itemize}
+
+The provided excerpt does not indicate that replication files or code are provided, nor any location for them.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Our transaction data cover all 222 Starbucks locations in NYC, and all 94 Starbucks locations in Boston and Philadelphia.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data Summary, note=No replication files or code mentioned in this section.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{F02: Is there a pre-analysis plan or registered trial? Provide details if mentioned.}\label{f02-is-there-a-pre-analysis-plan-or-registered-trial-provide-details-if-mentioned}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{F)\ Replication\ and\ transparency}
+\item
+  Confidence: \texttt{low\ (0.25846153994205967)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{No\ preregistration\ or\ trial\ registration\ is\ stated;\ methods\ describe\ regression\ specifications\ and\ data\ sources\ but\ do\ not\ reference\ preregistration.}
+\item
+  Data source: Transaction data for all Starbucks locations in NYC, Boston, and Philadelphia; anonymized cardholder data for a subsample.
+\item
+  Answer:
+\end{itemize}
+
+There is no mention of a pre-analysis plan or registered trial in the provided text.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We estimate regressions of the following form: (1) y\_sct = x\_sct β + γ\_POS Tc t + ε\_sct
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=9, words=275-587, section=II. Effect of Mandatory Calorie Posting on Calorie Consumption, note=Contains regression specification (y\_sct = x\_sct β + γ\_POS Tc t + ε\_sct); no preregistration mention.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{F03: Are data access constraints disclosed (restricted access, proprietary data, NDAs)?}\label{f03-are-data-access-constraints-disclosed-restricted-access-proprietary-data-ndas}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{F)\ Replication\ and\ transparency}
+\item
+  Confidence: \texttt{low\ (0.2748035588323431)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Confidentiality\ /\ data\ access\ constraints}
+\item
+  Data source: Starbucks transaction and cardholder data (calorie posting study)
+\item
+  Answer:
+\end{itemize}
+
+Yes --- the context discloses data-access constraints due to confidentiality requirements and restrictions on sharing details.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Due to confidentiality requirements, we are unable to reveal any more details about these differences.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data access constraints / confidentiality, note=To preserve confidentiality of competitively sensitive information.
+  \item
+    page=6, words=275-517, section=Confidentiality, note=Due to confidentiality requirements, we are unable to reveal any more details about these differences.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{F04: Are key steps in data cleaning and construction documented?}\label{f04-are-key-steps-in-data-cleaning-and-construction-documented}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{F)\ Replication\ and\ transparency}
+\item
+  Confidence: \texttt{low\ (0.21844943666575672)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual}
+\item
+  Data source: Starbucks transaction data and cardholder data for NYC, Boston, and Philadelphia (balanced panel after exclusions).
+\item
+  Answer:
+\end{itemize}
+
+Yes, key steps in data cleaning and construction are documented.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We exclude transactions at stores that were not open during the entire data period (i.e., we analyze the balanced panel), and we exclude transactions that included more than four units of any one item.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data cleaning and sample construction, note=Excludes stores not open during the entire data period (balanced panel) and transactions with more than four units; 2.2\% excluded.
+  \item
+    page=6, words=0-349, section=Data processing and confidentiality, note=Normalization of NYC values to one for confidentiality; data sources include transaction and cardholder data.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{F05: Are robustness and sensitivity analyses fully reported or partially omitted?}\label{f05-are-robustness-and-sensitivity-analyses-fully-reported-or-partially-omitted}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{F)\ Replication\ and\ transparency}
+\item
+  Confidence: \texttt{low\ (0.2842025482871281)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{robustness\_check\_reported}
+\item
+  Data source: Starbucks transaction and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Partially reported.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Our findings are unchanged if we exclude the weather controls.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Section IV, note=Robustness check: findings unchanged if weather controls are excluded.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{G01: What populations or settings are most likely to generalize from this study?}\label{g01-what-populations-or-settings-are-most-likely-to-generalize-from-this-study}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{G)\ External\ validity\ and\ generalization}
+\item
+  Confidence: \texttt{low\ (0.28505401415743975)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{empirical\ results\ with\ heterogeneity\ analyses\ and\ generalization\ caveats}
+\item
+  Data source: Starbucks transaction and cardholder data (NYC, Boston, Philadelphia; with Seattle controls)
+\item
+  Table/Figure: Table 9
+\item
+  Answer:
+\end{itemize}
+
+Populations/settings most likely to generalize from this study are similar urban chain-restaurant customers exposed to calorie labeling, particularly: (1) residents of higher-income and more educated ZIP codes; (2) female cardholders; (3) high-calorie purchasers and high-frequency customers; and (4) commuters who travel between NYC and other cities. Generalization to other restaurant chains remains uncertain, as the study covers only Starbucks.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+we find evidence in support of both learning and salience as part of the mechanism for why calorie posting causes consumers to reduce calories per transaction.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 3, words=275-564, section=Limitations and scope, note=Notes two limitations and that data are from only one chain (Starbucks).
+  \item
+    page=page 5, words=275-591, section=Data summary and limitations, note=States that cardholders may not be representative of Starbucks customers more generally.
+  \item
+    page=page 20, words=0-349, section=Heterogeneity in the Effect of Calorie Posting, note=Finds larger calorie reductions in higher-income and more-educated ZIPs; female cardholders more responsive.
+  \item
+    page=page 21, words=0-349, section=Heterogeneity in the Effect of Calorie Posting, note=Details on heterogeneous effects, including high- vs. low-calorie purchasers.
+  \item
+    page=page 29, words=0-349, section=Commuters (Table 9), note=Examines commuters and non-commuters to assess learning vs salience.
+  \item
+    page=page 30, words=0-349, section=Is the Effect Big Enough to Matter?, note=Discusses learning vs salience; supports both mechanisms.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{G02: What populations or settings are least likely to generalize?}\label{g02-what-populations-or-settings-are-least-likely-to-generalize}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{G)\ External\ validity\ and\ generalization}
+\item
+  Confidence: \texttt{low\ (0.21431272991336786)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{limitation}
+\item
+  Data source: Starbucks transaction and cardholder data (NYC, Boston, Philadelphia; Seattle data discussed separately)
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: The answer relies on explicit study limitations that cardholders are not representative and the data cover only one chain; assuming generalization would require evidence across other chains or populations.
+\item
+  Answer:
+\end{itemize}
+
+Cardholder data from a single-chain study (Starbucks) and a sample of loyal cardholders are least likely to generalize to broader populations or other chains.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+However, these cardholders may not be representative of Starbucks customers more generally, as we expect these individuals are above average in their loyalty to Starbucks.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Limitations -- chain generalizability, note=The study notes data are from only one chain (Starbucks), questioning generalization to other chains.
+  \item
+    page=5, words=275-591, section=Limitations -- sample representativeness, note=Cardholders may not be representative of Starbucks customers; they are described as above-average loyal.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{G03: Do the authors discuss boundary conditions or scope limits?}\label{g03-do-the-authors-discuss-boundary-conditions-or-scope-limits}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{G)\ External\ validity\ and\ generalization}
+\item
+  Confidence: \texttt{low\ (0.20195364741755326)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{limitations\ and\ scope\ boundaries}
+\item
+  Data source: Starbucks cardholder dataset (limited to Starbucks).
+\item
+  Assumption flag: \texttt{False}
+\item
+  Answer:
+\end{itemize}
+
+Yes. They explicitly discuss boundary conditions and scope limits, noting that they do not measure obesity directly and that the data cover only one chain (Starbucks).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+However, there are two important limitations to this research. First, we do not directly measure the effect of calorie posting on obesity itself.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Limitations, note=Two key limitations: no obesity measurement; data from a single chain (Starbucks); potential home behavior offset not known.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{G04: How might the results change in different time periods or markets?}\label{g04-how-might-the-results-change-in-different-time-periods-or-markets}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{G)\ External\ validity\ and\ generalization}
+\item
+  Confidence: \texttt{medium\ (0.35769051116993333)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{empirical\_findings}
+\item
+  Data source: Starbucks transaction and cardholder data described in the study
+\item
+  Answer:
+\end{itemize}
+
+Results may differ in other time periods or markets due to timing relative to calorie posting (effects observed immediately after posting on April 1, 2008 and persisting through Feb 2009), seasonal patterns and changing shopper composition, and the underlying mechanism (learning vs. salience). If learning effects dominate, commuters exposed to calorie information in NYC could reduce calories per transaction elsewhere as memory persists; if salience dominates, effects may be localized to NYC and decline outside it. Market characteristics (e.g., presence of nearby competitors like Dunkin Donuts) and the choice of control markets affect estimated effects, and cross-market comparability matters since NYC results rely on Boston/Philadelphia as controls. Therefore, in different time periods (e.g., holidays) or in different markets, the magnitude, persistence, and geographic reach of the calorie-posting effects could vary.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+the drop in calories per transaction occurred right around April 1, 2008, and persisted through February 2009
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Regression design and pre-trend checks, note=No pre-trend differences between NYC and controls; timing around posting date used to identify effects.
+  \item
+    page=14, words=0-349, section=Results: timing and persistence of effects, note=Calorie drop aligns with posting date and persists; supports potential cross-market learning vs salience considerations.
+  \item
+    page=29, words=0-349, section=Discussion on learning vs salience across markets, note=Commuter-learning mechanism implies potential effects beyond NYC.
+  \item
+    page=21, words=275-421, section=Heterogeneity across consumers and margins, note=Analyzes effects across different categories and proportions; illustrates behavioral heterogeneity.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{H01: Are key variables measured directly or via proxies?}\label{h01-are-key-variables-measured-directly-or-via-proxies}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{H)\ Measurement\ validity}
+\item
+  Confidence: \texttt{low\ (0.3077010504969669)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Direct\ measurement\ from\ transaction/cardholder\ datasets}
+\item
+  Data source: Transaction data; Cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Key variables are measured directly from transaction and cardholder data using item-level calorie information (not proxies). For example, calories per transaction and calories per beverage/food item are computed from actual items purchased, based on published calorie counts, and the number of items per transaction is directly observed.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Based on the transaction data, we compute that, prior to calorie posting, in NYC: average drink calories per transaction were 143; average total calories per transaction were 247.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 6, words=Based-247., section=Calories per transaction computed from transaction data, note=States that calories per transaction are computed from transaction data prior to calorie posting.
+  \item
+    page=page 12, words=The cardholder data allows-time., section=Data: cardholder vs transaction differences, note=Notes that cardholder data isolates intensive-margin changes by tracking the same individuals over time.
+  \item
+    page=page 16, words=To examine the relative importance-items)., section=Measurement of items and calories per item, note=Describes using number of items per transaction and calories per item purchased as dependent variables.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{H02: What measurement error risks are acknowledged or likely?}\label{h02-what-measurement-error-risks-are-acknowledged-or-likely}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{H)\ Measurement\ validity}
+\item
+  Confidence: \texttt{low\ (0.33249153366803075)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Limitations\ and\ measurement-error\ risks\ discussed\ in\ the\ study}
+\item
+  Data source: Starbucks transaction and cardholder data; Seattle/San Francisco surveys
+\item
+  Table/Figure: Figure 5
+\item
+  Answer:
+\end{itemize}
+
+The study acknowledges several measurement-error risks: (1) milk additions to beverages generate extra calories that are not observed in the data; (2) data come from a single chain (Starbucks), limiting measurement validity for other chains and obesity-related outcomes; (3) survey-based calorie knowledge data are prone to measurement error and potential sampling biases (e.g., under-representation of regular coffee drinkers and possible wave-to-wave sampling differences); (4) self-reported calorie estimates are inherently noisy and may not reflect actual consumption.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Consumers frequently add milk to their beverages at the self-service counter, which is a source of additional calories. Neither the transaction data nor cardholder data provide any information about this behavior.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Limitations, note=Data for only one chain (Starbucks); cannot infer effects at other chains or obesity outcomes.
+  \item
+    page=6, words=275-517, section=Measurement details, note=Milk additions are a source of additional calories not captured by the data.
+  \item
+    page=25, words=275-599, section=Survey limitations, note=Sample under-represents consumers who ordered regular coffee; potential biases in survey sample.
+  \item
+    page=27, words=275-577, section=Survey limitations, note=Possible inadvertent sampling of a more informed mix across the second survey wave.
+  \item
+    page=26, words=0-178, section=Survey results, note=Figure- and text describe errors in respondents\textquotesingle{} calorie estimates, indicating self-reported data are error-prone.
+  \item
+    page=3, words=275-564, section=Obesity link, note=No direct measurement of obesity effects.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{H03: Are there validation checks for key measures?}\label{h03-are-there-validation-checks-for-key-measures}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{H)\ Measurement\ validity}
+\item
+  Confidence: \texttt{low\ (0.24859403773494546)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Robustness\ checks\ and\ cross-dataset\ validation}
+\item
+  Data source: Transaction data; Cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Yes. The study performs validation checks on key measures via cross-dataset replication and robustness tests: estimates from transaction data and cardholder data are similar; weather controls have insignificant impact and results hold if removed; day-of-week and holiday dummies are included as robustness checks; sample restrictions ensure a balanced panel (excluding stores not open and bulk purchases).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Note also that we obtain similar estimates of the effect of calorie posting using both the transaction data and cardholder data.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=275-522, section=Methods across datasets, note=We estimate regressions separately with the transaction data and the cardholder data.
+  \item
+    page=11, words=275-522, section=Weather robustness, note=The weather controls are included; weather variables have an insignificant impact on sales; results unchanged if weather controls are excluded.
+  \item
+    page=14, words=275-590, section=Robustness checks, note=Day-of-week and holiday dummies are included; robustness checks show no difference in estimates; Seattle post-law robustness discussed.
+  \item
+    page=5, words=275-591, section=Data quality and sample restrictions, note=To preserve confidentiality and ensure comparability, transactions are filtered (e.g., exclude stores not open during the entire period; exclude bulk purchases). Excluded transactions represent 2.2\% of all transactions.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{H04: Do the authors discuss construct validity for core outcomes?}\label{h04-do-the-authors-discuss-construct-validity-for-core-outcomes}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{H)\ Measurement\ validity}
+\item
+  Confidence: \texttt{low\ (0.20310078750608626)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{not\_discussed}
+\item
+  Data source: Starbucks calorie-posting study transaction data (NYC/Seattle and control cities)
+\item
+  Answer:
+\end{itemize}
+
+No. The passages do not include an explicit discussion of construct validity for core outcomes.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+we do not directly measure the effect of calorie posting on obesity itself.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=3, words=275-564, section=Limitations / Scope, note=Mentions that they do not directly measure obesity and that data are limited to one chain; discussion of measurement limitations but not construct validity.
+  \item
+    page=11, words=0-349, section=Methods / Measurement, note=Describes regression specification to measure calories per transaction; demonstrates measurement approach but not validity discussion.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{I01: What policy counterfactuals are considered or implied?}\label{i01-what-policy-counterfactuals-are-considered-or-implied}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{I)\ Policy\ counterfactuals\ and\ welfare}
+\item
+  Confidence: \texttt{low\ (0.3409389970773805)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{counterfactual\ policy\ analysis\ (control-city\ comparison,\ commuter/within-city\ variation,\ and\ pre/post\ natural\ experiments)}
+\item
+  Data source: Starbucks transaction data; anonymous cardholder data; Seattle store surveys
+\item
+  Table/Figure: Table 3; Figure 3
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Assumes Boston/Philadelphia are appropriate counterfactuals for NYC in the absence of posting; Seattle pre/post provides an additional counterfactual for policy effects.
+\item
+  Answer:
+\end{itemize}
+
+Policy counterfactuals discussed or implied include (1) NYC\textquotesingle s outcomes juxtaposed with control cities (Boston and Philadelphia) where calorie posting did not occur, to estimate what would have happened in NYC absent posting; (2) within-cardholder analyses and commuter patterns that serve as counterfactuals for behavior in non-posting locations; and (3) Seattle\textquotesingle s pre/post calorie posting law as a separate counterfactual to triangulate the mechanism (learning vs. salience).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+To control for other factors affecting transactions, we also observe every transaction at Starbucks company stores in Boston and Philadelphia, where there was no calorie posting.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=2, words=0-40, section=Methods/Data, note=Boston and Philadelphia stores used as controls where calorie posting did not occur, providing a counterfactual for NYC.
+  \item
+    page=3, words=275-290, section=Methods/Data, note=Seattle calorie-posting law used as a pre/post counterfactual to study policy effects.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{I02: What are the main welfare tradeoffs or distributional impacts discussed?}\label{i02-what-are-the-main-welfare-tradeoffs-or-distributional-impacts-discussed}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{I)\ Policy\ counterfactuals\ and\ welfare}
+\item
+  Confidence: \texttt{low\ (0.3100505768530898)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{empirical\ findings\ on\ welfare\ and\ distributional\ effects\ of\ mandatory\ calorie\ posting.}
+\item
+  Data source: Calorie posting study data (NYC Starbucks, control cities; transaction and cardholder data).
+\item
+  Answer:
+\end{itemize}
+
+The policy reduced calories per transaction mainly through the extensive margin (people opting not to buy food items), with little change in beverage calories or visit frequency. Profits were largely unaffected, though average prices per item rose, implying a shift toward higher-margin products. Distributionally, calorie reductions were larger among higher-income and more educated ZIPs, were greater for female cardholders, and were concentrated at the higher end of the calorie distribution (larger absolute reductions at higher quantiles but similar percent reductions). Overall welfare effects thus concentrated health gains among higher-income/educated groups and high-calorie purchasers, with modest or neutral profit implications and some potential equity considerations.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Hence, nearly three quarters of the total calorie reduction can be attributed to people opting not to buy food items (i.e., the extensive margin of food demand).
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=18, words=1-26, section=Results: calories per item, note=Three quarters of calorie reduction attributed to not buying food items (extensive margin).
+  \item
+    page=20, words=1-20, section=Heterogeneity in effects, note=Decrease in calories per transaction larger in higher-income and more-educated ZIPs; female cardholders more responsive.
+  \item
+    page=22, words=1-20, section=Quantile results, note=Calorie reductions larger in the top half of the distribution; percent change roughly 5--6\% at higher quantiles.
+  \item
+    page=24, words=260-310, section=Profit implications, note=No significant effect on Starbucks profit; prices per item purchased increased.
+  \item
+    page=18, words=260-320, section=Beverage vs food calories, note=Beverage calories per transaction largely unaffected.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{I03: Are cost-benefit or incidence analyses provided?}\label{i03-are-cost-benefit-or-incidence-analyses-provided}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{I)\ Policy\ counterfactuals\ and\ welfare}
+\item
+  Confidence: \texttt{low\ (0.3129039136460898)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Qualitative\ discussion\ of\ costs;\ absence\ of\ formal\ analysis}
+\item
+  Data source: Starbucks NYC transaction data and control city data; in-store surveys (Seattle and controls)
+\item
+  Answer:
+\end{itemize}
+
+No formal cost-benefit or incidence analyses are provided. The paper mentions costs of posting (e.g., compliance costs) and potential indirect costs, but it does not present a quantified cost-benefit or incidence analysis.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+One natural argument against calorie posting is that forcing restaurants to put the information on menus is costly.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=4, words=275-576, section=Costs discussion, note=Mentions costs of compliance and indirect costs of calorie posting
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{I04: What policy recommendations are stated or implied?}\label{i04-what-policy-recommendations-are-stated-or-implied}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{I)\ Policy\ counterfactuals\ and\ welfare}
+\item
+  Confidence: \texttt{low\ (0.3368107264591931)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{policy\_recommendation}
+\item
+  Data source: Starbucks NYC transaction data (with calorie posting starting Apr 1, 2008; NYC stores vs comparator locations) and related survey/cardholder data
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Assumes that the benefits of calorie posting outweigh the costs and that low compliance and public education effects contribute to policy value; relies on the paper\textquotesingle s cost-benefit interpretation.
+\item
+  Answer:
+\end{itemize}
+
+Mandatory calorie posting is potentially beneficial if its benefits outweigh its costs; costs are very low, and it could reduce calories per transaction while encouraging low‑calorie menu innovation and offering public education benefits.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+Ultimately, mandatory calorie posting is only a good policy if the benefits outweigh the costs.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=34, words=0-349, section=Conclusion, note=Policy implication: benefits vs costs; low costs; potential for long-run innovation and education.
+  \item
+    page=33, words=275-553, section=Conclusion, note=Continuation of conclusion with policy implications.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{J01: What missingness or attrition patterns are reported?}\label{j01-what-missingness-or-attrition-patterns-are-reported}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{J)\ Data\ quality\ and\ integrity}
+\item
+  Confidence: \texttt{low\ (0.3156222240583413)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual\ description\ of\ missingness/attrition\ in\ Data\ Summary\ and\ footnotes}
+\item
+  Data source: Starbucks transaction data and cardholder data
+\item
+  Answer:
+\end{itemize}
+
+Missingness/attrition patterns reported include (1) exclusion of transactions from stores not open for the entire data period (balanced panel), (2) a known but small portion of transactions excluded overall (the excluded transactions represent only 2.2 percent of all transactions; the fraction of excluded transactions is unknown but believed to be well under 5 percent), and (3) data gaps due to independent, non--Starbucks-owned locations not covered by the data, implying missing data for those outlets. There is also an acknowledgment that the cardholder sample may not be representative of all Starbucks customers.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+The fraction of excluded transactions is unknown, but we believe it to be well under 5 percent. The excluded transactions represent only 2.2 percent of all transactions.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=A. Data Summary / Data exclusions, note=Excludes stores not open during the entire data period (balanced panel); fraction of excluded transactions unknown but under 5\%; 2.2\% of transactions excluded.
+  \item
+    page=5, words=0-349, section=Data Summary (Footnotes), note=12: data cover all Starbucks company-owned stores; 13: independent locations without data; fraction of excluded transactions unknown but under 5\%.
+  \item
+    page=5, words=275-591, section=A. Data Summary / Data exclusions (continued), note=Cardholders may not be representative of Starbucks customers; potential selection bias.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{J02: How are outliers handled (winsorization, trimming, exclusions)?}\label{j02-how-are-outliers-handled-winsorization-trimming-exclusions}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{J)\ Data\ quality\ and\ integrity}
+\item
+  Confidence: \texttt{low\ (0.3111494639257416)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{data\ cleaning\ /\ exclusions\ (outlier\ handling)}
+\item
+  Answer:
+\end{itemize}
+
+Outliers are handled by exclusions rather than statistical trimming: they remove transactions at stores not open for the full data period (balanced panel) and any transaction with more than four units of a single item; total exclusions amount to about 2.2\% of transactions.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+We exclude transactions at stores that were not open during the entire data period (i.e., we analyze the balanced panel), and we exclude transactions that included more than four units of any one item.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=We-transactions., section=Data cleaning / exclusions, note=Exclude non-open stores and bulk purchases; 2.2\% of transactions excluded.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{J03: Are there data audits or validation steps described?}\label{j03-are-there-data-audits-or-validation-steps-described}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{J)\ Data\ quality\ and\ integrity}
+\item
+  Confidence: \texttt{low\ (0.24329738080305616)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Data\ validation\ and\ robustness\ checks;\ data\ cleaning\ procedures.}
+\item
+  Data source: Starbucks transaction and cardholder datasets (NYC, Boston, Philadelphia).
+\item
+  Table/Figure: Figure 2
+\item
+  Answer:
+\end{itemize}
+
+Yes---the authors describe data validation and data-cleaning steps and perform robustness checks across two datasets to validate their findings. They exclude certain transactions, normalize data for confidentiality, use pre-trend tests, control for holidays and day-of-week, compare NYC to Boston/Philadelphia, and use Seattle as an additional robustness check, including within-individual analysis via the cardholder data.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+There are a few points of interest to note from Figure 2. First, with both datasets we see no evidence of pre-trend differences between NYC and Boston/Philadelphia.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=0-349, section=Data Summary / Data Cleaning, note=Data describe transaction and cardholder datasets; confidentiality-related exclusions.
+  \item
+    page=14, words=0-349, section=II. Effect of Mandatory Calorie Posting on Calorie Consumption, note=No evidence of pre-trend differences; cross-dataset robustness checks described.
+  \item
+    page=14, words=275-590, section=II. Effect of Mandatory Calorie Posting on Calorie Consumption, note=Robustness checks including day-of-week/holiday controls; Seattle robustness; within-individual variation.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{J04: Is there evidence of reporting bias or selective sample inclusion?}\label{j04-is-there-evidence-of-reporting-bias-or-selective-sample-inclusion}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{J)\ Data\ quality\ and\ integrity}
+\item
+  Confidence: \texttt{low\ (0.3050009509577364)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{limitations\ acknowledgment\ of\ sampling\ bias}
+\item
+  Data source: Cardholder data (anonymous Starbucks cardholders) and transaction data from Starbucks locations in NYC, Boston, and Philadelphia; Seattle/other controls mentioned.
+\item
+  Assumption flag: \texttt{True}
+\item
+  Assumption notes: Authors acknowledge that cardholders may not be representative; potential sampling bias affecting generalizability.
+\item
+  Answer:
+\end{itemize}
+
+Yes. The authors acknowledge potential selective sample inclusion: the cardholder sample may not be representative of all Starbucks customers, being above-average in loyalty, which can bias generalizability.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+However, these cardholders may not be representative of Starbucks customers more generally, as we expect these individuals are above average in their loyalty to Starbucks.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=5, words=combined-Starbucks., section=Data Summary / Cardholder data limitations, note=Notes that cardholders may not be representative of Starbucks customers generally; sample bias.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{K01: What goodness-of-fit or diagnostic metrics are reported?}\label{k01-what-goodness-of-fit-or-diagnostic-metrics-are-reported}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{K)\ Model\ fit\ and\ diagnostics}
+\item
+  Confidence: \texttt{low\ (0.24747909226599218)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{regression\ results\ summary\ (R-squared\ values)}
+\item
+  Data source: Regression results from Bollinger et al. (2011) Table 4 notes (transaction data and cardholder data)
+\item
+  Answer:
+\end{itemize}
+
+R-squared metrics (R2 and R2') are reported as goodness-of-fit for the regressions. Specifically, R2' ranges from 0.27 to 0.82 for item-per-transaction regressions, and R2 ranges from 0.26 to 0.37 for cardholder-data regressions.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+R2' ranging from 0.27 to 0.82. The regressions using the cardholder data in the top panel are based on 1,511,516 observations, and the R2 vary between 0.26 and 0.37.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=18, words=0-349, section=Table 4 notes, note=R2' ranges 0.27--0.82; R2 ranges 0.26--0.37 for regression models.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{K02: Are functional form choices tested (logs, levels, nonlinearities)?}\label{k02-are-functional-form-choices-tested-logs-levels-nonlinearities}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{K)\ Model\ fit\ and\ diagnostics}
+\item
+  Confidence: \texttt{low\ (0.2677824279050766)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{empirical\ regression\ specifications}
+\item
+  Data source: cardholder data and transaction data from Starbucks study
+\item
+  Table/Figure: Table 9; Figure 3
+\item
+  Answer:
+\end{itemize}
+
+Yes. They test multiple functional forms by using both level and log specifications, including log(calories + 1) and log daily sales, as well as regressions with calories-per-transaction in levels.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+the dependent variable is log(calories + 1)
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=page 11 words 0-349, words=0-349, section=Methods/Empirical strategy, note=Regression form y\_sct = x\_sctβ + γPOS\_t c t + ε\_sct; discusses the empirical setup
+  \item
+    page=page 16 words 0-349, words=0-349, section=B. Substitution Effects, note=Describes regressing log daily sales and log calories per item purchased
+  \item
+    page=page 29 words 0-349, words=0-349, section=Commuters' analysis, note=Dependent variable is log(calories + 1); discusses regression with logs and interactions
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{K03: Are residual checks or specification tests reported?}\label{k03-are-residual-checks-or-specification-tests-reported}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{K)\ Model\ fit\ and\ diagnostics}
+\item
+  Confidence: \texttt{low\ (0.2356104236657303)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{textual}
+\item
+  Data source: Transaction data and Cardholder data
+\item
+  Table/Figure: Table 9
+\item
+  Answer:
+\end{itemize}
+
+No explicit residual checks or formal specification tests are reported. The authors discuss robustness via alternative specifications (e.g., using separate week dummies, different dependent variables) and report robust standard errors (Table 9).
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+"Robust standard errors in parentheses."
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=11, words=0-349, section=Model specification, note=Regression specification with fixed effects and controls; baseline model.
+  \item
+    page=13, words=275-528, section=Robustness/Alternative specifications, note=Describes alternative specification (separate week dummies) and robustness checks.
+  \item
+    page=16, words=275-558, section=Results/Robustness, note=Discussion of alternative dependent variables and robustness of findings (Table 4).
+  \item
+    page=29, words=0-349, section=Results/Table notes, note=Table 9 note indicates robust standard errors in parentheses.
+  \end{itemize}
+\end{itemize}
+
+\subsubsection{K04: How sensitive are results to alternative specifications or estimators?}\label{k04-how-sensitive-are-results-to-alternative-specifications-or-estimators}
+
+\begin{itemize}
+\tightlist
+\item
+  Category: \texttt{K)\ Model\ fit\ and\ diagnostics}
+\item
+  Confidence: \texttt{medium\ (0.376466386118914)}
+\item
+  Retrieval method: \texttt{local}
+\item
+  Evidence type: \texttt{Robustness\ checks\ and\ estimator\ comparisons}
+\item
+  Data source: American Economic Journal: Economic Policy, Bollinger et al., calorie posting study (transaction and cardholder data).
+\item
+  Answer:
+\end{itemize}
+
+Results are robust to alternative specifications and estimators. Robustness checks with date fixed effects show the transaction-based estimates barely change (beverage calories −0.004, food calories −0.152, total calories −0.063); cardholder data confirm the intensive-margin effects but with some differences (beverage calories not significantly different from zero; food calories −11.2\% per transaction; total calories −5.0\%). Weather controls are insignificant, and identification relies on within-city variation. Quantile analyses indicate the size of effects can vary across the calorie distribution but remain nontrivial, with larger absolute reductions at higher quantiles.
+
+\begin{itemize}
+\tightlist
+\item
+  Quote snippet:
+\end{itemize}
+
+\begin{quote}
+As a robustness check, we include date fixed effects in the above specification (and therefore drop the day-of-week and week fixed effects). The estimates based on the transaction data are barely changed.
+\end{quote}
+
+\begin{itemize}
+\tightlist
+\item
+  Citation anchors:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    page=12, words=0-349, section=Robustness checks and estimator comparisons, note=Date fixed effects robustness; transaction results: beverage calories −0.004, food calories −0.152, total calories −0.063.
+  \item
+    page=11, words=275-522, section=Controls and seasonality, note=Weather variables have an insignificant impact; fixed effects control for seasonality.
+  \item
+    page=12, words=275-624, section=Cardholder vs transaction data, note=Cardholder data isolate intensive-margin effects; six regressions; within-city variation; extensive margin not captured in these estimates.
+  \item
+    page=22, words=0-349, section=Quantile analysis, note=Calorie reductions tend to be larger in higher quantiles; effects vary across the distribution.
+  \end{itemize}
+\end{itemize}
+
+\end{document}

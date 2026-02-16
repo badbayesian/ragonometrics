@@ -55,7 +55,6 @@ flowchart LR
     CUI[streamlit container] --> UI
     CWF[workflow container] --> Runner
     CRQ[rq-worker container] --> Runner
-    CRedis[redis container]
     CPG[postgres container]
   end
 
@@ -74,7 +73,7 @@ Key Components
   - [`ragonometrics/core/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/core): settings, ingestion, extraction, core prompts, logging.
   - [`ragonometrics/pipeline/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/pipeline): LLM call wrapper, query cache, token usage accounting.
   - [`ragonometrics/indexing/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/indexing): FAISS indexing, Postgres metadata, hybrid retrieval, migrations.
-  - [`ragonometrics/integrations/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/integrations): OpenAlex, CitEc, econ data, Redis/RQ jobs.
+- [`ragonometrics/integrations/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/integrations): OpenAlex, CitEc, econ data, and async queue jobs.
   - [`ragonometrics/ui/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/ui): Streamlit app.
   - [`ragonometrics/eval/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/eval): eval + benchmark tooling.
 - PDF extraction and preprocessing
@@ -96,8 +95,8 @@ Key Components
   - Console entrypoints: `ragonometrics index | query | ui | benchmark`.
 - Agentic workflow
   - [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
-  - State persisted in Postgres (`workflow.workflow_runs`, `workflow.workflow_steps`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py).
-  - Optional async execution with Redis + RQ ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
+  - State persisted in Postgres (`workflow.run_records`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py) and [`ragonometrics/pipeline/report_store.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/report_store.py).
+  - Optional async execution with a Postgres-backed queue ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
   - Optional agentic step plans sub-questions, retrieves context, and synthesizes an answer.
 - Caching
   - OpenAlex metadata cache in Postgres (`enrichment.openalex_cache`).
@@ -111,7 +110,7 @@ Data and Metadata Stores
   - Ingestion: `ingestion.documents`, `ingestion.paper_metadata`, `ingestion.prep_manifests`.
   - Enrichment: `enrichment.openalex_cache`, `enrichment.citec_cache`.
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.
-  - Workflow: `workflow.workflow_runs`, `workflow.workflow_steps`, `workflow.workflow_reports`.
+  - Workflow: `workflow.run_records` (`record_kind`: `run|step|report|question|artifact|workstream_link`).
   - Retrieval: `retrieval.query_cache`, `retrieval.retrieval_events`.
   - Observability: `observability.token_usage`, `observability.request_failures`.
 - Local artifacts:
@@ -163,7 +162,7 @@ Evaluation
 
 Queueing
 --------
-- Redis + RQ ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)) for async indexing jobs.
+- Postgres-backed async jobs table + worker ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
 
 Benchmarks
 ----------
@@ -180,6 +179,6 @@ Entrypoints
 Containerization
 ----------------
 - [`Dockerfile`](https://github.com/badbayesian/ragonometrics/blob/main/Dockerfile) installs package dependencies and Poppler.
-- [`compose.yml`](https://github.com/badbayesian/ragonometrics/blob/main/compose.yml) defines services for UI, workflow, Redis, RQ worker, and Postgres.
+- [`compose.yml`](https://github.com/badbayesian/ragonometrics/blob/main/compose.yml) defines services for UI, workflow, queue worker, and Postgres.
 - Services run code from the image by default; add a bind mount for live code editing if desired.
 

@@ -1,0 +1,26 @@
+{
+  "run_id": "d990e3616c2549d89a540e3f50c6e92d",
+  "created_at": "2026-02-16T04:09:22.324976+00:00",
+  "corpus_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "hashing_enabled": true,
+  "validate_text": false,
+  "stats": {
+    "num_files": 0,
+    "total_size_bytes": 0,
+    "corpus_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hashing_enabled": true,
+    "validate_text": false,
+    "duplicate_count": 0,
+    "empty_file_count": 0,
+    "empty_text_count": 0,
+    "pdfinfo_available": false
+  },
+  "warnings": [
+    "no_pdfs_found",
+    "pdfinfo_unavailable"
+  ],
+  "duplicates": [],
+  "empty_files": [],
+  "empty_text_files": [],
+  "files": []
+}

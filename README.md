@@ -3,7 +3,7 @@ Ragonometrics - RAG pipeline for economics papers
 
 Overview
 --------
-Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes vectors in Postgres (`pgvector` + `pgvectorscale`) with FAISS fallback artifacts, and serves retrieval + LLM summaries via CLI and a Streamlit UI. External metadata is enriched via OpenAlex and CitEc when available. Author display uses layered lookup (OpenAlex, PDF metadata, then first-page text parsing) to reduce `Unknown` results. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
+Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes vectors in Postgres (`pgvector` + `pgvectorscale`) with FAISS fallback artifacts, and serves retrieval + LLM summaries via CLI and a Streamlit UI. External metadata is enriched via OpenAlex and CitEc when available. Author display uses layered lookup (OpenAlex, PDF metadata, then first-page text parsing) to reduce `Unknown` results. Async workflow execution is Postgres-backed (`workflow.async_jobs`) and processed by the queue worker service. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
 
 This repo is a combination of coding + vibe coding.
 
@@ -55,13 +55,35 @@ docker compose ps
 docker compose exec -T streamlit ls -la /app/papers
 ```
 
+Bring up only the core runtime stack (UI + Postgres + queue worker):
+
+```bash
+docker compose up -d --build streamlit postgres rq-worker
+```
+
+pgAdmin (database browser) quick start:
+
+```bash
+python tools/standup_pgadmin.py
+```
+
+Then open the URL printed by the script (default `http://localhost:5050`) and inspect tables under:
+- `workflow.run_records`
+- `workflow.workflow_runs`
+- `workflow.workflow_steps`
+- `workflow.workflow_reports`
+- `workflow.workstream_runs`
+- `workflow.artifacts`
+
 Recent Updates
 --------------
 - Streamlit answer rendering now includes an optional math-format review pass that rewrites formula/function notation to Markdown-friendly LaTeX.
 - Streamlit now labels the evidence expander as `Snapshots`.
 - Paper author lookup now falls back to first-page author parsing when metadata sources are incomplete.
-- Workflow reports can now be stored in Postgres as `jsonb` documents (table: `workflow_reports`) with indexed metadata fields.
+- Workflow persistence is consolidated into `workflow.run_records` (`record_kind`: `run|step|report|question|artifact|workstream_link`) with JSON payloads and indexed metadata.
 - Workflow runs now terminate early (after saving partial report/state) if OpenAI returns `insufficient_quota` (`429`).
+- Workflow runs now support explicit workstream metadata (`--workstream-id`, `--arm`, `--parent-run-id`, `--trigger-source`) and persist this lineage in `workflow.run_records`.
+- Token usage is logged per call with step/question attribution in `observability.token_usage` (`step`, `question_id`, `run_id`, `operation`, token counts).
 
 Workflow (Recommended)
 ----------------------
@@ -70,7 +92,20 @@ The primary entrypoint for reproducible analysis is `ragonometrics workflow`. A 
 Start here for end-to-end paper analysis:
 
 ```bash
-ragonometrics workflow --papers papers/ --agentic --report-question-set structured --question "What is the key contribution?"
+ragonometrics workflow --papers papers/ --agentic --report-question-set both --question "What is the key contribution?"
+```
+
+Workstream-oriented run example:
+
+```bash
+ragonometrics workflow --papers "papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" --agentic --agentic-model gpt-5-nano --agentic-citations --report-question-set both --question "What are the paper's main contribution, identification strategy, key results, and limitations?" --workstream-id calorie-posting-chain-restaurants --arm gpt-5-nano --trigger-source cli
+```
+
+Async workstream enqueue (Postgres queue):
+
+```bash
+ragonometrics workflow --papers papers/ --agentic --report-question-set both --async --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics" --queue-db-url "postgres://user:pass@localhost:5432/ragonometrics"
+python -m ragonometrics.integrations.rq_queue worker --db-url "postgres://user:pass@localhost:5432/ragonometrics"
 ```
 
 Each run produces audit artifacts under [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports), including:
@@ -95,8 +130,10 @@ CLI Commands
 ragonometrics workflow --papers papers/
 ragonometrics workflow --papers papers/ --agentic --question "What is the key contribution?"
 ragonometrics workflow --papers papers/ --agentic --agentic-citations --report-question-set both --question "What is the key contribution?"
+ragonometrics workflow --papers papers/ --agentic --report-question-set both --workstream-id my-workstream --arm baseline --trigger-source cli
+ragonometrics workflow --papers papers/ --agentic --report-question-set both --async --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics" --queue-db-url "postgres://user:pass@localhost:5432/ragonometrics"
 ```
-- `ragonometrics store-workflow-reports`: backfill report JSON files from `reports/` into Postgres `workflow_reports` (`jsonb` payload).
+- `ragonometrics store-workflow-reports`: backfill report JSON files from `reports/` into Postgres `workflow.run_records` (`record_kind=report|question|artifact`).
 ```bash
 ragonometrics store-workflow-reports --reports-dir reports --recursive --meta-db-url "postgres://user:pass@localhost:5432/ragonometrics"
 ```

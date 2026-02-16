@@ -37,7 +37,11 @@ def test_upsert_workflow_report():
 
     cur = conn.cursor()
     cur.execute(
-        "SELECT run_id, status, papers_dir, agentic_status, report_questions_set FROM workflow_reports WHERE run_id = %s",
+        """
+        SELECT run_id, status, papers_dir, agentic_status, report_question_set
+        FROM run_records
+        WHERE run_id = %s AND record_kind = 'report'
+        """,
         ("run-report-store-1",),
     )
     row = cur.fetchone()
@@ -70,4 +74,3 @@ def test_store_workflow_reports_from_dir(tmp_path: Path):
     assert stats["total"] == 1
     assert stats["stored"] == 1
     assert stats["skipped"] == 0
-
