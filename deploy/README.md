@@ -30,3 +30,9 @@ Notes
 - These stubs do not create IAM policies, secrets, or networking by default.
 - Store secrets in a managed secrets service (AWS Secrets Manager / GCP Secret Manager).
 - Prefer private networking between the app and Postgres.
+
+Architecture Docs
+-----------------
+- System architecture diagram: [`docs/architecture/architecture.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md)
+- Workflow architecture diagram: [`docs/architecture/workflow_architecture.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md)
+- Postgres ERD: [`docs/architecture/data-model-erd.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/data-model-erd.md)

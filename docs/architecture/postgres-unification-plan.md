@@ -18,7 +18,7 @@ This document defines the target storage model for consolidating runtime persist
 - `ingestion`: extracted paper records and prep manifests.
 - `enrichment`: OpenAlex/CitEc cache and external fetch outcomes.
 - `indexing`: vector/index metadata and shard/version records.
-- `workflow`: workflow run state, step state, and workflow report payloads.
+- `workflow`: unified workflow ledger (`run_records`) and async jobs queue.
 - `retrieval`: query cache and retrieval telemetry.
 - `observability`: token usage and operational failures.
 
@@ -40,9 +40,8 @@ This document defines the target storage model for consolidating runtime persist
 - `indexing.index_shards`
 
 ### `workflow`
-- `workflow.workflow_runs`
-- `workflow.workflow_steps`
-- `workflow.workflow_reports`
+- `workflow.run_records`
+- `workflow.async_jobs`
 
 ### `retrieval`
 - `retrieval.query_cache`
@@ -65,7 +64,7 @@ The concrete DDL is tracked in:
 ### Phase 1: Dual-Write (No Read Changes)
 - Continue current reads.
 - Add Postgres writes for:
-  - workflow state (`workflow.workflow_runs`, `workflow.workflow_steps`)
+  - workflow state + reports (`workflow.run_records`)
   - query cache (`retrieval.query_cache`)
   - token usage (`observability.token_usage`)
   - enrichment caches (`enrichment.openalex_cache`, `enrichment.citec_cache`)
@@ -73,8 +72,8 @@ The concrete DDL is tracked in:
 
 ### Phase 2: Backfill
 - Backfill historical sqlite/report artifacts into Postgres:
-  - workflow json reports -> `workflow.workflow_reports`
-  - sqlite workflow state -> `workflow.workflow_runs` / `workflow.workflow_steps`
+  - workflow json reports -> `workflow.run_records` (`record_kind=report`)
+  - sqlite workflow state -> `workflow.run_records` (`record_kind=run|step`)
   - sqlite query cache -> `retrieval.query_cache`
   - sqlite token usage -> `observability.token_usage`
   - sqlite enrichment caches -> `enrichment.*_cache`
@@ -90,7 +89,7 @@ The concrete DDL is tracked in:
 
 ## Constraints and Idempotency
 - Ensure uniqueness where natural keys exist:
-  - `workflow.workflow_reports(run_id)`
+  - `workflow.run_records(run_id, record_kind, step, record_key)`
   - `retrieval.query_cache(cache_key)`
   - `ingestion.documents(doc_id)`
   - `indexing.vectors(id)` and `indexing.vectors(chunk_id)`
