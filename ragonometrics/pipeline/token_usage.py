@@ -25,6 +25,14 @@ class UsageSummary:
 
 
 def _database_url() -> str:
+    """Database url.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for token usage persistence.")
@@ -32,6 +40,14 @@ def _database_url() -> str:
 
 
 def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    """Connect.
+
+    Args:
+        _db_path (Path): Description.
+
+    Returns:
+        psycopg2.extensions.connection: Description.
+    """
     conn = psycopg2.connect(_database_url())
     cur = conn.cursor()
     cur.execute("CREATE SCHEMA IF NOT EXISTS observability")
@@ -129,7 +145,28 @@ def record_usage(
     cost_usd_total: Optional[float] = None,
     meta: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Persist a token usage record to Postgres."""
+    """Persist a token usage record to Postgres.
+
+    Args:
+        db_path (Path): Description.
+        model (str): Description.
+        operation (str): Description.
+        input_tokens (int): Description.
+        output_tokens (int): Description.
+        total_tokens (int): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        run_id (Optional[str]): Description.
+        step (Optional[str]): Description.
+        question_id (Optional[str]): Description.
+        provider_request_id (Optional[str]): Description.
+        latency_ms (Optional[int]): Description.
+        cache_hit (Optional[bool]): Description.
+        cost_usd_input (Optional[float]): Description.
+        cost_usd_output (Optional[float]): Description.
+        cost_usd_total (Optional[float]): Description.
+        meta (Optional[Dict[str, Any]]): Description.
+    """
     conn = _connect(db_path)
     try:
         resolved_run_id = run_id
@@ -194,6 +231,16 @@ def _where_clauses(
     request_id: Optional[str],
     since: Optional[str],
 ) -> tuple[str, List[Any]]:
+    """Where clauses.
+
+    Args:
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        since (Optional[str]): Description.
+
+    Returns:
+        tuple[str, List[Any]]: Description.
+    """
     clauses = []
     params: List[Any] = []
     if session_id:
@@ -217,7 +264,17 @@ def get_usage_summary(
     request_id: Optional[str] = None,
     since: Optional[str] = None,
 ) -> UsageSummary:
-    """Return aggregate usage stats."""
+    """Return aggregate usage stats.
+
+    Args:
+        db_path (Path): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        since (Optional[str]): Description.
+
+    Returns:
+        UsageSummary: Description.
+    """
     conn = _connect(db_path)
     try:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
@@ -251,7 +308,17 @@ def get_usage_by_model(
     request_id: Optional[str] = None,
     since: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Return aggregated usage totals grouped by model."""
+    """Return aggregated usage totals grouped by model.
+
+    Args:
+        db_path (Path): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        since (Optional[str]): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+    """
     conn = _connect(db_path)
     try:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
@@ -284,7 +351,17 @@ def get_recent_usage(
     session_id: Optional[str] = None,
     request_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Return the most recent usage rows."""
+    """Return the most recent usage rows.
+
+    Args:
+        db_path (Path): Description.
+        limit (int): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+    """
     conn = _connect(db_path)
     try:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=None)

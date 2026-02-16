@@ -73,10 +73,13 @@ The `rq-worker` service consumes jobs from `workflow.async_jobs`.
 ## Artifacts and data
 
 Filesystem:
-- `reports/workflow/workflow-report-<run_id>.json`
-- `reports/prep/prep-manifest-<run_id>.json`
-- `reports/audit/audit-workflow-report-<run_id>.md`
-- `reports/audit/audit-workflow-report-<run_id>-latex.pdf`
+- `reports/workflow-report-<run_id>.json` (default path)
+- `reports/prep-manifest-<run_id>.json` (default path)
+- `reports/audit-workflow-report-<run_id>.md` (if audit rendering enabled)
+- `reports/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
+
+Optional organization:
+- You can move artifacts into subfolders such as `reports/workflow/`, `reports/prep/`, and `reports/audit/` for browsing.
 
 Postgres:
 - Workflow lineage: `workflow.run_records`

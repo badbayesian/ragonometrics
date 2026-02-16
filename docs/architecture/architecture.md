@@ -48,7 +48,10 @@ flowchart LR
   end
 
   CLI --> WF
-  UI --> WF
+  CLI --> RET
+  CLI --> IDXT
+  UI --> RET
+  UI --> OBS
   BATCH --> Q --> WKR --> WF
 
   WF --> PREP --> INGEST --> ENRICH --> ECON --> AGENTIC --> INDEX --> EVAL --> REPORT
@@ -87,7 +90,7 @@ Key Components
   - Optional section-aware chunking (title/abstract/introduction/methods/results) via `SECTION_AWARE_CHUNKING`.
 - Embeddings and retrieval
   - OpenAI embeddings via `embed_texts`.
-  - Hybrid BM25 + FAISS retrieval when `DATABASE_URL` is configured.
+  - Hybrid BM25 + Postgres vector retrieval when `DATABASE_URL` is configured, with FAISS fallback.
   - Optional query expansion (`QUERY_EXPANSION`) and LLM reranking (`RERANKER_MODEL`, `RERANK_TOP_N`).
 - Indexing
   - FAISS `IndexFlatIP` with normalized vectors.
@@ -97,7 +100,7 @@ Key Components
 - UI and CLI
   - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat and Usage tabs.
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
-  - Console entrypoints: `ragonometrics index | query | ui | benchmark`.
+  - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-workflow-reports`.
 - Agentic workflow
   - [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
   - State persisted in Postgres (`workflow.run_records`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py) and [`ragonometrics/pipeline/report_store.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/report_store.py).
@@ -106,25 +109,24 @@ Key Components
 - Caching
   - OpenAlex metadata cache in Postgres (`enrichment.openalex_cache`).
   - CitEc metadata cache in Postgres (`enrichment.citec_cache`).
+  - OpenAlex title+author paper matches in Postgres (`enrichment.paper_openalex_metadata`).
   - Query/answer cache in Postgres (`retrieval.query_cache`).
   - Token usage in Postgres (`observability.token_usage`).
 
 Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
-  - Ingestion: `ingestion.documents`, `ingestion.paper_metadata`, `ingestion.prep_manifests`.
-  - Enrichment: `enrichment.openalex_cache`, `enrichment.citec_cache`.
+  - Ingestion: `ingestion.documents`, `ingestion.paper_metadata` (`ingestion.prep_manifests` is present in schema for optional prep-manifest persistence/backfills).
+  - Enrichment: `enrichment.openalex_cache`, `enrichment.citec_cache`, `enrichment.paper_openalex_metadata`.
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.
   - Workflow: `workflow.run_records` (`record_kind`: `run|step|report|question|artifact|workstream_link`).
-  - Retrieval: `retrieval.query_cache`, `retrieval.retrieval_events`.
+  - Retrieval: `retrieval.query_cache` (`retrieval.retrieval_events` is available for retrieval diagnostics).
   - Observability: `observability.token_usage`, `observability.request_failures`.
 - Local artifacts:
   - FAISS indexes in [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index) and versioned shards in [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes).
   - Index version sidecar JSON next to each shard.
-  - Workflow JSON reports in [`reports/workflow/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow).
-  - Prep manifests in [`reports/prep/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/prep).
-  - Audit markdown/PDF artifacts in [`reports/audit/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit).
-  - Workstream comparison artifacts in [`reports/workstream/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workstream).
+  - Workflow report artifacts are written under [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports) by default (`workflow-report-<run_id>.json`, `prep-manifest-<run_id>.json`, `audit-workflow-report-<run_id>.*`).
+  - Teams may organize artifacts into subfolders like [`reports/workflow/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow), [`reports/prep/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/prep), [`reports/audit/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit), and [`reports/workstream/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workstream).
 
 Reproducibility
 ---------------

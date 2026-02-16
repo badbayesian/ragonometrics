@@ -16,11 +16,11 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> List[str]:
     """Return column names for a SQLite table.
 
     Args:
-        conn: Open SQLite connection.
-        table: Table name.
+        conn (sqlite3.Connection): Description.
+        table (str): Description.
 
     Returns:
-        List[str]: Column names in order.
+        List[str]: Description.
     """
     cur = conn.execute(f"PRAGMA table_info('{table}')")
     return [row[1] for row in cur.fetchall()]
@@ -30,11 +30,11 @@ def migrate_vectors(sqlite_path: Path, pg_url: str) -> int:
     """Migrate vectors-like rows from SQLite into Postgres.
 
     Args:
-        sqlite_path: Path to the SQLite database file.
-        pg_url: Postgres database URL.
+        sqlite_path (Path): Description.
+        pg_url (str): Description.
 
     Returns:
-        int: Number of vector rows migrated.
+        int: Description.
     """
     if not sqlite_path.exists():
         return 0
@@ -116,11 +116,11 @@ def migrate_doi_network(sqlite_path: Path, pg_url: str) -> int:
     """Migrate DOI network tables from SQLite into Postgres.
 
     Args:
-        sqlite_path: Path to the SQLite database file.
-        pg_url: Postgres database URL.
+        sqlite_path (Path): Description.
+        pg_url (str): Description.
 
     Returns:
-        int: Number of citation edges migrated.
+        int: Description.
     """
     if not sqlite_path.exists():
         return 0
@@ -179,7 +179,7 @@ def main(argv: Iterable[str] | None = None) -> None:
     """CLI entry point for migrating SQLite metadata to Postgres.
 
     Args:
-        argv: Optional argument list for testing.
+        argv (Iterable[str] | None): Description.
     """
     p = argparse.ArgumentParser(description="Migrate SQLite vectors/doi-network to Postgres")
     p.add_argument("--sqlite-vectors", type=str, default="vectors_meta.sqlite", help="Path to SQLite file containing vectors table")

@@ -21,13 +21,13 @@ def sweep(
     """Run a parameter sweep and write benchmark CSVs.
 
     Args:
-        papers_dir: Directory containing PDF files.
-        out_dir: Output directory for sweep results.
-        chunk_words_vals: Chunk sizes to evaluate.
-        chunk_overlap_vals: Overlap sizes to evaluate.
-        bm25_vals: BM25 weights to evaluate.
-        limit: Maximum number of papers to process (0 = all).
-        use_openai: Whether to use the real OpenAI client.
+        papers_dir (str | Path): Description.
+        out_dir (str | Path): Description.
+        chunk_words_vals (List[int]): Description.
+        chunk_overlap_vals (List[int]): Description.
+        bm25_vals (List[float]): Description.
+        limit (int): Description.
+        use_openai (bool): Description.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

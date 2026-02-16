@@ -8,7 +8,12 @@ from typing import Any, Dict
 
 
 def log_event(event: str, payload: Dict[str, Any] | None = None) -> None:
-    """Emit a structured JSON log line to stdout."""
+    """Emit a structured JSON log line to stdout.
+
+    Args:
+        event (str): Description.
+        payload (Dict[str, Any] | None): Description.
+    """
     data = {
         "event": event,
         "ts": datetime.now(timezone.utc).isoformat(),

@@ -17,10 +17,23 @@ DEFAULT_STATE_DB = Path("postgres_workflow_state")
 
 
 def _utc_now() -> str:
+    """Utc now.
+
+    Returns:
+        str: Description.
+    """
     return datetime.now(timezone.utc).isoformat()
 
 
 def _database_url() -> str:
+    """Database url.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for workflow state persistence.")
@@ -28,6 +41,14 @@ def _database_url() -> str:
 
 
 def _to_iso(value: Any) -> str | None:
+    """To iso.
+
+    Args:
+        value (Any): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if value is None:
         return None
     if hasattr(value, "isoformat"):
@@ -39,6 +60,14 @@ def _to_iso(value: Any) -> str | None:
 
 
 def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    """Connect.
+
+    Args:
+        _db_path (Path): Description.
+
+    Returns:
+        psycopg2.extensions.connection: Description.
+    """
     conn = psycopg2.connect(_database_url())
     ensure_run_records_table(conn)
     return conn
@@ -65,6 +94,28 @@ def create_workflow_run(
     question: Optional[str] = None,
     report_question_set: Optional[str] = None,
 ) -> None:
+    """Create workflow run.
+
+    Args:
+        db_path (Path): Description.
+        run_id (str): Description.
+        papers_dir (str): Description.
+        config_hash (Optional[str]): Description.
+        status (str): Description.
+        metadata (Optional[Dict[str, Any]]): Description.
+        started_at (Optional[str]): Description.
+        finished_at (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        parent_run_id (Optional[str]): Description.
+        trigger_source (Optional[str]): Description.
+        git_sha (Optional[str]): Description.
+        git_branch (Optional[str]): Description.
+        config_effective (Optional[Dict[str, Any]]): Description.
+        paper_set_hash (Optional[str]): Description.
+        question (Optional[str]): Description.
+        report_question_set (Optional[str]): Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -187,6 +238,14 @@ def create_workflow_run(
 
 
 def set_workflow_status(db_path: Path, run_id: str, status: str, *, finished_at: Optional[str] = None) -> None:
+    """Set workflow status.
+
+    Args:
+        db_path (Path): Description.
+        run_id (str): Description.
+        status (str): Description.
+        finished_at (Optional[str]): Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -230,6 +289,26 @@ def record_step(
     retry_of_attempt_id: Optional[str] = None,
     output: Optional[Dict[str, Any]] = None,
 ) -> None:
+    """Record step.
+
+    Args:
+        db_path (Path): Description.
+        run_id (str): Description.
+        step (str): Description.
+        status (str): Description.
+        step_attempt_id (Optional[str]): Description.
+        attempt_no (Optional[int]): Description.
+        queued_at (Optional[str]): Description.
+        started_at (Optional[str]): Description.
+        finished_at (Optional[str]): Description.
+        duration_ms (Optional[int]): Description.
+        status_reason (Optional[str]): Description.
+        error_code (Optional[str]): Description.
+        error_message (Optional[str]): Description.
+        worker_id (Optional[str]): Description.
+        retry_of_attempt_id (Optional[str]): Description.
+        output (Optional[Dict[str, Any]]): Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -299,7 +378,25 @@ def find_similar_completed_step(
     match_question: bool = False,
     match_report_question_set: bool = False,
 ) -> Optional[Dict[str, Any]]:
-    """Return latest completed step output from a similar prior run, if any."""
+    """Return latest completed step output from a similar prior run, if any.
+
+    Args:
+        db_path (Path): Description.
+        step (str): Description.
+        exclude_run_id (str): Description.
+        config_hash (Optional[str]): Description.
+        papers_dir (Optional[str]): Description.
+        paper_set_hash (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        question (Optional[str]): Description.
+        report_question_set (Optional[str]): Description.
+        match_question (bool): Description.
+        match_report_question_set (bool): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
 
     conn = _connect(db_path)
     try:
@@ -382,7 +479,24 @@ def find_similar_report_question_items(
     match_question: bool = False,
     match_report_question_set: bool = False,
 ) -> Dict[str, Dict[str, Any]]:
-    """Return latest reusable structured question payloads keyed by question_id."""
+    """Return latest reusable structured question payloads keyed by question_id.
+
+    Args:
+        db_path (Path): Description.
+        exclude_run_id (str): Description.
+        config_hash (Optional[str]): Description.
+        papers_dir (Optional[str]): Description.
+        paper_set_hash (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        question (Optional[str]): Description.
+        report_question_set (Optional[str]): Description.
+        match_question (bool): Description.
+        match_report_question_set (bool): Description.
+
+    Returns:
+        Dict[str, Dict[str, Any]]: Description.
+    """
 
     conn = _connect(db_path)
     try:
@@ -455,6 +569,15 @@ def find_similar_report_question_items(
 
 
 def get_workflow_run(db_path: Path, run_id: str) -> Optional[Dict[str, Any]]:
+    """Get workflow run.
+
+    Args:
+        db_path (Path): Description.
+        run_id (str): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -513,6 +636,15 @@ def get_workflow_run(db_path: Path, run_id: str) -> Optional[Dict[str, Any]]:
 
 
 def list_workflow_steps(db_path: Path, run_id: str) -> List[Dict[str, Any]]:
+    """List workflow steps.
+
+    Args:
+        db_path (Path): Description.
+        run_id (str): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()

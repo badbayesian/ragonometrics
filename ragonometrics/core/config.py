@@ -32,7 +32,14 @@ ENV_CONFIG_MAP = {
 
 
 def load_config(path: Path | None) -> Dict[str, Any]:
-    """Load a TOML config file and return the ragonometrics section or top-level dict."""
+    """Load a TOML config file and return the ragonometrics section or top-level dict.
+
+    Args:
+        path (Path | None): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     if not path or not path.exists():
         return {}
     data = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -42,12 +49,31 @@ def load_config(path: Path | None) -> Dict[str, Any]:
 
 
 def hash_config_dict(config: Mapping[str, Any]) -> str:
-    """Return a stable SHA-256 hash of a config mapping."""
+    """Return a stable SHA-256 hash of a config mapping.
+
+    Args:
+        config (Mapping[str, Any]): Description.
+
+    Returns:
+        str: Description.
+    """
     payload = json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _env_or_config(env: Mapping[str, str], config: Mapping[str, Any], env_key: str, config_key: str, default: Any) -> Any:
+    """Env or config.
+
+    Args:
+        env (Mapping[str, str]): Description.
+        config (Mapping[str, Any]): Description.
+        env_key (str): Description.
+        config_key (str): Description.
+        default (Any): Description.
+
+    Returns:
+        Any: Description.
+    """
     if env_key in env and env[env_key] != "":
         return env[env_key]
     if config_key in config:
@@ -56,6 +82,15 @@ def _env_or_config(env: Mapping[str, str], config: Mapping[str, Any], env_key: s
 
 
 def _coerce_int(value: Any, default: int) -> int:
+    """Coerce int.
+
+    Args:
+        value (Any): Description.
+        default (int): Description.
+
+    Returns:
+        int: Description.
+    """
     try:
         return int(value)
     except Exception:
@@ -63,6 +98,15 @@ def _coerce_int(value: Any, default: int) -> int:
 
 
 def _coerce_float(value: Any, default: float) -> float:
+    """Coerce float.
+
+    Args:
+        value (Any): Description.
+        default (float): Description.
+
+    Returns:
+        float: Description.
+    """
     try:
         return float(value)
     except Exception:
@@ -70,6 +114,15 @@ def _coerce_float(value: Any, default: float) -> float:
 
 
 def _coerce_bool(value: Any, default: bool) -> bool:
+    """Coerce bool.
+
+    Args:
+        value (Any): Description.
+        default (bool): Description.
+
+    Returns:
+        bool: Description.
+    """
     if isinstance(value, bool):
         return value
     if value is None:
@@ -90,7 +143,16 @@ def build_effective_config(
     *,
     project_root: Path,
 ) -> Dict[str, Any]:
-    """Build the effective config with env overrides applied."""
+    """Build the effective config with env overrides applied.
+
+    Args:
+        config (Mapping[str, Any]): Description.
+        env (Mapping[str, str]): Description.
+        project_root (Path): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     papers_dir_val = _env_or_config(env, config, "PAPERS_DIR", "papers_dir", project_root / "papers")
     papers_dir = Path(papers_dir_val)
     if not papers_dir.is_absolute():
@@ -130,7 +192,9 @@ def build_effective_config(
 def apply_config_env_overrides(config: Mapping[str, Any], env: Mapping[str, str]) -> None:
     """Populate env vars from config when not already set.
 
-    Boolean values only set the env var when True to avoid truthy "0"/"false" strings.
+    Args:
+        config (Mapping[str, Any]): Description.
+        env (Mapping[str, str]): Description.
     """
     for env_key, config_key in ENV_CONFIG_MAP.items():
         if env_key in env and env[env_key] != "":

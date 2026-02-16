@@ -18,6 +18,14 @@ DEFAULT_BASE_URL = os.environ.get("CITEC_API_BASE", "http://citec.repec.org/api"
 
 
 def _database_url() -> str:
+    """Database url.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for CitEc cache persistence.")
@@ -25,6 +33,14 @@ def _database_url() -> str:
 
 
 def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    """Connect.
+
+    Args:
+        _db_path (Path): Description.
+
+    Returns:
+        psycopg2.extensions.connection: Description.
+    """
     conn = psycopg2.connect(_database_url())
     cur = conn.cursor()
     cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
@@ -49,6 +65,11 @@ def _connect(_db_path: Path) -> psycopg2.extensions.connection:
 
 
 def _cache_ttl_seconds() -> int:
+    """Cache ttl seconds.
+
+    Returns:
+        int: Description.
+    """
     try:
         days = int(os.environ.get("CITEC_CACHE_TTL_DAYS", "30"))
     except Exception:
@@ -57,10 +78,27 @@ def _cache_ttl_seconds() -> int:
 
 
 def make_cache_key(repec_handle: str) -> str:
+    """Make cache key.
+
+    Args:
+        repec_handle (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return hashlib.sha256(repec_handle.encode("utf-8")).hexdigest()
 
 
 def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any]]:
+    """Get cached metadata.
+
+    Args:
+        db_path (Path): Description.
+        cache_key (str): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -86,6 +124,14 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
 
 
 def set_cached_metadata(db_path: Path, *, cache_key: str, repec_handle: str, response: Dict[str, Any]) -> None:
+    """Set cached metadata.
+
+    Args:
+        db_path (Path): Description.
+        cache_key (str): Description.
+        repec_handle (str): Description.
+        response (Dict[str, Any]): Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -111,6 +157,18 @@ def set_cached_metadata(db_path: Path, *, cache_key: str, repec_handle: str, res
 
 
 def _request_text(url: str, timeout: int = 10) -> Optional[str]:
+    """Request text.
+
+    Args:
+        url (str): Description.
+        timeout (int): Description.
+
+    Returns:
+        Optional[str]: Description.
+
+    Raises:
+        Exception: Description.
+    """
     max_retries = int(os.environ.get("CITEC_MAX_RETRIES", "2"))
     for attempt in range(max_retries + 1):
         try:
@@ -132,6 +190,14 @@ def _request_text(url: str, timeout: int = 10) -> Optional[str]:
 
 
 def parse_citec_plain(xml_text: str) -> Optional[Dict[str, Any]]:
+    """Parse citec plain.
+
+    Args:
+        xml_text (str): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
     try:
         root = ET.fromstring(xml_text)
     except Exception:
@@ -145,6 +211,14 @@ def parse_citec_plain(xml_text: str) -> Optional[Dict[str, Any]]:
         return None
 
     def _get_text(tag: str) -> Optional[str]:
+        """Get text.
+
+        Args:
+            tag (str): Description.
+
+        Returns:
+            Optional[str]: Description.
+        """
         node = data.find(tag)
         if node is None or node.text is None:
             return None
@@ -173,6 +247,16 @@ def fetch_citec_plain(
     cache_path: Path = DEFAULT_CACHE_PATH,
     timeout: int = 10,
 ) -> Optional[Dict[str, Any]]:
+    """Fetch citec plain.
+
+    Args:
+        repec_handle (str): Description.
+        cache_path (Path): Description.
+        timeout (int): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
     if not repec_handle:
         return None
     if os.environ.get("CITEC_DISABLE", "").strip() == "1":
@@ -194,6 +278,14 @@ def fetch_citec_plain(
 
 
 def format_citec_context(meta: Optional[Dict[str, Any]]) -> str:
+    """Format citec context.
+
+    Args:
+        meta (Optional[Dict[str, Any]]): Description.
+
+    Returns:
+        str: Description.
+    """
     if not meta:
         return ""
     lines = ["CitEc Metadata:"]

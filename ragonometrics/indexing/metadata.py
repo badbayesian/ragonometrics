@@ -10,7 +10,16 @@ import psycopg2
 
 
 def _safe_execute(cur, sql: str, params: tuple | None = None) -> bool:
-    """Execute SQL and suppress backend-specific incompatibilities."""
+    """Execute SQL and suppress backend-specific incompatibilities.
+
+    Args:
+        cur (Any): Description.
+        sql (str): Description.
+        params (tuple | None): Description.
+
+    Returns:
+        bool: Description.
+    """
     savepoint_name = "ragonometrics_safe_execute"
     has_savepoint = False
     try:
@@ -40,7 +49,11 @@ def _safe_execute(cur, sql: str, params: tuple | None = None) -> bool:
 
 
 def ensure_vector_extensions(cur) -> None:
-    """Enable vector extensions when supported by the backend."""
+    """Enable vector extensions when supported by the backend.
+
+    Args:
+        cur (Any): Description.
+    """
     # vectorscale cascades to pgvector on supported images.
     if not _safe_execute(cur, "CREATE EXTENSION IF NOT EXISTS vectorscale CASCADE"):
         # fallback to pgvector-only setups
@@ -48,7 +61,11 @@ def ensure_vector_extensions(cur) -> None:
 
 
 def ensure_vector_indexes(cur) -> None:
-    """Ensure ANN vector indexes exist when backend supports vector indexes."""
+    """Ensure ANN vector indexes exist when backend supports vector indexes.
+
+    Args:
+        cur (Any): Description.
+    """
     if _safe_execute(
         cur,
         """
@@ -71,10 +88,10 @@ def init_metadata_db(db_url: str):
     """Initialize metadata tables for pipeline runs and vectors.
 
     Args:
-        db_url: Postgres database URL.
+        db_url (str): Description.
 
     Returns:
-        connection: Open psycopg2 connection.
+        Any: Description.
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
@@ -247,7 +264,28 @@ def upsert_paper_metadata(
     metadata_json: dict[str, Any] | None = None,
     extracted_at: str | None = None,
 ) -> None:
-    """Upsert one paper metadata row into `ingestion.paper_metadata`."""
+    """Upsert one paper metadata row into `ingestion.paper_metadata`.
+
+    Args:
+        conn (Any): Description.
+        doc_id (str): Description.
+        path (str): Description.
+        title (str): Description.
+        author (str): Description.
+        authors (list[str] | None): Description.
+        primary_doi (str | None): Description.
+        dois (list[str] | None): Description.
+        openalex_id (str | None): Description.
+        openalex_doi (str | None): Description.
+        publication_year (int | None): Description.
+        venue (str | None): Description.
+        repec_handle (str | None): Description.
+        source_url (str | None): Description.
+        openalex_json (dict[str, Any] | None): Description.
+        citec_json (dict[str, Any] | None): Description.
+        metadata_json (dict[str, Any] | None): Description.
+        extracted_at (str | None): Description.
+    """
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
     extracted = extracted_at or now
@@ -330,16 +368,22 @@ def create_pipeline_run(
     """Create a pipeline run record and return its id.
 
     Args:
-        conn: Open database connection.
-        git_sha: Optional git SHA for the run.
-        extractor_version: Optional extractor version string.
-        embedding_model: Embedding model name.
-        chunk_words: Chunk size in words.
-        chunk_overlap: Overlap size in words.
-        normalized: Whether embeddings were normalized.
+        conn (Any): Description.
+        git_sha (Optional[str]): Description.
+        extractor_version (Optional[str]): Description.
+        embedding_model (str): Description.
+        chunk_words (int): Description.
+        chunk_overlap (int): Description.
+        normalized (bool): Description.
+        idempotency_key (Optional[str]): Description.
+        workflow_run_id (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        paper_set_hash (Optional[str]): Description.
+        index_build_reason (Optional[str]): Description.
 
     Returns:
-        int: Pipeline run id if available.
+        int: Description.
     """
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
@@ -427,14 +471,14 @@ def publish_shard(conn, shard_name: str, path: str, pipeline_run_id: int, index_
     """Upsert an index shard and mark it active.
 
     Args:
-        conn: Open database connection.
-        shard_name: Unique shard name.
-        path: Filesystem path to the shard.
-        pipeline_run_id: Associated pipeline run id.
-        index_id: Optional index version id.
+        conn (Any): Description.
+        shard_name (str): Description.
+        path (str): Description.
+        pipeline_run_id (int): Description.
+        index_id (str | None): Description.
 
     Returns:
-        int: Shard id if available.
+        int: Description.
     """
     cur = conn.cursor()
     cur.execute("UPDATE indexing.index_shards SET is_active = FALSE WHERE is_active = TRUE")
@@ -470,10 +514,10 @@ def get_active_shards(conn):
     """Fetch active index shards ordered by creation time.
 
     Args:
-        conn: Open database connection.
+        conn (Any): Description.
 
     Returns:
-        list[tuple[str, str]]: (shard_name, path) rows.
+        Any: Description.
     """
     cur = conn.cursor()
     cur.execute(
@@ -483,7 +527,14 @@ def get_active_shards(conn):
 
 
 def record_failure(conn, component: str, error: str, context: dict | None = None) -> None:
-    """Record a failure for later replay/debug."""
+    """Record a failure for later replay/debug.
+
+    Args:
+        conn (Any): Description.
+        component (str): Description.
+        error (str): Description.
+        context (dict | None): Description.
+    """
     cur = conn.cursor()
     payload = json.dumps(context or {}, ensure_ascii=False)
     cur.execute(
@@ -504,7 +555,21 @@ def create_index_version(
     index_path: str,
     shard_path: str,
 ) -> str:
-    """Insert an index version row and return the index id."""
+    """Insert an index version row and return the index id.
+
+    Args:
+        conn (Any): Description.
+        index_id (str): Description.
+        embedding_model (str): Description.
+        chunk_words (int): Description.
+        chunk_overlap (int): Description.
+        corpus_fingerprint (str): Description.
+        index_path (str): Description.
+        shard_path (str): Description.
+
+    Returns:
+        str: Description.
+    """
     cur = conn.cursor()
     cur.execute(
         """

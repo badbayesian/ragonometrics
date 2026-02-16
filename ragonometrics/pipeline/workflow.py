@@ -42,12 +42,23 @@ from ragonometrics.integrations.econ_data import fetch_fred_series
 
 
 def _utc_now() -> str:
-    """Return the current UTC timestamp in ISO-8601 format."""
+    """Return the current UTC timestamp in ISO-8601 format.
+
+    Returns:
+        str: Description.
+    """
     return datetime.now(timezone.utc).isoformat()
 
 
 def _is_insufficient_quota_error(exc: Exception) -> bool:
-    """Return whether an exception chain represents an insufficient quota error."""
+    """Return whether an exception chain represents an insufficient quota error.
+
+    Args:
+        exc (Exception): Description.
+
+    Returns:
+        bool: Description.
+    """
     current: Exception | None = exc
     seen: set[int] = set()
     while current is not None and id(current) not in seen:
@@ -66,7 +77,14 @@ def _is_insufficient_quota_error(exc: Exception) -> bool:
 
 
 def _estimate_tokens(text: str) -> int:
-    """Estimate token usage from text length using a coarse heuristic."""
+    """Estimate token usage from text length using a coarse heuristic.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        int: Description.
+    """
     if not text:
         return 0
     text = str(text)
@@ -77,7 +95,14 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _resolve_paper_paths(papers_path: Path) -> List[Path]:
-    """Resolve a file or directory input into a list of PDF paths."""
+    """Resolve a file or directory input into a list of PDF paths.
+
+    Args:
+        papers_path (Path): Description.
+
+    Returns:
+        List[Path]: Description.
+    """
     if papers_path.is_file():
         if papers_path.suffix.lower() == ".pdf":
             return [papers_path]
@@ -88,12 +113,28 @@ def _resolve_paper_paths(papers_path: Path) -> List[Path]:
 
 
 def _progress_iter(items, desc: str, *, total: int | None = None):
-    """Wrap an iterable with a tqdm progress bar."""
+    """Wrap an iterable with a tqdm progress bar.
+
+    Args:
+        items (Any): Description.
+        desc (str): Description.
+        total (int | None): Description.
+
+    Returns:
+        Any: Description.
+    """
     return tqdm(items, desc=desc, total=total)
 
 
 def _can_connect_db(db_url: str) -> bool:
-    """Return True when the provided database URL is reachable."""
+    """Return True when the provided database URL is reachable.
+
+    Args:
+        db_url (str): Description.
+
+    Returns:
+        bool: Description.
+    """
     try:
         import psycopg2
 
@@ -105,7 +146,14 @@ def _can_connect_db(db_url: str) -> bool:
 
 
 def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict[str, Any]]:
-    """Select the metadata database URL and capture fallback diagnostics."""
+    """Select the metadata database URL and capture fallback diagnostics.
+
+    Args:
+        preferred_db_url (str | None): Description.
+
+    Returns:
+        tuple[str | None, Dict[str, Any]]: Description.
+    """
     preferred = (preferred_db_url or "").strip() or None
     env_db = (os.environ.get("DATABASE_URL") or "").strip() or None
     candidates: List[tuple[str, str]] = []
@@ -142,7 +190,16 @@ def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict
 
 
 def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Path:
-    """Write the workflow report JSON file and return its path."""
+    """Write the workflow report JSON file and return its path.
+
+    Args:
+        report_dir (Path): Description.
+        run_id (str): Description.
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        Path: Description.
+    """
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"workflow-report-{run_id}.json"
     path.write_text(
@@ -153,7 +210,15 @@ def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Pat
 
 
 def _bool_env(name: str, default: bool) -> bool:
-    """Parse a boolean environment variable with a default fallback."""
+    """Parse a boolean environment variable with a default fallback.
+
+    Args:
+        name (str): Description.
+        default (bool): Description.
+
+    Returns:
+        bool: Description.
+    """
     raw = os.environ.get(name)
     if raw is None:
         return default
@@ -166,7 +231,16 @@ def _bool_env(name: str, default: bool) -> bool:
 
 
 def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_at: str | None) -> Dict[str, Any]:
-    """Attach source-run reuse metadata to a step output payload."""
+    """Attach source-run reuse metadata to a step output payload.
+
+    Args:
+        step_output (Any): Description.
+        source_run_id (str): Description.
+        source_finished_at (str | None): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     if isinstance(step_output, dict):
         out = dict(step_output)
     else:
@@ -179,14 +253,30 @@ def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_
 
 
 def _tail(text: str, limit: int = 800) -> str:
-    """Return the trailing slice of a string constrained by the provided limit."""
+    """Return the trailing slice of a string constrained by the provided limit.
+
+    Args:
+        text (str): Description.
+        limit (int): Description.
+
+    Returns:
+        str: Description.
+    """
     if not text:
         return ""
     return text[-limit:]
 
 
 def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
-    """Execute a subprocess command and capture return code, stdout, and stderr."""
+    """Execute a subprocess command and capture return code, stdout, and stderr.
+
+    Args:
+        cmd (List[str]): Description.
+        cwd (Path): Description.
+
+    Returns:
+        tuple[int, str, str]: Description.
+    """
     proc = subprocess.run(
         cmd,
         cwd=str(cwd),
@@ -199,7 +289,14 @@ def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
 
 
 def _git_value(args: List[str]) -> str | None:
-    """Run a git command and return a trimmed stdout value when successful."""
+    """Run a git command and return a trimmed stdout value when successful.
+
+    Args:
+        args (List[str]): Description.
+
+    Returns:
+        str | None: Description.
+    """
     try:
         proc = subprocess.run(
             ["git", *args],
@@ -219,7 +316,16 @@ def _git_value(args: List[str]) -> str | None:
 
 
 def _render_audit_artifacts(*, run_id: str, report_path: Path, report_dir: Path) -> Dict[str, Any]:
-    """Render markdown/PDF audit artifacts for a workflow report."""
+    """Render markdown/PDF audit artifacts for a workflow report.
+
+    Args:
+        run_id (str): Description.
+        report_path (Path): Description.
+        report_dir (Path): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     out: Dict[str, Any] = {
         "enabled": _bool_env("WORKFLOW_RENDER_AUDIT_ARTIFACTS", True),
         "status": "pending",
@@ -318,7 +424,18 @@ def _store_report_in_db(
     payload: Dict[str, Any],
     workflow_status: str,
 ) -> Dict[str, Any]:
-    """Persist the finalized workflow report payload to Postgres."""
+    """Persist the finalized workflow report payload to Postgres.
+
+    Args:
+        db_url (str | None): Description.
+        run_id (str): Description.
+        report_path (Path): Description.
+        payload (Dict[str, Any]): Description.
+        workflow_status (str): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     out: Dict[str, Any] = {"database_url": bool(db_url)}
     if not db_url:
         out["status"] = "skipped"
@@ -355,7 +472,20 @@ def _finalize_workflow_report(
     db_url: str | None,
     workflow_status: str,
 ) -> Dict[str, Any]:
-    """Finalize workflow output, write report artifacts, and persist report state."""
+    """Finalize workflow output, write report artifacts, and persist report state.
+
+    Args:
+        report_dir (Path): Description.
+        run_id (str): Description.
+        summary (Dict[str, Any]): Description.
+        state_db (Path): Description.
+        report_started_at (str): Description.
+        db_url (str | None): Description.
+        workflow_status (str): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     summary.setdefault("finished_at", _utc_now())
     summary["report_store"] = {"status": "pending", "database_url": bool(db_url)}
     summary["audit_artifacts"] = {"status": "pending"}
@@ -400,7 +530,20 @@ def _finalize_quota_termination(
     step: str,
     exc: Exception,
 ) -> Dict[str, Any]:
-    """Finalize workflow state and report when execution stops due to quota limits."""
+    """Finalize workflow state and report when execution stops due to quota limits.
+
+    Args:
+        report_dir (Path): Description.
+        run_id (str): Description.
+        summary (Dict[str, Any]): Description.
+        state_db (Path): Description.
+        db_url (str | None): Description.
+        step (str): Description.
+        exc (Exception): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     err_text = str(exc)
     summary["error"] = err_text
     summary["fatal_error"] = {
@@ -424,7 +567,15 @@ def _finalize_quota_termination(
 
 
 def _parse_subquestions(raw: str, max_items: int) -> List[str]:
-    """Parse raw planner output into a deduplicated list of subquestions."""
+    """Parse raw planner output into a deduplicated list of subquestions.
+
+    Args:
+        raw (str): Description.
+        max_items (int): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     items: List[str] = []
     for line in raw.splitlines():
         line = line.strip()
@@ -449,7 +600,18 @@ def _agentic_plan(
     max_items: int,
     run_id: str | None = None,
 ) -> List[str]:
-    """Generate agentic subquestions for the main research prompt."""
+    """Generate agentic subquestions for the main research prompt.
+
+    Args:
+        client (OpenAI): Description.
+        question (str): Description.
+        model (str): Description.
+        max_items (int): Description.
+        run_id (str | None): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     instructions = (
         "You are a research analyst. Generate a short list of sub-questions that would help "
         "answer the main question. Return one sub-question per line, no extra text."
@@ -479,7 +641,18 @@ def _agentic_summarize(
     sub_answers: List[Dict[str, str]],
     run_id: str | None = None,
 ) -> str:
-    """Synthesize sub-answer results into a final response."""
+    """Synthesize sub-answer results into a final response.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        question (str): Description.
+        sub_answers (List[Dict[str, str]]): Description.
+        run_id (str | None): Description.
+
+    Returns:
+        str: Description.
+    """
     bullets = "\n".join([f"- {item['question']}: {item['answer']}" for item in sub_answers])
     synthesis_prompt = (
         "Synthesize a concise, researcher-grade answer based on the sub-answers below. "
@@ -500,7 +673,15 @@ def _agentic_summarize(
 
 
 def _format_citations_context(citations: List[Dict[str, Any]], max_items: int) -> str:
-    """Format extracted citations into a compact context block for prompting."""
+    """Format extracted citations into a compact context block for prompting.
+
+    Args:
+        citations (List[Dict[str, Any]]): Description.
+        max_items (int): Description.
+
+    Returns:
+        str: Description.
+    """
     if not citations:
         return ""
     items = citations[:max_items]
@@ -530,7 +711,14 @@ def _format_citations_context(citations: List[Dict[str, Any]], max_items: int) -
 
 
 def _split_context_chunks(context: str) -> List[Dict[str, Any]]:
-    """Parse provenance-tagged context text into structured chunk metadata."""
+    """Parse provenance-tagged context text into structured chunk metadata.
+
+    Args:
+        context (str): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+    """
     chunks: List[Dict[str, Any]] = []
     if not context:
         return chunks
@@ -558,7 +746,14 @@ def _split_context_chunks(context: str) -> List[Dict[str, Any]]:
 
 
 def _confidence_from_retrieval_stats(stats: Dict[str, Any] | None) -> tuple[str, float, str]:
-    """Convert retrieval statistics into a confidence label and numeric score."""
+    """Convert retrieval statistics into a confidence label and numeric score.
+
+    Args:
+        stats (Dict[str, Any] | None): Description.
+
+    Returns:
+        tuple[str, float, str]: Description.
+    """
     if not stats or int(stats.get("top_k", 0) or 0) <= 0:
         return "low", 0.0, "unknown"
     method = str(stats.get("method") or "local")
@@ -589,7 +784,16 @@ def _build_report_prompt(
     context: str,
     anchors: List[Dict[str, Any]],
 ) -> str:
-    """Build the JSON-output prompt for a structured report question."""
+    """Build the JSON-output prompt for a structured report question.
+
+    Args:
+        question (str): Description.
+        context (str): Description.
+        anchors (List[Dict[str, Any]]): Description.
+
+    Returns:
+        str: Description.
+    """
     anchor_lines = []
     for item in anchors:
         section = f" section {item['section']}" if item.get("section") else ""
@@ -765,7 +969,15 @@ REPORT_QUESTION_SECTIONS: List[tuple[str, str, List[str]]] = [
 
 
 def _normalize_report_question_set(value: str | None, enabled_default: bool) -> str:
-    """Normalize report question set mode to a supported value."""
+    """Normalize report question set mode to a supported value.
+
+    Args:
+        value (str | None): Description.
+        enabled_default (bool): Description.
+
+    Returns:
+        str: Description.
+    """
     if not value:
         return "structured" if enabled_default else "none"
     text = value.strip().lower()
@@ -781,7 +993,11 @@ def _normalize_report_question_set(value: str | None, enabled_default: bool) -> 
 
 
 def _build_report_questions() -> List[Dict[str, str]]:
-    """Construct the structured report question definitions."""
+    """Construct the structured report question definitions.
+
+    Returns:
+        List[Dict[str, str]]: Description.
+    """
     questions: List[Dict[str, str]] = []
     for section_key, section_title, items in REPORT_QUESTION_SECTIONS:
         for idx, question in enumerate(items, start=1):
@@ -796,7 +1012,14 @@ def _build_report_questions() -> List[Dict[str, str]]:
 
 
 def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    """Convert subquestion answers into report-question style entries."""
+    """Convert subquestion answers into report-question style entries.
+
+    Args:
+        sub_answers (List[Dict[str, str]]): Description.
+
+    Returns:
+        List[Dict[str, str]]: Description.
+    """
     report: List[Dict[str, str]] = []
     for idx, item in enumerate(sub_answers, start=1):
         report.append(
@@ -812,7 +1035,14 @@ def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> Lis
 
 
 def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Summarize confidence scores and labels across report-question answers."""
+    """Summarize confidence scores and labels across report-question answers.
+
+    Args:
+        items (List[Dict[str, Any]]): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     scores: List[float] = []
     labels: Dict[str, int] = {"high": 0, "medium": 0, "low": 0}
     for item in items:
@@ -848,6 +1078,14 @@ def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
         median = scores_sorted[mid]
 
     def _percentile(p: float) -> float:
+        """Percentile.
+
+        Args:
+            p (float): Description.
+
+        Returns:
+            float: Description.
+        """
         if n == 1:
             return scores_sorted[0]
         idx = p * (n - 1)
@@ -881,7 +1119,21 @@ def _answer_report_question_item(
     item: Dict[str, str],
     run_id: str | None = None,
 ) -> Dict[str, Any]:
-    """Answer one structured report question using retrieval and LLM output parsing."""
+    """Answer one structured report question using retrieval and LLM output parsing.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        settings (Any): Description.
+        chunks (List[Dict[str, Any]] | List[str]): Description.
+        chunk_embeddings (List[List[float]]): Description.
+        citations_context (str): Description.
+        item (Dict[str, str]): Description.
+        run_id (str | None): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+    """
     context, retrieval_stats = top_k_context(
         chunks,
         chunk_embeddings,
@@ -972,7 +1224,24 @@ def _answer_report_questions(
     run_id: str | None = None,
     reusable_items_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
-    """Answer all structured report questions with optional reuse of prior results."""
+    """Answer all structured report questions with optional reuse of prior results.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        settings (Any): Description.
+        chunks (List[Dict[str, Any]] | List[str]): Description.
+        chunk_embeddings (List[List[float]]): Description.
+        citations_context (str): Description.
+        run_id (str | None): Description.
+        reusable_items_by_id (Optional[Dict[str, Dict[str, Any]]]): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+
+    Raises:
+        Exception: Description.
+    """
     questions = _build_report_questions()
     if not questions:
         return []
@@ -1081,7 +1350,22 @@ def _answer_subquestion(
     run_id: str | None = None,
     question_id: str | None = None,
 ) -> Dict[str, str]:
-    """Answer a single agentic subquestion using retrieved context."""
+    """Answer a single agentic subquestion using retrieved context.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        settings (Any): Description.
+        chunks (List[Dict[str, Any]] | List[str]): Description.
+        chunk_embeddings (List[List[float]]): Description.
+        citations_context (str): Description.
+        subq (str): Description.
+        run_id (str | None): Description.
+        question_id (str | None): Description.
+
+    Returns:
+        Dict[str, str]: Description.
+    """
     context = top_k_context(
         chunks,
         chunk_embeddings,
@@ -1133,12 +1417,29 @@ def run_workflow(
 ) -> Dict[str, Any]:
     """Run the multi-step workflow and persist state transitions.
 
-    Steps:
-    1) ingest: load papers + extract text
-    2) enrich: tally external metadata availability
-    3) index: build FAISS + metadata tables (if DATABASE_URL is configured)
-    4) evaluate: lightweight stats for provenance quality
-    5) report: write a JSON report
+    Args:
+        papers_dir (Path): Description.
+        config_path (Optional[Path]): Description.
+        meta_db_url (Optional[str]): Description.
+        report_dir (Optional[Path]): Description.
+        state_db (Path): Description.
+        agentic (Optional[bool]): Description.
+        question (Optional[str]): Description.
+        agentic_model (Optional[str]): Description.
+        agentic_max_subquestions (Optional[int]): Description.
+        agentic_citations (Optional[bool]): Description.
+        agentic_citations_max_items (Optional[int]): Description.
+        report_question_set (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        parent_run_id (Optional[str]): Description.
+        trigger_source (Optional[str]): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+
+    Raises:
+        Exception: Description.
     """
     settings = load_settings(config_path=config_path)
     run_id = uuid4().hex
@@ -1207,6 +1508,11 @@ def run_workflow(
     papers_cache: List[Any] | None = None
 
     def _ensure_papers_loaded() -> List[Any]:
+        """Ensure papers loaded.
+
+        Returns:
+            List[Any]: Description.
+        """
         nonlocal papers_cache
         if papers_cache is None:
             papers_cache = load_papers(pdfs, progress=True, progress_desc="Ingesting papers")
@@ -1218,6 +1524,16 @@ def run_workflow(
         match_question: bool = False,
         match_report_question_set: bool = False,
     ) -> Optional[Dict[str, Any]]:
+        """Find reusable step.
+
+        Args:
+            step_name (str): Description.
+            match_question (bool): Description.
+            match_report_question_set (bool): Description.
+
+        Returns:
+            Optional[Dict[str, Any]]: Description.
+        """
         if not step_reuse_enabled:
             return None
         try:
@@ -1716,7 +2032,25 @@ def workflow_entrypoint(
     parent_run_id: Optional[str] = None,
     trigger_source: Optional[str] = None,
 ) -> str:
-    """Helper for queue execution. Returns run_id for logging."""
+    """Helper for queue execution. Returns run_id for logging.
+
+    Args:
+        papers_dir (str): Description.
+        config_path (Optional[str]): Description.
+        meta_db_url (Optional[str]): Description.
+        agentic (Optional[bool]): Description.
+        question (Optional[str]): Description.
+        agentic_model (Optional[str]): Description.
+        agentic_citations (Optional[bool]): Description.
+        report_question_set (Optional[str]): Description.
+        workstream_id (Optional[str]): Description.
+        arm (Optional[str]): Description.
+        parent_run_id (Optional[str]): Description.
+        trigger_source (Optional[str]): Description.
+
+    Returns:
+        str: Description.
+    """
     summary = run_workflow(
         papers_dir=Path(papers_dir),
         config_path=Path(config_path) if config_path else None,

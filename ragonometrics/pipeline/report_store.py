@@ -14,11 +14,23 @@ from ragonometrics.pipeline.run_records import ensure_run_records_table
 
 
 def _utc_now() -> str:
+    """Utc now.
+
+    Returns:
+        str: Description.
+    """
     return datetime.now(timezone.utc).isoformat()
 
 
 def infer_workflow_status(payload: Dict[str, Any]) -> str:
-    """Infer a top-level workflow status from report payload data."""
+    """Infer a top-level workflow status from report payload data.
+
+    Args:
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        str: Description.
+    """
     status = str(payload.get("status") or "").strip().lower()
     if status in {"running", "completed", "failed"}:
         return status
@@ -31,6 +43,14 @@ def infer_workflow_status(payload: Dict[str, Any]) -> str:
 
 
 def _agentic_status(payload: Dict[str, Any]) -> str | None:
+    """Agentic status.
+
+    Args:
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        str | None: Description.
+    """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
         return None
@@ -39,6 +59,14 @@ def _agentic_status(payload: Dict[str, Any]) -> str | None:
 
 
 def _report_questions_set(payload: Dict[str, Any]) -> str | None:
+    """Report questions set.
+
+    Args:
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        str | None: Description.
+    """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
         return None
@@ -47,6 +75,14 @@ def _report_questions_set(payload: Dict[str, Any]) -> str | None:
 
 
 def _report_questions(payload: Dict[str, Any]) -> list[dict[str, Any]]:
+    """Report questions.
+
+    Args:
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        list[dict[str, Any]]: Description.
+    """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
         return []
@@ -57,6 +93,14 @@ def _report_questions(payload: Dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _report_question_confidence(payload: Dict[str, Any]) -> dict[str, Any]:
+    """Report question confidence.
+
+    Args:
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        dict[str, Any]: Description.
+    """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
         return {}
@@ -67,10 +111,26 @@ def _report_question_confidence(payload: Dict[str, Any]) -> dict[str, Any]:
 
 
 def _sha256_text(text: str) -> str:
+    """Sha256 text.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return hashlib.sha256((text or "").encode("utf-8", errors="ignore")).hexdigest()
 
 
 def _sha256_file(path: Path) -> str | None:
+    """Sha256 file.
+
+    Args:
+        path (Path): Description.
+
+    Returns:
+        str | None: Description.
+    """
     try:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except Exception:
@@ -78,11 +138,25 @@ def _sha256_file(path: Path) -> str | None:
 
 
 def ensure_workflow_report_store(conn) -> None:
-    """Create unified workflow report persistence table/indexes if needed."""
+    """Create unified workflow report persistence table/indexes if needed.
+
+    Args:
+        conn (Any): Description.
+    """
     ensure_run_records_table(conn)
 
 
 def _upsert_run_record(cur, *, run_id: str, status: str, papers_dir: str, report_path: str, payload: Dict[str, Any]) -> None:
+    """Upsert run record.
+
+    Args:
+        cur (Any): Description.
+        run_id (str): Description.
+        status (str): Description.
+        papers_dir (str): Description.
+        report_path (str): Description.
+        payload (Dict[str, Any]): Description.
+    """
     workstream_id = str(payload.get("workstream_id") or "").strip() or None
     arm = str(payload.get("arm") or "").strip() or None
     parent_run_id = str(payload.get("parent_run_id") or "").strip() or None
@@ -211,6 +285,13 @@ def _upsert_run_record(cur, *, run_id: str, status: str, papers_dir: str, report
 
 
 def _upsert_report_questions(cur, *, run_id: str, payload: Dict[str, Any]) -> None:
+    """Upsert report questions.
+
+    Args:
+        cur (Any): Description.
+        run_id (str): Description.
+        payload (Dict[str, Any]): Description.
+    """
     questions = _report_questions(payload)
     if not questions:
         return
@@ -257,6 +338,14 @@ def _upsert_report_questions(cur, *, run_id: str, payload: Dict[str, Any]) -> No
 
 
 def _upsert_artifacts(cur, *, run_id: str, report_path: str, payload: Dict[str, Any]) -> None:
+    """Upsert artifacts.
+
+    Args:
+        cur (Any): Description.
+        run_id (str): Description.
+        report_path (str): Description.
+        payload (Dict[str, Any]): Description.
+    """
     artifact_candidates: list[tuple[str, str | None, dict[str, Any]]] = [
         ("workflow_report_json", report_path, {"source": "workflow.report_path"}),
     ]
@@ -317,7 +406,15 @@ def upsert_workflow_report(
     payload: Dict[str, Any],
     status: str | None = None,
 ) -> None:
-    """Upsert one workflow report row into the unified workflow ledger."""
+    """Upsert one workflow report row into the unified workflow ledger.
+
+    Args:
+        conn (Any): Description.
+        run_id (str): Description.
+        report_path (str): Description.
+        payload (Dict[str, Any]): Description.
+        status (str | None): Description.
+    """
     cur = conn.cursor()
     now = _utc_now()
     payload_json = json.dumps(payload, ensure_ascii=False, default=str)
@@ -418,7 +515,15 @@ def store_workflow_report(
     payload: Dict[str, Any],
     status: str | None = None,
 ) -> None:
-    """Connect and store a single workflow report row."""
+    """Connect and store a single workflow report row.
+
+    Args:
+        db_url (str): Description.
+        run_id (str): Description.
+        report_path (str): Description.
+        payload (Dict[str, Any]): Description.
+        status (str | None): Description.
+    """
     conn = psycopg2.connect(db_url)
     try:
         ensure_workflow_report_store(conn)
@@ -434,7 +539,17 @@ def store_workflow_reports_from_dir(
     recursive: bool = False,
     limit: int = 0,
 ) -> Dict[str, int]:
-    """Backfill workflow report JSON files from disk into Postgres."""
+    """Backfill workflow report JSON files from disk into Postgres.
+
+    Args:
+        reports_dir (Path): Description.
+        db_url (str): Description.
+        recursive (bool): Description.
+        limit (int): Description.
+
+    Returns:
+        Dict[str, int]: Description.
+    """
     if not reports_dir.exists():
         return {"total": 0, "stored": 0, "skipped": 0}
 

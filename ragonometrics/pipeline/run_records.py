@@ -8,7 +8,11 @@ from __future__ import annotations
 
 
 def ensure_run_records_table(conn) -> None:
-    """Create the unified workflow ledger table and indexes."""
+    """Create the unified workflow ledger table and indexes.
+
+    Args:
+        conn (Any): Description.
+    """
     cur = conn.cursor()
     cur.execute("CREATE SCHEMA IF NOT EXISTS workflow")
     cur.execute(

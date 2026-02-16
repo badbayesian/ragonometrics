@@ -14,10 +14,24 @@ from ragonometrics.core.io_loaders import run_pdftotext_pages
 
 
 def _utc_now() -> str:
+    """Utc now.
+
+    Returns:
+        str: Description.
+    """
     return datetime.now(timezone.utc).isoformat()
 
 
 def _truthy(value: str | None, *, default: bool = False) -> bool:
+    """Truthy.
+
+    Args:
+        value (str | None): Description.
+        default (bool): Description.
+
+    Returns:
+        bool: Description.
+    """
     if value is None:
         return default
     text = value.strip().lower()
@@ -29,6 +43,15 @@ def _truthy(value: str | None, *, default: bool = False) -> bool:
 
 
 def _hash_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
+    """Hash file.
+
+    Args:
+        path (Path): Description.
+        chunk_size (int): Description.
+
+    Returns:
+        str: Description.
+    """
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
         while True:
@@ -40,6 +63,14 @@ def _hash_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
 
 
 def _pdfinfo_pages(path: Path) -> Optional[int]:
+    """Pdfinfo pages.
+
+    Args:
+        path (Path): Description.
+
+    Returns:
+        Optional[int]: Description.
+    """
     try:
         result = subprocess.run(
             ["pdfinfo", str(path)],
@@ -62,6 +93,16 @@ def _pdfinfo_pages(path: Path) -> Optional[int]:
 
 
 def _write_manifest(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Path:
+    """Write manifest.
+
+    Args:
+        report_dir (Path): Description.
+        run_id (str): Description.
+        payload (Dict[str, Any]): Description.
+
+    Returns:
+        Path: Description.
+    """
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"prep-manifest-{run_id}.json"
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
@@ -76,11 +117,13 @@ def prep_corpus(
 ) -> Dict[str, Any]:
     """Profile and validate a corpus of PDF files before ingestion.
 
-    Environment toggles:
-        PREP_HASH_FILES: Enable SHA-256 hashing per file (default True).
-        PREP_VALIDATE_TEXT: Run pdftotext to estimate text coverage (default False).
-        PREP_FAIL_ON_EMPTY: Fail if no PDFs or no extractable text (default False).
-        PREP_VALIDATE_ONLY: If set, workflows should exit after prep (default False).
+    Args:
+        pdfs (List[Path]): Description.
+        report_dir (Path): Description.
+        run_id (str): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
     """
     hash_files = _truthy(os.environ.get("PREP_HASH_FILES"), default=True)
     validate_text = _truthy(os.environ.get("PREP_VALIDATE_TEXT"), default=False)

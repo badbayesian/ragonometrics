@@ -32,10 +32,10 @@ def load_golden_set(path: Path) -> List[GoldenExample]:
     """Load a golden set from a JSON list file.
 
     Args:
-        path: Path to the JSON file.
+        path (Path): Description.
 
     Returns:
-        List[GoldenExample]: Parsed golden examples.
+        List[GoldenExample]: Description.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     out: List[GoldenExample] = []
@@ -56,12 +56,12 @@ def recall_at_k(retrieved_ids: List[str], expected_ids: List[str], k: int) -> fl
     """Compute recall@k.
 
     Args:
-        retrieved_ids: Ranked list of retrieved identifiers.
-        expected_ids: Expected relevant identifiers.
-        k: Cutoff.
+        retrieved_ids (List[str]): Description.
+        expected_ids (List[str]): Description.
+        k (int): Description.
 
     Returns:
-        float: Recall at k.
+        float: Description.
     """
     if not expected_ids or k <= 0:
         return 0.0
@@ -74,12 +74,12 @@ def mrr_at_k(retrieved_ids: List[str], expected_ids: List[str], k: int) -> float
     """Compute mean reciprocal rank at k.
 
     Args:
-        retrieved_ids: Ranked list of retrieved identifiers.
-        expected_ids: Expected relevant identifiers.
-        k: Cutoff.
+        retrieved_ids (List[str]): Description.
+        expected_ids (List[str]): Description.
+        k (int): Description.
 
     Returns:
-        float: MRR at k.
+        float: Description.
     """
     if not expected_ids or k <= 0:
         return 0.0
@@ -99,13 +99,13 @@ def evaluate_retrieval(
     """Compute retrieval metrics from retrieved chunk metadata.
 
     Args:
-        retrieved_meta: Retrieved chunk metadata dicts.
-        expected_pages: Expected relevant pages.
-        expected_chunk_ids: Optional expected chunk ids.
-        k: Cutoff for metrics.
+        retrieved_meta (List[Dict]): Description.
+        expected_pages (List[int]): Description.
+        expected_chunk_ids (Optional[List[str]]): Description.
+        k (int): Description.
 
     Returns:
-        Dict[str, float]: Retrieval metrics.
+        Dict[str, float]: Description.
     """
     retrieved_page_ids = [str(m.get("page")) for m in retrieved_meta if m.get("page") is not None]
     expected_page_ids = [str(p) for p in expected_pages]
@@ -132,16 +132,23 @@ def answer_has_citation(answer: str) -> bool:
     """Return True if the answer appears to contain a provenance citation.
 
     Args:
-        answer: Answer string.
+        answer (str): Description.
 
     Returns:
-        bool: True if a citation-like pattern is found.
+        bool: Description.
     """
     return any(p.search(answer or "") for p in _CITATION_PATTERNS)
 
 
 def normalize_answer(text: str) -> str:
-    """Normalize an answer for comparison."""
+    """Normalize an answer for comparison.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return re.sub(r"\s+", " ", (text or "").strip().lower())
 
 
@@ -149,10 +156,10 @@ def self_consistency_rate(answers: Iterable[str]) -> float:
     """Compute a simple self-consistency rate.
 
     Args:
-        answers: Iterable of answer strings.
+        answers (Iterable[str]): Description.
 
     Returns:
-        float: Fraction of the most common answer.
+        float: Description.
     """
     answers_list = [normalize_answer(a) for a in answers if a]
     if not answers_list:
@@ -167,10 +174,10 @@ def evaluate_answers(answers: Iterable[str]) -> Dict[str, float]:
     """Compute answer-quality proxy metrics.
 
     Args:
-        answers: Iterable of answer strings.
+        answers (Iterable[str]): Description.
 
     Returns:
-        Dict[str, float]: Answer-quality proxy metrics.
+        Dict[str, float]: Description.
     """
     answers_list = [a for a in answers if a is not None]
     if not answers_list:

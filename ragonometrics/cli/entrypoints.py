@@ -27,16 +27,17 @@ from ragonometrics.integrations.citec import format_citec_context
 from ragonometrics.pipeline.workflow import run_workflow
 from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
+from ragonometrics.integrations.openalex_store import store_openalex_metadata_by_title_author
 
 
 def cmd_index(args: argparse.Namespace) -> int:
     """Build vector indexes from PDFs.
 
     Args:
-        args: Parsed CLI arguments.
+        args (argparse.Namespace): Description.
 
     Returns:
-        int: Exit code (0 on success).
+        int: Description.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -54,10 +55,10 @@ def cmd_query(args: argparse.Namespace) -> int:
     """Run a single query against a paper.
 
     Args:
-        args: Parsed CLI arguments.
+        args (argparse.Namespace): Description.
 
     Returns:
-        int: Exit code (0 on success).
+        int: Description.
     """
     settings = load_settings()
     paper_path = Path(args.paper)
@@ -117,10 +118,10 @@ def cmd_ui(args: argparse.Namespace) -> int:
     """Launch the Streamlit UI.
 
     Args:
-        args: Parsed CLI arguments.
+        args (argparse.Namespace): Description.
 
     Returns:
-        int: Exit code (0 on success).
+        int: Description.
     """
     app_path = Path(__file__).resolve().parents[1] / "ui" / "streamlit_app.py"
     try:
@@ -134,10 +135,10 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     """Run benchmark suite.
 
     Args:
-        args: Parsed CLI arguments.
+        args (argparse.Namespace): Description.
 
     Returns:
-        int: Exit code (0 on success).
+        int: Description.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -153,7 +154,14 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
 
 def cmd_store_metadata(args: argparse.Namespace) -> int:
-    """Store paper-level metadata in Postgres without building vector indexes."""
+    """Store paper-level metadata in Postgres without building vector indexes.
+
+    Args:
+        args (argparse.Namespace): Description.
+
+    Returns:
+        int: Description.
+    """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
     pdfs = sorted(papers_dir.glob("*.pdf"))
@@ -168,7 +176,14 @@ def cmd_store_metadata(args: argparse.Namespace) -> int:
 
 
 def cmd_store_workflow_reports(args: argparse.Namespace) -> int:
-    """Store workflow report JSON files in Postgres JSONB."""
+    """Store workflow report JSON files in Postgres JSONB.
+
+    Args:
+        args (argparse.Namespace): Description.
+
+    Returns:
+        int: Description.
+    """
     settings = load_settings()
     db_url = args.meta_db_url or (settings.config_effective or {}).get("database_url")
     if not db_url:
@@ -191,14 +206,51 @@ def cmd_store_workflow_reports(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_store_openalex_metadata(args: argparse.Namespace) -> int:
+    """Resolve OpenAlex papers by title+authors and persist results to Postgres.
+
+    Args:
+        args (argparse.Namespace): Description.
+
+    Returns:
+        int: Description.
+    """
+    settings = load_settings()
+    papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
+    pdfs = sorted(papers_dir.glob("*.pdf"))
+    if args.limit and args.limit > 0:
+        pdfs = pdfs[: args.limit]
+    if not pdfs:
+        print("No PDFs found to store OpenAlex metadata.")
+        return 1
+
+    db_url = args.meta_db_url or (settings.config_effective or {}).get("database_url")
+    if not db_url:
+        print("No database URL configured. Pass --meta-db-url or set DATABASE_URL.")
+        return 1
+
+    stats = store_openalex_metadata_by_title_author(
+        paper_paths=pdfs,
+        db_url=str(db_url),
+        progress=True,
+        refresh=bool(args.refresh),
+    )
+    print(
+        "OpenAlex title+author metadata stored for "
+        f"{stats['total']} paper(s): matched={stats['matched']}, "
+        f"not_found={stats['not_found']}, error={stats['error']}, skipped={stats['skipped']}."
+    )
+    return 0
+
+
 def cmd_workflow(args: argparse.Namespace) -> int:
     """Run or enqueue the multi-step workflow.
 
     Args:
-        args: Parsed CLI arguments.
+        args (argparse.Namespace): Description.
 
     Returns:
-        int: Exit code (0 on success).
+        int: Description.
     """
     papers_dir = Path(args.papers) if args.papers else load_settings().papers_dir
     if args.async_mode:
@@ -246,7 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
     Returns:
-        argparse.ArgumentParser: Configured parser.
+        argparse.ArgumentParser: Description.
     """
     p = argparse.ArgumentParser(prog="ragonometrics")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -289,6 +341,16 @@ def build_parser() -> argparse.ArgumentParser:
     wr.add_argument("--limit", type=int, default=0)
     wr.set_defaults(func=cmd_store_workflow_reports)
 
+    oa = sub.add_parser(
+        "store-openalex-metadata",
+        help="Find papers on OpenAlex by title+authors and store matches in Postgres",
+    )
+    oa.add_argument("--papers-dir", type=str, default=None)
+    oa.add_argument("--meta-db-url", type=str, default=None)
+    oa.add_argument("--limit", type=int, default=0)
+    oa.add_argument("--refresh", action="store_true", help="Re-query and overwrite already matched rows.")
+    oa.set_defaults(func=cmd_store_openalex_metadata)
+
     w = sub.add_parser("workflow", help="Run or enqueue a multi-step workflow")
     w.add_argument("--papers", type=str, default=None, help="PDF file or directory")
     w.add_argument("--papers-dir", dest="papers", type=str, help=argparse.SUPPRESS)
@@ -325,7 +387,7 @@ def main() -> int:
     """CLI entrypoint for ragonometrics.
 
     Returns:
-        int: Exit code.
+        int: Description.
     """
     parser = build_parser()
     args = parser.parse_args()

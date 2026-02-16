@@ -14,6 +14,19 @@ WORLD_BANK_BASE = "https://api.worldbank.org/v2"
 
 
 def _request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Optional[Any]:
+    """Request json.
+
+    Args:
+        url (str): Description.
+        params (Optional[Dict[str, Any]]): Description.
+        timeout (int): Description.
+
+    Returns:
+        Optional[Any]: Description.
+
+    Raises:
+        Exception: Description.
+    """
     max_retries = int(os.environ.get("ECON_API_MAX_RETRIES", "2"))
     for attempt in range(max_retries + 1):
         try:
@@ -42,14 +55,14 @@ def fetch_fred_series(
     """Fetch FRED series observations.
 
     Args:
-        series_id: FRED series id (e.g., "GDPC1").
-        api_key: FRED API key (or set FRED_API_KEY).
-        start_date: Optional start date (YYYY-MM-DD).
-        end_date: Optional end date (YYYY-MM-DD).
-        limit: Optional maximum observations.
+        series_id (str): Description.
+        api_key (Optional[str]): Description.
+        start_date (Optional[str]): Description.
+        end_date (Optional[str]): Description.
+        limit (Optional[int]): Description.
 
     Returns:
-        List of observation dicts with "date" and "value".
+        List[Dict[str, Any]]: Description.
     """
     key = api_key or os.environ.get("FRED_API_KEY")
     params: Dict[str, Any] = {"series_id": series_id, "file_type": "json"}
@@ -78,14 +91,14 @@ def fetch_world_bank_indicator(
     """Fetch World Bank indicator data for a country.
 
     Args:
-        indicator: Indicator id (e.g., "NY.GDP.MKTP.CD").
-        country: Country code (default "USA").
-        start_year: Optional start year.
-        end_year: Optional end year.
-        per_page: Page size for the API.
+        indicator (str): Description.
+        country (str): Description.
+        start_year (Optional[int]): Description.
+        end_year (Optional[int]): Description.
+        per_page (int): Description.
 
     Returns:
-        List of indicator observations.
+        List[Dict[str, Any]]: Description.
     """
     params: Dict[str, Any] = {"format": "json", "per_page": per_page}
     if start_year:

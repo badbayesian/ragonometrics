@@ -12,14 +12,39 @@ from ragonometrics.indexing import metadata
 
 
 def _sha256_bytes(payload: bytes) -> str:
+    """Sha256 bytes.
+
+    Args:
+        payload (bytes): Description.
+
+    Returns:
+        str: Description.
+    """
     return hashlib.sha256(payload).hexdigest()
 
 
 def _sha256_text(text: str) -> str:
+    """Sha256 text.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return _sha256_bytes(text.encode("utf-8", errors="ignore"))
 
 
 def _doc_id_for_paper(path: Path, text: str) -> str:
+    """Doc id for paper.
+
+    Args:
+        path (Path): Description.
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     try:
         file_bytes = path.read_bytes()
     except Exception:
@@ -30,6 +55,15 @@ def _doc_id_for_paper(path: Path, text: str) -> str:
 
 
 def _hashes_for_paper(path: Path, text: str) -> tuple[str, str]:
+    """Hashes for paper.
+
+    Args:
+        path (Path): Description.
+        text (str): Description.
+
+    Returns:
+        tuple[str, str]: Description.
+    """
     try:
         file_bytes = path.read_bytes()
     except Exception:
@@ -40,6 +74,14 @@ def _hashes_for_paper(path: Path, text: str) -> tuple[str, str]:
 
 
 def _dedupe_keep_order(values: List[str]) -> List[str]:
+    """Dedupe keep order.
+
+    Args:
+        values (List[str]): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     seen = set()
     out: List[str] = []
     for value in values:
@@ -55,6 +97,14 @@ def _dedupe_keep_order(values: List[str]) -> List[str]:
 
 
 def _split_author_names(author_text: str) -> List[str]:
+    """Split author names.
+
+    Args:
+        author_text (str): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     text = str(author_text or "").strip()
     if not text:
         return []
@@ -63,6 +113,14 @@ def _split_author_names(author_text: str) -> List[str]:
 
 
 def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
+    """Openalex author names.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     if not openalex_meta:
         return []
     names: List[str] = []
@@ -77,6 +135,14 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
 
 
 def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
+    """Openalex venue.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if not openalex_meta:
         return None
     primary = openalex_meta.get("primary_location") or {}
@@ -90,6 +156,14 @@ def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
 
 
 def _openalex_source_url(openalex_meta: Dict[str, Any] | None) -> str | None:
+    """Openalex source url.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if not openalex_meta:
         return None
     primary = openalex_meta.get("primary_location") or {}
@@ -106,7 +180,19 @@ def store_paper_metadata(
     meta_db_url: str | None = None,
     progress: bool = True,
 ) -> int:
-    """Load papers and upsert paper-level metadata rows into Postgres."""
+    """Load papers and upsert paper-level metadata rows into Postgres.
+
+    Args:
+        paper_paths (Iterable[Path]): Description.
+        meta_db_url (str | None): Description.
+        progress (bool): Description.
+
+    Returns:
+        int: Description.
+
+    Raises:
+        Exception: Description.
+    """
     db_url = meta_db_url or os.environ.get("DATABASE_URL")
     if not db_url:
         raise RuntimeError("No metadata DB URL provided and DATABASE_URL not set")
@@ -193,7 +279,11 @@ def store_paper_metadata(
 
 
 def main() -> None:
-    """CLI entrypoint for metadata-only ingestion."""
+    """CLI entrypoint for metadata-only ingestion.
+
+    Raises:
+        Exception: Description.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(description="Store paper metadata in Postgres without building vectors")

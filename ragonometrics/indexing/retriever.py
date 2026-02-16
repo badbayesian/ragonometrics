@@ -15,17 +15,44 @@ import psycopg2
 
 
 def _normalize(vec: np.ndarray) -> np.ndarray:
+    """Normalize.
+
+    Args:
+        vec (np.ndarray): Description.
+
+    Returns:
+        np.ndarray: Description.
+    """
     norm = np.linalg.norm(vec, axis=1, keepdims=True)
     norm[norm == 0] = 1.0
     return vec / norm
 
 
 def _to_pgvector_literal(vec: np.ndarray) -> str:
+    """To pgvector literal.
+
+    Args:
+        vec (np.ndarray): Description.
+
+    Returns:
+        str: Description.
+    """
     values = vec[0].tolist()
     return "[" + ",".join(f"{float(v):.10f}" for v in values) + "]"
 
 
 def _load_index_sidecar(path: str) -> Dict:
+    """Load index sidecar.
+
+    Args:
+        path (str): Description.
+
+    Returns:
+        Dict: Description.
+
+    Raises:
+        Exception: Description.
+    """
     sidecar = Path(path).with_suffix(".index.version.json")
     if not sidecar.exists():
         raise RuntimeError(f"Index sidecar not found: {sidecar}")
@@ -36,6 +63,15 @@ def _load_index_sidecar(path: str) -> Dict:
 
 
 def _verify_index_version(path: str, db_index_id: str | None) -> None:
+    """Verify index version.
+
+    Args:
+        path (str): Description.
+        db_index_id (str | None): Description.
+
+    Raises:
+        Exception: Description.
+    """
     if os.environ.get("ALLOW_UNVERIFIED_INDEX"):
         return
     sidecar = _load_index_sidecar(path)
@@ -52,10 +88,10 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     """Load active FAISS indexes from metadata.
 
     Args:
-        db_url: Postgres database URL.
+        db_url (str): Description.
 
     Returns:
-        List[Tuple[str, faiss.Index]]: (shard_name, index) pairs.
+        List[Tuple[str, faiss.Index]]: Description.
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
@@ -74,10 +110,10 @@ def _load_texts_for_shards(db_url: str) -> Tuple[List[str], List[int]]:
     """Load vector texts and ids from Postgres.
 
     Args:
-        db_url: Postgres database URL.
+        db_url (str): Description.
 
     Returns:
-        Tuple[List[str], List[int]]: Texts and corresponding vector ids.
+        Tuple[List[str], List[int]]: Description.
     """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
@@ -91,6 +127,11 @@ def _load_texts_for_shards(db_url: str) -> Tuple[List[str], List[int]]:
 
 def _set_diskann_runtime_knobs(cur) -> None:
     # Query-time tuning knobs; ignored where unsupported.
+    """Set diskann runtime knobs.
+
+    Args:
+        cur (Any): Description.
+    """
     try:
         if os.environ.get("DISKANN_QUERY_RESCORE"):
             cur.execute(f"SET LOCAL diskann.query_rescore = {int(os.environ['DISKANN_QUERY_RESCORE'])}")
@@ -103,6 +144,16 @@ def _set_diskann_runtime_knobs(cur) -> None:
 
 
 def _embedding_search_pg(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple[int, float]]:
+    """Embedding search pg.
+
+    Args:
+        db_url (str): Description.
+        vec (np.ndarray): Description.
+        top_k (int): Description.
+
+    Returns:
+        List[Tuple[int, float]]: Description.
+    """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
     vector_literal = _to_pgvector_literal(vec)
@@ -126,6 +177,16 @@ def _embedding_search_pg(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple
 
 
 def _embedding_search_faiss(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple[int, float]]:
+    """Embedding search faiss.
+
+    Args:
+        db_url (str): Description.
+        vec (np.ndarray): Description.
+        top_k (int): Description.
+
+    Returns:
+        List[Tuple[int, float]]: Description.
+    """
     indexes = _load_active_indexes(db_url)
     if not indexes:
         return []
@@ -139,14 +200,14 @@ def hybrid_search(query: str, client: OpenAI, db_url: str, top_k: int = 6, bm25_
     """Perform hybrid BM25 + embedding search over stored vectors.
 
     Args:
-        query: Search query string.
-        client: OpenAI client for embeddings.
-        db_url: Postgres database URL.
-        top_k: Number of results to return.
-        bm25_weight: Weight for BM25 score in the hybrid blend.
+        query (str): Description.
+        client (OpenAI): Description.
+        db_url (str): Description.
+        top_k (int): Description.
+        bm25_weight (float): Description.
 
     Returns:
-        List[Tuple[int, float]]: (vector_id, score) results.
+        List[Tuple[int, float]]: Description.
     """
     # 1. BM25 over stored texts
     texts, ids = _load_texts_for_shards(db_url)

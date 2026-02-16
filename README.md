@@ -80,18 +80,27 @@ docker compose run --rm workflow \
 Outputs
 -------
 Filesystem artifacts:
-- `reports/workflow/workflow-report-<run_id>.json`
-- `reports/prep/prep-manifest-<run_id>.json`
-- `reports/audit/audit-workflow-report-<run_id>.md`
-- `reports/audit/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
+- `reports/workflow-report-<run_id>.json` (default path)
+- `reports/prep-manifest-<run_id>.json` (default path)
+- `reports/audit-workflow-report-<run_id>.md` (if audit rendering enabled)
+- `reports/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
+
+Note: teams can post-process or move artifacts into `reports/workflow/`, `reports/prep/`, and `reports/audit/`; runtime writes to `reports/` by default.
 
 Primary Postgres tables:
 - `workflow.run_records`
 - `workflow.async_jobs`
 - `retrieval.query_cache`
 - `observability.token_usage`
+- `enrichment.paper_openalex_metadata`
 - `ingestion.documents`, `ingestion.paper_metadata`
 - `indexing.pipeline_runs`, `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`
+
+OpenAlex title+author metadata process:
+
+```bash
+ragonometrics store-openalex-metadata --papers-dir papers --meta-db-url "$DATABASE_URL"
+```
 
 Database Browser (pgAdmin)
 --------------------------

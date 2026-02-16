@@ -28,10 +28,23 @@ class FakeClient:
     class embeddings:
         @staticmethod
         def create(model, input):
-            """Return deterministic embedding vectors for testing."""
+            """Return deterministic embedding vectors for testing.
+
+            Args:
+                model (Any): Description.
+                input (Any): Description.
+
+            Returns:
+                Any: Description.
+            """
             # return a fixed-length small vector for deterministic dry runs
             class Item:
                 def __init__(self, embedding):
+                    """Init.
+
+                    Args:
+                        embedding (Any): Description.
+                    """
                     self.embedding = embedding
 
             vec = [0.01] * 8
@@ -42,11 +55,11 @@ def benchmark_indexing(papers: List[Path], runs: int = 1) -> List[dict]:
     """Benchmark vector index building across runs.
 
     Args:
-        papers: PDF paths to index.
-        runs: Number of benchmark runs.
+        papers (List[Path]): Description.
+        runs (int): Description.
 
     Returns:
-        list[dict]: Per-run timing results.
+        List[dict]: Description.
     """
     settings = load_settings()
     results = []
@@ -62,10 +75,10 @@ def benchmark_chunking(paper: Path) -> dict:
     """Benchmark chunk preparation for a single paper.
 
     Args:
-        paper: PDF path to process.
+        paper (Path): Description.
 
     Returns:
-        dict: Chunk count and timing results for the paper.
+        dict: Description.
     """
     settings = load_settings()
     papers = load_papers([paper])
@@ -92,15 +105,18 @@ def bench_papers(
     """Benchmark chunking, embedding, and retrieval across papers.
 
     Args:
-        papers_dir: Directory of PDF files.
-        out_csv: Output CSV path.
-        limit: Maximum number of papers to process (0 = all).
-        use_openai: Whether to use the real OpenAI client.
-        db_url: Optional Postgres URL for hybrid retrieval.
-        chunk_words: Override chunk size in words.
-        chunk_overlap: Override overlap size in words.
-        bm25_weight: Optional BM25 weight for hybrid retrieval.
-        force_ocr: Whether to force OCR instead of pdftotext.
+        papers_dir (Path): Description.
+        out_csv (Path): Description.
+        limit (int): Description.
+        use_openai (bool): Description.
+        db_url (Optional[str]): Description.
+        chunk_words (Optional[int]): Description.
+        chunk_overlap (Optional[int]): Description.
+        bm25_weight (Optional[float]): Description.
+        force_ocr (bool): Description.
+
+    Raises:
+        Exception: Description.
     """
     settings = load_settings()
     settings = Settings(

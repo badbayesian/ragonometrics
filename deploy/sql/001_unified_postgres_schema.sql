@@ -94,6 +94,30 @@ CREATE TABLE IF NOT EXISTS enrichment.citec_cache (
 CREATE INDEX IF NOT EXISTS enrichment_citec_cache_fetched_at_idx
     ON enrichment.citec_cache(fetched_at DESC);
 
+CREATE TABLE IF NOT EXISTS enrichment.paper_openalex_metadata (
+    paper_path TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    authors TEXT NOT NULL,
+    query_title TEXT NOT NULL,
+    query_authors TEXT NOT NULL,
+    query_year INTEGER,
+    openalex_id TEXT,
+    openalex_doi TEXT,
+    openalex_title TEXT,
+    openalex_publication_year INTEGER,
+    openalex_authors_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    openalex_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    match_status TEXT NOT NULL,
+    error_text TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (match_status IN ('matched', 'not_found', 'error'))
+);
+CREATE INDEX IF NOT EXISTS enrichment_paper_openalex_metadata_updated_idx
+    ON enrichment.paper_openalex_metadata(updated_at DESC);
+CREATE INDEX IF NOT EXISTS enrichment_paper_openalex_metadata_openalex_id_idx
+    ON enrichment.paper_openalex_metadata(openalex_id);
+
 -- =========================
 -- indexing
 -- =========================

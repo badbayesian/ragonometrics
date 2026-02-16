@@ -17,7 +17,14 @@ from ragonometrics.core.main import Settings
 
 
 def get_git_sha(repo_root: Path = PROJECT_ROOT) -> Optional[str]:
-    """Return the current git SHA if available."""
+    """Return the current git SHA if available.
+
+    Args:
+        repo_root (Path): Description.
+
+    Returns:
+        Optional[str]: Description.
+    """
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -33,6 +40,14 @@ def get_git_sha(repo_root: Path = PROJECT_ROOT) -> Optional[str]:
 
 
 def _sha256_file(path: Path) -> Optional[str]:
+    """Sha256 file.
+
+    Args:
+        path (Path): Description.
+
+    Returns:
+        Optional[str]: Description.
+    """
     if not path.exists():
         return None
     h = hashlib.sha256()
@@ -43,6 +58,14 @@ def _sha256_file(path: Path) -> Optional[str]:
 
 
 def _redact_url(url: str | None) -> str | None:
+    """Redact url.
+
+    Args:
+        url (str | None): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if not url:
         return None
     try:
@@ -60,6 +83,14 @@ def _redact_url(url: str | None) -> str | None:
 
 
 def _sanitize_config(config: dict | None) -> dict | None:
+    """Sanitize config.
+
+    Args:
+        config (dict | None): Description.
+
+    Returns:
+        dict | None: Description.
+    """
     if not config:
         return None
     sanitized = dict(config)
@@ -81,7 +112,23 @@ def build_run_manifest(
     embeddings_sha256: Optional[str] = None,
     paper_manifest: Optional[list[dict]] = None,
 ) -> dict:
-    """Build a run manifest for an indexing run."""
+    """Build a run manifest for an indexing run.
+
+    Args:
+        settings (Settings): Description.
+        paper_paths (Iterable[Path]): Description.
+        index_path (Path): Description.
+        shard_path (Path): Description.
+        pipeline_run_id (Optional[int]): Description.
+        corpus_fingerprint (Optional[str]): Description.
+        embedding_dim (Optional[int]): Description.
+        index_sha256 (Optional[str]): Description.
+        embeddings_sha256 (Optional[str]): Description.
+        paper_manifest (Optional[list[dict]]): Description.
+
+    Returns:
+        dict: Description.
+    """
     config_effective = _sanitize_config(settings.config_effective)
     dependency_fingerprint = {
         "pyproject_toml_sha256": _sha256_file(PROJECT_ROOT / "pyproject.toml"),
@@ -125,7 +172,15 @@ def build_run_manifest(
 
 
 def write_run_manifest(shard_path: Path, manifest: dict) -> Path:
-    """Write a manifest JSON file next to the index shard."""
+    """Write a manifest JSON file next to the index shard.
+
+    Args:
+        shard_path (Path): Description.
+        manifest (dict): Description.
+
+    Returns:
+        Path: Description.
+    """
     manifest_path = shard_path.with_suffix(".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest_path
@@ -141,7 +196,20 @@ def build_index_version(
     embedding_dim: Optional[int] = None,
     created_at: Optional[str] = None,
 ) -> dict:
-    """Build the index version payload for sidecar storage."""
+    """Build the index version payload for sidecar storage.
+
+    Args:
+        index_id (str): Description.
+        embedding_model (str): Description.
+        chunk_words (int): Description.
+        chunk_overlap (int): Description.
+        corpus_fingerprint (str): Description.
+        embedding_dim (Optional[int]): Description.
+        created_at (Optional[str]): Description.
+
+    Returns:
+        dict: Description.
+    """
     return {
         "index_id": index_id,
         "created_at": created_at or datetime.now(timezone.utc).isoformat(),
@@ -154,7 +222,15 @@ def build_index_version(
 
 
 def write_index_version_sidecar(shard_path: Path, payload: dict) -> Path:
-    """Write an index version sidecar JSON next to the FAISS artifact."""
+    """Write an index version sidecar JSON next to the FAISS artifact.
+
+    Args:
+        shard_path (Path): Description.
+        payload (dict): Description.
+
+    Returns:
+        Path: Description.
+    """
     sidecar = shard_path.with_suffix(".index.version.json")
     sidecar.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return sidecar

@@ -33,10 +33,10 @@ def normalize(v: np.ndarray) -> np.ndarray:
     """L2-normalize a 2D array of vectors.
 
     Args:
-        v: Array of vectors with shape (n, d).
+        v (np.ndarray): Description.
 
     Returns:
-        np.ndarray: Normalized vectors with the same shape.
+        np.ndarray: Description.
     """
     norms = np.linalg.norm(v, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -44,23 +44,67 @@ def normalize(v: np.ndarray) -> np.ndarray:
 
 
 def _sha256_bytes(payload: bytes) -> str:
+    """Sha256 bytes.
+
+    Args:
+        payload (bytes): Description.
+
+    Returns:
+        str: Description.
+    """
     return hashlib.sha256(payload).hexdigest()
 
 
 def _sha256_text(text: str) -> str:
+    """Sha256 text.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return _sha256_bytes(text.encode("utf-8", errors="ignore"))
 
 
 def _stable_chunk_id(doc_id: str, page: int | None, start_word: int | None, end_word: int | None, chunk_hash: str) -> str:
+    """Stable chunk id.
+
+    Args:
+        doc_id (str): Description.
+        page (int | None): Description.
+        start_word (int | None): Description.
+        end_word (int | None): Description.
+        chunk_hash (str): Description.
+
+    Returns:
+        str: Description.
+    """
     payload = f"{doc_id}|{page}|{start_word}|{end_word}|{chunk_hash}"
     return _sha256_text(payload)
 
 
 def _to_pgvector_literal(values: np.ndarray) -> str:
+    """To pgvector literal.
+
+    Args:
+        values (np.ndarray): Description.
+
+    Returns:
+        str: Description.
+    """
     return "[" + ",".join(f"{float(v):.10f}" for v in values.tolist()) + "]"
 
 
 def _dedupe_keep_order(values: List[str]) -> List[str]:
+    """Dedupe keep order.
+
+    Args:
+        values (List[str]): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     seen = set()
     out: List[str] = []
     for value in values:
@@ -76,6 +120,14 @@ def _dedupe_keep_order(values: List[str]) -> List[str]:
 
 
 def _split_author_names(author_text: str) -> List[str]:
+    """Split author names.
+
+    Args:
+        author_text (str): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     text = str(author_text or "").strip()
     if not text:
         return []
@@ -84,6 +136,14 @@ def _split_author_names(author_text: str) -> List[str]:
 
 
 def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
+    """Openalex author names.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     if not openalex_meta:
         return []
     names: List[str] = []
@@ -98,6 +158,14 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
 
 
 def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
+    """Openalex venue.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if not openalex_meta:
         return None
     primary = openalex_meta.get("primary_location") or {}
@@ -111,6 +179,14 @@ def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
 
 
 def _openalex_source_url(openalex_meta: Dict[str, Any] | None) -> str | None:
+    """Openalex source url.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        str | None: Description.
+    """
     if not openalex_meta:
         return None
     primary = openalex_meta.get("primary_location") or {}
@@ -136,13 +212,18 @@ def build_index(
     """Build vector indexes from paper paths and persist metadata to Postgres.
 
     Args:
-        settings: Runtime settings for chunking and embeddings.
-        paper_paths: PDF paths to index.
-        index_path: Output index file path.
-        meta_db_url: Optional Postgres URL for metadata storage.
+        settings (Settings): Description.
+        paper_paths (List[Path]): Description.
+        index_path (Path): Description.
+        meta_db_url (str | None): Description.
+        workflow_run_id (str | None): Description.
+        workstream_id (str | None): Description.
+        arm (str | None): Description.
+        paper_set_hash (str | None): Description.
+        index_build_reason (str | None): Description.
 
     Raises:
-        RuntimeError: If no metadata DB URL is available or index dims mismatch.
+        Exception: Description.
     """
     client = OpenAI()
     log_event("index_start", {"papers": len(paper_paths), "index_path": str(index_path)})

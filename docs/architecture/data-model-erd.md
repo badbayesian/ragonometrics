@@ -43,6 +43,21 @@ erDiagram
     timestamptz fetched_at
   }
 
+  ENRICHMENT_PAPER_OPENALEX_METADATA {
+    text paper_path PK
+    text title
+    text authors
+    text query_title
+    text query_authors
+    int query_year
+    text openalex_id
+    text openalex_doi
+    text openalex_title
+    int openalex_publication_year
+    text match_status
+    timestamptz updated_at
+  }
+
   INDEXING_PIPELINE_RUNS {
     bigint id PK
     text workflow_run_id

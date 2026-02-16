@@ -52,10 +52,10 @@ def list_papers(papers_dir: Path) -> List[Path]:
     """List PDF files in the provided directory.
 
     Args:
-        papers_dir: Directory containing PDF files.
+        papers_dir (Path): Description.
 
     Returns:
-        List[Path]: Sorted list of PDF paths.
+        List[Path]: Description.
     """
     if not papers_dir.exists():
         return []
@@ -66,14 +66,12 @@ def list_papers(papers_dir: Path) -> List[Path]:
 def load_and_prepare(path: Path, settings: Settings):
     """Load a paper, prepare chunks/embeddings, and cache the result.
 
-    A client is constructed internally so caching depends on `path` and `settings`.
-
     Args:
-        path: PDF path to load.
-        settings: Runtime settings.
+        path (Path): Description.
+        settings (Settings): Description.
 
     Returns:
-        tuple[Paper, list[dict], list[list[float]]]: Paper, chunks, embeddings.
+        Any: Description.
     """
     papers = load_papers([path])
     paper = papers[0]
@@ -90,10 +88,10 @@ def parse_context_chunks(context: str) -> List[dict]:
     """Parse concatenated context into structured chunks.
 
     Args:
-        context: Context string with optional provenance lines.
+        context (str): Description.
 
     Returns:
-        List[dict]: Dicts with "meta", "text", and optional "page".
+        List[dict]: Description.
     """
     chunks: List[dict] = []
     for block in context.split("\n\n"):
@@ -121,13 +119,13 @@ def build_chat_history_context(history: List[dict], *, paper_path: Path, max_tur
     """Build a compact conversation transcript for prompt grounding.
 
     Args:
-        history: Session history entries.
-        paper_path: Active paper path to scope relevant turns.
-        max_turns: Number of latest turns to include.
-        max_answer_chars: Max characters per assistant answer excerpt.
+        history (List[dict]): Description.
+        paper_path (Path): Description.
+        max_turns (int): Description.
+        max_answer_chars (int): Description.
 
     Returns:
-        str: Compact conversation transcript, or empty string.
+        str: Description.
     """
     turns: List[tuple[str, str]] = []
     for item in history:
@@ -163,7 +161,14 @@ def build_chat_history_context(history: List[dict], *, paper_path: Path, max_tur
 
 
 def suggested_paper_questions(paper: Paper) -> List[str]:
-    """Return a concise list of starter questions for the selected paper."""
+    """Return a concise list of starter questions for the selected paper.
+
+    Args:
+        paper (Paper): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     questions = [
         "What is the main research question of this paper?",
         "What identification strategy does the paper use?",
@@ -178,7 +183,14 @@ def suggested_paper_questions(paper: Paper) -> List[str]:
 
 
 def _response_text_from_final_response(response: object) -> str:
-    """Extract best-effort text from a completed OpenAI response object."""
+    """Extract best-effort text from a completed OpenAI response object.
+
+    Args:
+        response (object): Description.
+
+    Returns:
+        str: Description.
+    """
     text = getattr(response, "output_text", None) or getattr(response, "text", None)
     if text:
         return str(text).strip()
@@ -206,7 +218,25 @@ def stream_openai_answer(
     request_id: Optional[str],
     on_delta: Callable[[str], None],
 ) -> str:
-    """Stream answer tokens from OpenAI Responses API and return final text."""
+    """Stream answer tokens from OpenAI Responses API and return final text.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        instructions (str): Description.
+        user_input (str): Description.
+        temperature (Optional[float]): Description.
+        usage_context (str): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        on_delta (Callable[[str], None]): Description.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
     payload = {
         "model": model,
@@ -300,6 +330,15 @@ _MATH_SIGNAL_PATTERN = re.compile(
 
 
 def _truthy_env(name: str, default: bool) -> bool:
+    """Truthy env.
+
+    Args:
+        name (str): Description.
+        default (bool): Description.
+
+    Returns:
+        bool: Description.
+    """
     value = os.environ.get(name)
     if value is None:
         return default
@@ -312,6 +351,14 @@ def _truthy_env(name: str, default: bool) -> bool:
 
 
 def _should_review_math_latex(answer: str) -> bool:
+    """Should review math latex.
+
+    Args:
+        answer (str): Description.
+
+    Returns:
+        bool: Description.
+    """
     if not answer or not answer.strip():
         return False
     if "$" in answer and (_MATH_SIGNAL_PATTERN.search(answer) is None):
@@ -326,6 +373,14 @@ def _should_review_math_latex(answer: str) -> bool:
 
 def _estimate_review_max_tokens(answer: str) -> int:
     # Roughly map characters to tokens; keep bounded for latency/cost.
+    """Estimate review max tokens.
+
+    Args:
+        answer (str): Description.
+
+    Returns:
+        int: Description.
+    """
     approx = int(len(answer) / 3.0) + 128
     return max(256, min(3072, approx))
 
@@ -338,7 +393,18 @@ def maybe_review_math_latex(
     session_id: Optional[str],
     request_id: Optional[str],
 ) -> str:
-    """Optionally run an AI formatting pass so math renders with LaTeX."""
+    """Optionally run an AI formatting pass so math renders with LaTeX.
+
+    Args:
+        client (OpenAI): Description.
+        answer (str): Description.
+        source_model (str): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+
+    Returns:
+        str: Description.
+    """
     if not _truthy_env("MATH_LATEX_REVIEW_ENABLED", True):
         return answer
     if not _should_review_math_latex(answer):
@@ -393,7 +459,8 @@ def maybe_review_math_latex(
 
 
 def scroll_chat_to_top() -> None:
-    """Request a smooth scroll to the top of the Streamlit app."""
+    """Request a smooth scroll to the top of the Streamlit app.
+    """
     components.html(
         """
         <script>
@@ -411,7 +478,15 @@ def scroll_chat_to_top() -> None:
 
 
 def extract_highlight_terms(query: str, max_terms: int = 6) -> List[str]:
-    """Extract key terms from a query for highlighting."""
+    """Extract key terms from a query for highlighting.
+
+    Args:
+        query (str): Description.
+        max_terms (int): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     stop = {
         "the", "and", "or", "but", "a", "an", "of", "to", "in", "for", "on", "with",
         "is", "are", "was", "were", "be", "been", "it", "this", "that", "these",
@@ -431,7 +506,15 @@ def extract_highlight_terms(query: str, max_terms: int = 6) -> List[str]:
 
 
 def highlight_text_html(text: str, terms: List[str]) -> str:
-    """Return HTML with highlight marks for matching terms."""
+    """Return HTML with highlight marks for matching terms.
+
+    Args:
+        text (str): Description.
+        terms (List[str]): Description.
+
+    Returns:
+        str: Description.
+    """
     if not terms:
         return html.escape(text)
     escaped = html.escape(text)
@@ -442,7 +525,15 @@ def highlight_text_html(text: str, terms: List[str]) -> str:
 
 
 def highlight_image_terms(image, terms: List[str]):
-    """Highlight matched terms on a PIL image using OCR."""
+    """Highlight matched terms on a PIL image using OCR.
+
+    Args:
+        image (Any): Description.
+        terms (List[str]): Description.
+
+    Returns:
+        Any: Description.
+    """
     if not terms or not pytesseract or not ImageDraw:
         return image
     try:
@@ -469,7 +560,14 @@ def highlight_image_terms(image, terms: List[str]):
 
 
 def render_citation_snapshot(path: Path, citation: dict, key_prefix: str, query: str) -> None:
-    """Render a highlighted text snapshot and optional page image for a citation chunk."""
+    """Render a highlighted text snapshot and optional page image for a citation chunk.
+
+    Args:
+        path (Path): Description.
+        citation (dict): Description.
+        key_prefix (str): Description.
+        query (str): Description.
+    """
     meta = citation.get("meta") or "Context chunk"
     text = citation.get("text") or ""
     page = citation.get("page")
@@ -501,7 +599,8 @@ def render_citation_snapshot(path: Path, citation: dict, key_prefix: str, query:
 
 
 def auth_gate() -> None:
-    """Simple username/password gate for the Streamlit app."""
+    """Simple username/password gate for the Streamlit app.
+    """
     expected_user = os.getenv("STREAMLIT_USERNAME")
     expected_pass = os.getenv("STREAMLIT_PASSWORD")
 
@@ -529,7 +628,11 @@ def auth_gate() -> None:
 
 
 def main():
-    """Run the Streamlit app."""
+    """Run the Streamlit app.
+
+    Raises:
+        Exception: Description.
+    """
     st.title("Ragonometrics -- Paper Chatbot")
 
     settings = load_settings()

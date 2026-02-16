@@ -38,6 +38,17 @@ class EnqueuedJob:
 
 
 def _resolve_db_url(db_url: str | None) -> str:
+    """Resolve db url.
+
+    Args:
+        db_url (str | None): Description.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     raw = (db_url or "").strip()
     if raw.startswith("redis://"):
         # Backward compatibility for old call sites that passed `redis_url`.
@@ -49,12 +60,25 @@ def _resolve_db_url(db_url: str | None) -> str:
 
 
 def _connect(db_url: str):
+    """Connect.
+
+    Args:
+        db_url (str): Description.
+
+    Returns:
+        Any: Description.
+    """
     conn = psycopg2.connect(db_url)
     conn.autocommit = False
     return conn
 
 
 def ensure_async_jobs_table(conn) -> None:
+    """Ensure async jobs table.
+
+    Args:
+        conn (Any): Description.
+    """
     cur = conn.cursor()
     cur.execute("CREATE SCHEMA IF NOT EXISTS workflow")
     cur.execute(
@@ -113,6 +137,19 @@ def _enqueue_job(
     max_attempts: int = 3,
     retry_delay_seconds: int = 10,
 ) -> EnqueuedJob:
+    """Enqueue job.
+
+    Args:
+        db_url (str | None): Description.
+        queue_name (str): Description.
+        job_type (str): Description.
+        payload (Dict[str, Any]): Description.
+        max_attempts (int): Description.
+        retry_delay_seconds (int): Description.
+
+    Returns:
+        EnqueuedJob: Description.
+    """
     resolved_db_url = _resolve_db_url(db_url)
     job_id = uuid.uuid4().hex
     with _connect(resolved_db_url) as conn:
@@ -153,7 +190,19 @@ def enqueue_index(
     index_path: Path | None = None,
     queue_name: str = DEFAULT_QUEUE_NAME,
 ):
-    """Enqueue an indexing job in Postgres."""
+    """Enqueue an indexing job in Postgres.
+
+    Args:
+        papers (List[Path]): Description.
+        db_url (str | None): Description.
+        config_path (Path | None): Description.
+        meta_db_url (str | None): Description.
+        index_path (Path | None): Description.
+        queue_name (str): Description.
+
+    Returns:
+        Any: Description.
+    """
 
     payload = {
         "paper_paths": [str(p) for p in papers],
@@ -186,7 +235,27 @@ def enqueue_workflow(
     trigger_source: str | None = None,
     queue_name: str = DEFAULT_QUEUE_NAME,
 ):
-    """Enqueue a multi-step workflow run in Postgres."""
+    """Enqueue a multi-step workflow run in Postgres.
+
+    Args:
+        papers_dir (Path): Description.
+        db_url (str | None): Description.
+        config_path (Path | None): Description.
+        meta_db_url (str | None): Description.
+        agentic (bool | None): Description.
+        question (str | None): Description.
+        agentic_model (str | None): Description.
+        agentic_citations (bool | None): Description.
+        report_question_set (str | None): Description.
+        workstream_id (str | None): Description.
+        arm (str | None): Description.
+        parent_run_id (str | None): Description.
+        trigger_source (str | None): Description.
+        queue_name (str): Description.
+
+    Returns:
+        Any: Description.
+    """
 
     payload = {
         "papers_dir": str(papers_dir),
@@ -211,6 +280,16 @@ def enqueue_workflow(
 
 
 def _claim_next_job(conn, *, queue_name: str, worker_id: str) -> Optional[Dict[str, Any]]:
+    """Claim next job.
+
+    Args:
+        conn (Any): Description.
+        queue_name (str): Description.
+        worker_id (str): Description.
+
+    Returns:
+        Optional[Dict[str, Any]]: Description.
+    """
     cur = conn.cursor()
     cur.execute(
         """
@@ -259,6 +338,13 @@ def _claim_next_job(conn, *, queue_name: str, worker_id: str) -> Optional[Dict[s
 
 
 def _mark_completed(conn, *, job_id: str, result: Dict[str, Any]) -> None:
+    """Mark completed.
+
+    Args:
+        conn (Any): Description.
+        job_id (str): Description.
+        result (Dict[str, Any]): Description.
+    """
     cur = conn.cursor()
     cur.execute(
         """
@@ -276,6 +362,13 @@ def _mark_completed(conn, *, job_id: str, result: Dict[str, Any]) -> None:
 
 
 def _mark_failed(conn, *, job: Dict[str, Any], error_text: str) -> None:
+    """Mark failed.
+
+    Args:
+        conn (Any): Description.
+        job (Dict[str, Any]): Description.
+        error_text (str): Description.
+    """
     attempts = int(job["attempt_count"])
     max_attempts = int(job["max_attempts"])
     retry_delay = max(1, int(job["retry_delay_seconds"]))
@@ -310,6 +403,18 @@ def _mark_failed(conn, *, job: Dict[str, Any], error_text: str) -> None:
 
 
 def _execute_job(job: Dict[str, Any], *, default_meta_db_url: str | None = None) -> Dict[str, Any]:
+    """Execute job.
+
+    Args:
+        job (Dict[str, Any]): Description.
+        default_meta_db_url (str | None): Description.
+
+    Returns:
+        Dict[str, Any]: Description.
+
+    Raises:
+        Exception: Description.
+    """
     payload = job.get("payload_json") or {}
     job_type = str(job.get("job_type") or "").strip()
 
@@ -359,7 +464,19 @@ def run_worker(
     max_jobs: int = 0,
     worker_id: str | None = None,
 ) -> int:
-    """Run polling worker loop for Postgres-backed jobs."""
+    """Run polling worker loop for Postgres-backed jobs.
+
+    Args:
+        db_url (str | None): Description.
+        queue_name (str): Description.
+        poll_seconds (float): Description.
+        once (bool): Description.
+        max_jobs (int): Description.
+        worker_id (str | None): Description.
+
+    Returns:
+        int: Description.
+    """
 
     resolved_db_url = _resolve_db_url(db_url)
     effective_worker_id = worker_id or socket.gethostname()
@@ -400,6 +517,11 @@ def run_worker(
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """Build parser.
+
+    Returns:
+        argparse.ArgumentParser: Description.
+    """
     parser = argparse.ArgumentParser(
         description="Postgres-backed async queue worker for Ragonometrics."
     )
@@ -417,6 +539,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Main.
+
+    Returns:
+        int: Description.
+    """
     parser = _build_parser()
     args = parser.parse_args()
     if args.cmd == "worker":

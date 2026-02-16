@@ -1,4 +1,4 @@
-﻿"""LLM helpers used by active runtime flows (workflow, CLI, UI)."""
+"""LLM helpers used by active runtime flows (workflow, CLI, UI)."""
 
 from __future__ import annotations
 
@@ -34,7 +34,14 @@ class PaperText:
 
 
 def split_references(text: str) -> Tuple[str, str]:
-    """Split text into body and references by heading heuristics."""
+    """Split text into body and references by heading heuristics.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        Tuple[str, str]: Description.
+    """
     pattern = re.compile(
         r"^\s*(references|bibliography|works cited)\s*$",
         re.IGNORECASE | re.MULTILINE,
@@ -47,14 +54,29 @@ def split_references(text: str) -> Tuple[str, str]:
 
 
 def tail_text(text: str, max_chars: int) -> str:
-    """Return the last N characters of text."""
+    """Return the last N characters of text.
+
+    Args:
+        text (str): Description.
+        max_chars (int): Description.
+
+    Returns:
+        str: Description.
+    """
     if len(text) <= max_chars:
         return text
     return text[-max_chars:]
 
 
 def load_paper_text(path: Path) -> PaperText:
-    """Load a paper and split it into body and references sections."""
+    """Load a paper and split it into body and references sections.
+
+    Args:
+        path (Path): Description.
+
+    Returns:
+        PaperText: Description.
+    """
     if path.suffix.lower() == ".pdf":
         raw = load_pdf(path).text
     else:
@@ -68,7 +90,17 @@ def load_paper_text(path: Path) -> PaperText:
 
 
 def build_client(api_key: Optional[str]) -> OpenAI:
-    """Build an OpenAI client using explicit or env API key."""
+    """Build an OpenAI client using explicit or env API key.
+
+    Args:
+        api_key (Optional[str]): Description.
+
+    Returns:
+        OpenAI: Description.
+
+    Raises:
+        Exception: Description.
+    """
     key = api_key or os.getenv("OPENAI_API_KEY")
     if not key:
         raise ValueError("OPENAI_API_KEY is not set.")
@@ -76,7 +108,17 @@ def build_client(api_key: Optional[str]) -> OpenAI:
 
 
 def response_text(response: Any) -> str:
-    """Extract text content from an OpenAI response object."""
+    """Extract text content from an OpenAI response object.
+
+    Args:
+        response (Any): Description.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     parts: List[str] = []
     for item in getattr(response, "output", []) or []:
         if getattr(item, "type", None) != "message":
@@ -110,7 +152,30 @@ def call_openai(
     cache_hit: Optional[bool] = None,
     meta: Optional[Dict[str, Any]] = None,
 ) -> str:
-    """Call OpenAI Responses API and return text."""
+    """Call OpenAI Responses API and return text.
+
+    Args:
+        client (OpenAI): Description.
+        model (str): Description.
+        instructions (str): Description.
+        user_input (str): Description.
+        max_output_tokens (Optional[int]): Description.
+        temperature (Optional[float]): Description.
+        usage_context (str): Description.
+        session_id (Optional[str]): Description.
+        request_id (Optional[str]): Description.
+        run_id (Optional[str]): Description.
+        step (Optional[str]): Description.
+        question_id (Optional[str]): Description.
+        cache_hit (Optional[bool]): Description.
+        meta (Optional[Dict[str, Any]]): Description.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     if max_output_tokens is not None and max_output_tokens < 16:
         max_output_tokens = 16
     max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
@@ -188,7 +253,14 @@ def call_openai(
 
 
 def extract_json(text: str) -> Any:
-    """Extract JSON from a string, tolerating markdown fences."""
+    """Extract JSON from a string, tolerating markdown fences.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        Any: Description.
+    """
     candidate = text.strip()
     if "```" in candidate:
         blocks = re.findall(r"```(?:json)?\s*(.*?)```", candidate, flags=re.DOTALL)
@@ -215,7 +287,20 @@ def extract_citations(
     api_key: Optional[str] = None,
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
 ) -> List[Dict[str, Any]]:
-    """Extract citation metadata from a paper using OpenAI."""
+    """Extract citation metadata from a paper using OpenAI.
+
+    Args:
+        paper_path (Path): Description.
+        model (str): Description.
+        api_key (Optional[str]): Description.
+        max_output_tokens (int): Description.
+
+    Returns:
+        List[Dict[str, Any]]: Description.
+
+    Raises:
+        Exception: Description.
+    """
     paper = load_paper_text(paper_path)
     client = build_client(api_key)
 

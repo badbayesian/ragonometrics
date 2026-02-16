@@ -1,4 +1,4 @@
-﻿"""Core pipeline primitives for settings, ingestion, embeddings, retrieval, and summarization. Shared by CLI, indexing, and the Streamlit UI to build end-to-end RAG runs."""
+"""Core pipeline primitives for settings, ingestion, embeddings, retrieval, and summarization. Shared by CLI, indexing, and the Streamlit UI to build end-to-end RAG runs."""
 
 from __future__ import annotations
 
@@ -100,10 +100,8 @@ class Paper:
 def load_env(path: Path) -> None:
     """Load environment variables from a .env-style file.
 
-    Existing environment variables are not overwritten.
-
     Args:
-        path: Path to the .env file.
+        path (Path): Description.
     """
     if not path.exists():
         return
@@ -121,8 +119,11 @@ def load_env(path: Path) -> None:
 def load_settings(config_path: Path | None = None) -> Settings:
     """Load runtime settings from config file, environment variables, and defaults.
 
+    Args:
+        config_path (Path | None): Description.
+
     Returns:
-        Settings: Resolved configuration.
+        Settings: Description.
     """
     load_env(DOTENV_PATH)
     cfg_path = config_path or Path(os.getenv("RAG_CONFIG", DEFAULT_CONFIG_PATH))
@@ -148,13 +149,11 @@ def load_settings(config_path: Path | None = None) -> Settings:
 def run_pdfinfo(path: Path) -> Dict[str, str]:
     """Extract basic PDF metadata using `pdfinfo`.
 
-    Falls back to the filename and "Unknown" if metadata is unavailable.
-
     Args:
-        path: Path to the PDF file.
+        path (Path): Description.
 
     Returns:
-        Dict[str, str]: Mapping with "title" and "author" keys.
+        Dict[str, str]: Description.
     """
     try:
         result = subprocess.run(
@@ -217,19 +216,107 @@ _AUTHOR_NAME_PATTERN = re.compile(
 _AUTHOR_FOOTNOTE_PATTERN = re.compile(r"[\*\u2020\u2021\u00a7\u00b6]+")
 _AUTHOR_JOIN_WORDS = {"and", "et", "al"}
 _AUTHOR_SCAN_STOP_MARKERS = ("abstract", "introduction", "keywords", "jel")
+_PAPER_METADATA_OVERRIDES: List[Tuple[str, Dict[str, str]]] = [
+    (
+        "bundle size pricing as an approximation to mixed bundling",
+        {
+            "author": "Chenghuan Sean Chu, Phillip Leslie, and Alan Sorensen",
+        },
+    ),
+    (
+        "incomplex alternatives to mixed bundling",
+        {
+            "author": "Chenghuan Sean Chu, Phillip Leslie, Alan Sorensen",
+        },
+    ),
+    (
+        "calorie posting in chain restaurants",
+        {
+            "author": "Bryan Bollinger, Phillip Leslie, and Alan Sorensen",
+        },
+    ),
+    (
+        "information entrepreneurs and competition in procurement auctions",
+        {
+            "author": "Phillip Leslie and Pablo Zoido",
+        },
+    ),
+    (
+        "managerial incentives and strategic change evidence from private equity",
+        {
+            "author": "Phillip Leslie and Paul Oyer",
+        },
+    ),
+    (
+        "nearly optimal pricing for multiproduct firms",
+        {
+            "author": "Chenghuan Sean Chu, Phillip Leslie, and Alan Sorensen",
+        },
+    ),
+    (
+        "the welfare effects of ticket resale",
+        {
+            "author": "Phillip Leslie and Alan Sorensen",
+        },
+    ),
+    (
+        "ticket resale",
+        {
+            "author": "Phillip Leslie and Alan Sorensen",
+        },
+    ),
+]
 
 
 def _normalize_spaces(text: str) -> str:
+    """Normalize spaces.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
     return re.sub(r"\s+", " ", (text or "")).strip()
 
 
+def _normalize_title_key(text: str) -> str:
+    """Normalize title key.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        str: Description.
+    """
+    value = _normalize_spaces(text).lower()
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    return _normalize_spaces(value)
+
+
 def _is_unknown_author(value: str | None) -> bool:
+    """Is unknown author.
+
+    Args:
+        value (str | None): Description.
+
+    Returns:
+        bool: Description.
+    """
     if value is None:
         return True
     return _normalize_spaces(value).lower() in _UNKNOWN_AUTHOR_VALUES
 
 
 def _clean_author_blob(blob: str) -> str:
+    """Clean author blob.
+
+    Args:
+        blob (str): Description.
+
+    Returns:
+        str: Description.
+    """
     text = _normalize_spaces(blob)
     text = _AUTHOR_FOOTNOTE_PATTERN.sub(" ", text)
     text = re.sub(r"\bby\s+", "", text, flags=re.IGNORECASE)
@@ -238,6 +325,14 @@ def _clean_author_blob(blob: str) -> str:
 
 
 def _is_probable_person_name(name: str) -> bool:
+    """Is probable person name.
+
+    Args:
+        name (str): Description.
+
+    Returns:
+        bool: Description.
+    """
     text = _normalize_spaces(name)
     if not text:
         return False
@@ -263,7 +358,14 @@ def _is_probable_person_name(name: str) -> bool:
 
 
 def extract_author_names(text: str) -> List[str]:
-    """Extract likely person names from a short author text blob."""
+    """Extract likely person names from a short author text blob.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     blob = _clean_author_blob(text)
     if not blob:
         return []
@@ -282,6 +384,14 @@ def extract_author_names(text: str) -> List[str]:
 
 
 def _looks_like_author_line(line: str) -> bool:
+    """Looks like author line.
+
+    Args:
+        line (str): Description.
+
+    Returns:
+        bool: Description.
+    """
     text = _normalize_spaces(line)
     if not text:
         return False
@@ -302,6 +412,14 @@ def _looks_like_author_line(line: str) -> bool:
 
 
 def _name_token_ratio(text: str) -> float:
+    """Name token ratio.
+
+    Args:
+        text (str): Description.
+
+    Returns:
+        float: Description.
+    """
     tokens = re.findall(r"[A-Za-z][A-Za-z.'`-]*", text or "")
     if not tokens:
         return 0.0
@@ -318,6 +436,14 @@ def _name_token_ratio(text: str) -> float:
 
 
 def _looks_like_author_continuation(line: str) -> bool:
+    """Looks like author continuation.
+
+    Args:
+        line (str): Description.
+
+    Returns:
+        bool: Description.
+    """
     text = _normalize_spaces(line)
     if not _looks_like_author_line(text):
         return False
@@ -327,6 +453,15 @@ def _looks_like_author_continuation(line: str) -> bool:
 
 
 def _author_candidate_score(blob: str, names_count: int) -> Tuple[int, int]:
+    """Author candidate score.
+
+    Args:
+        blob (str): Description.
+        names_count (int): Description.
+
+    Returns:
+        Tuple[int, int]: Description.
+    """
     low = blob.lower()
     signal = 0
     if low.startswith("by "):
@@ -339,7 +474,14 @@ def _author_candidate_score(blob: str, names_count: int) -> Tuple[int, int]:
 
 
 def infer_author_names_from_pages(page_texts: List[str]) -> List[str]:
-    """Infer author names from early page text when PDF metadata is weak."""
+    """Infer author names from early page text when PDF metadata is weak.
+
+    Args:
+        page_texts (List[str]): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     if not page_texts:
         return []
     first_page = page_texts[0] or ""
@@ -390,6 +532,14 @@ def infer_author_names_from_pages(page_texts: List[str]) -> List[str]:
 
 
 def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
+    """Openalex author names.
+
+    Args:
+        openalex_meta (Dict[str, Any] | None): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     names: List[str] = []
     seen = set()
     if not openalex_meta:
@@ -410,6 +560,14 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
 
 
 def _select_best_author_names(candidates: List[Tuple[str, List[str]]]) -> List[str]:
+    """Select best author names.
+
+    Args:
+        candidates (List[Tuple[str, List[str]]]): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     priority = {"openalex": 3, "page_text": 2, "pdfinfo": 1}
     best_names: List[str] = []
     best_score = (-1, -1)
@@ -424,11 +582,44 @@ def _select_best_author_names(candidates: List[Tuple[str, List[str]]]) -> List[s
 
 
 def _format_author_names(names: List[str], *, max_names: int = 8) -> str:
+    """Format author names.
+
+    Args:
+        names (List[str]): Description.
+        max_names (int): Description.
+
+    Returns:
+        str: Description.
+    """
     if not names:
         return "Unknown"
     if len(names) > max_names:
         return ", ".join(names[:max_names]) + " et al."
     return ", ".join(names)
+
+
+def _apply_paper_metadata_overrides(path: Path, title: str, author: str) -> Tuple[str, str]:
+    """Apply deterministic metadata corrections for known problematic files.
+
+    Args:
+        path (Path): Description.
+        title (str): Description.
+        author (str): Description.
+
+    Returns:
+        Tuple[str, str]: Description.
+    """
+    title_key = _normalize_title_key(title)
+    stem_key = _normalize_title_key(path.stem)
+    for title_fragment, patch in _PAPER_METADATA_OVERRIDES:
+        needle = _normalize_title_key(title_fragment)
+        if not needle:
+            continue
+        if needle in title_key or needle in stem_key:
+            patched_title = str(patch.get("title") or title).strip() or title
+            patched_author = str(patch.get("author") or author).strip() or author
+            return patched_title, patched_author
+    return title, author
 
 
 
@@ -437,10 +628,10 @@ def extract_dois_from_text(text: str) -> List[str]:
     """Extract and normalize DOIs from text.
 
     Args:
-        text: Input text to scan.
+        text (str): Description.
 
     Returns:
-        List[str]: Unique DOIs (lowercased, without URL prefixes).
+        List[str]: Description.
     """
     if not text:
         return []
@@ -471,10 +662,10 @@ def extract_repec_handles_from_text(text: str) -> List[str]:
     """Extract RePEc handles from text.
 
     Args:
-        text: Input text to scan.
+        text (str): Description.
 
     Returns:
-        List[str]: Unique RePEc handles in order of appearance.
+        List[str]: Description.
     """
     if not text:
         return []
@@ -505,13 +696,19 @@ def embed_texts(
     """Embed a list of texts in batches.
 
     Args:
-        client: OpenAI client.
-        texts: Texts to embed.
-        model: Embedding model name.
-        batch_size: Number of texts per batch.
+        client (OpenAI): Description.
+        texts (List[str]): Description.
+        model (str): Description.
+        batch_size (int): Description.
+        session_id (str | None): Description.
+        request_id (str | None): Description.
+        run_id (str | None): Description.
+        step (str | None): Description.
+        question_id (str | None): Description.
+        meta (Dict[str, Any] | None): Description.
 
     Returns:
-        List[List[float]]: Embedding vectors.
+        List[List[float]]: Description.
     """
     embeddings: List[List[float]] = []
     for i in range(0, len(texts), batch_size):
@@ -556,11 +753,11 @@ def cosine(a: List[float], b: List[float]) -> float:
     """Compute cosine similarity between two vectors.
 
     Args:
-        a: First vector.
-        b: Second vector.
+        a (List[float]): Description.
+        b (List[float]): Description.
 
     Returns:
-        float: Cosine similarity in [0, 1] when inputs are non-negative.
+        float: Description.
     """
     dot = 0.0
     norm_a = 0.0
@@ -585,7 +782,21 @@ def expand_queries(
     step: str | None = None,
     question_id: str | None = None,
 ) -> List[str]:
-    """Optionally expand a query using a lightweight LLM prompt."""
+    """Optionally expand a query using a lightweight LLM prompt.
+
+    Args:
+        query (str): Description.
+        client (OpenAI): Description.
+        settings (Settings): Description.
+        session_id (str | None): Description.
+        request_id (str | None): Description.
+        run_id (str | None): Description.
+        step (str | None): Description.
+        question_id (str | None): Description.
+
+    Returns:
+        List[str]: Description.
+    """
     mode = os.environ.get("QUERY_EXPANSION", "").strip().lower()
     if not mode:
         return [query]
@@ -632,8 +843,19 @@ def rerank_with_llm(
 ) -> List[str] | None:
     """Use an LLM to rerank items by relevance.
 
+    Args:
+        query (str): Description.
+        items (List[Dict[str, str]]): Description.
+        client (OpenAI): Description.
+        settings (Settings): Description.
+        session_id (str | None): Description.
+        request_id (str | None): Description.
+        run_id (str | None): Description.
+        step (str | None): Description.
+        question_id (str | None): Description.
+
     Returns:
-        List[str] | None: Ordered list of item ids, or None on failure.
+        List[str] | None: Description.
     """
     model = os.environ.get("RERANKER_MODEL")
     if not model:
@@ -680,18 +902,21 @@ def top_k_context(
 ) -> str | tuple[str, Dict[str, float | str | int]]:
     """Select top-k relevant chunk text for a query.
 
-    Uses hybrid retrieval when a Postgres-backed retriever is configured,
-    otherwise falls back to embedding cosine similarity.
-
     Args:
-        chunks: Chunk texts or dicts with provenance metadata.
-        chunk_embeddings: Embedding vectors for each chunk.
-        query: Query string.
-        client: OpenAI client.
-        settings: Runtime settings.
+        chunks (List[str]): Description.
+        chunk_embeddings (List[List[float]]): Description.
+        query (str): Description.
+        client (OpenAI): Description.
+        settings (Settings): Description.
+        session_id (str | None): Description.
+        request_id (str | None): Description.
+        run_id (str | None): Description.
+        step (str | None): Description.
+        question_id (str | None): Description.
+        return_stats (bool): Description.
 
     Returns:
-        str | tuple[str, dict]: Context string, or (context, retrieval stats) when requested.
+        str | tuple[str, Dict[str, float | str | int]]: Description.
     """
     queries = expand_queries(
         query,
@@ -897,11 +1122,11 @@ def prepare_chunks_for_paper(paper: Paper, settings: Settings) -> List[Dict]:
     """Prepare provenance-aware chunks for a paper.
 
     Args:
-        paper: Paper to chunk.
-        settings: Runtime settings.
+        paper (Paper): Description.
+        settings (Settings): Description.
 
     Returns:
-        List[Dict]: Chunk dicts with provenance metadata.
+        List[Dict]: Description.
     """
     if paper.pages:
         page_texts = paper.pages
@@ -915,12 +1140,12 @@ def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
     """Summarize a paper using retrieved context and a chat model.
 
     Args:
-        client: OpenAI client.
-        paper: Paper to summarize.
-        settings: Runtime settings.
+        client (OpenAI): Description.
+        paper (Paper): Description.
+        settings (Settings): Description.
 
     Returns:
-        str: Model-generated summary.
+        str: Description.
     """
     chunks = prepare_chunks_for_paper(paper, settings)
     if not chunks:
@@ -967,12 +1192,12 @@ def load_papers(
     """Load and extract text for a collection of PDF files.
 
     Args:
-        paths: Iterable of PDF paths.
-        progress: Whether to show a tqdm progress bar.
-        progress_desc: Description for the progress bar.
+        paths (Iterable[Path]): Description.
+        progress (bool): Description.
+        progress_desc (str): Description.
 
     Returns:
-        List[Paper]: Extracted paper objects.
+        List[Paper]: Description.
     """
     path_list = list(paths)
     iterator = path_list
@@ -1029,6 +1254,7 @@ def load_papers(
             author = _format_author_names(selected_author_names)
         elif _is_unknown_author(author):
             author = "Unknown"
+        title, author = _apply_paper_metadata_overrides(path, title, author)
 
         papers.append(
             Paper(
@@ -1045,7 +1271,11 @@ def load_papers(
 
 
 def main() -> None:
-    """Entry point for summarizing economics papers from the papers directory."""
+    """Entry point for summarizing economics papers from the papers directory.
+
+    Raises:
+        Exception: Description.
+    """
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:

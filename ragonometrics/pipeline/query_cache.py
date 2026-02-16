@@ -14,6 +14,14 @@ DEFAULT_CACHE_PATH = Path("postgres_query_cache")
 
 
 def _database_url() -> str:
+    """Database url.
+
+    Returns:
+        str: Description.
+
+    Raises:
+        Exception: Description.
+    """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for query cache persistence.")
@@ -21,6 +29,14 @@ def _database_url() -> str:
 
 
 def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+    """Connect.
+
+    Args:
+        _db_path (Path): Description.
+
+    Returns:
+        psycopg2.extensions.connection: Description.
+    """
     conn = psycopg2.connect(_database_url())
     cur = conn.cursor()
     cur.execute("CREATE SCHEMA IF NOT EXISTS retrieval")
@@ -48,11 +64,31 @@ def _connect(_db_path: Path) -> psycopg2.extensions.connection:
 
 
 def make_cache_key(query: str, paper_path: str, model: str, context: str) -> str:
+    """Make cache key.
+
+    Args:
+        query (str): Description.
+        paper_path (str): Description.
+        model (str): Description.
+        context (str): Description.
+
+    Returns:
+        str: Description.
+    """
     payload = f"{paper_path}||{model}||{query}||{hashlib.sha256(context.encode('utf-8')).hexdigest()}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def get_cached_answer(db_path: Path, cache_key: str) -> Optional[str]:
+    """Get cached answer.
+
+    Args:
+        db_path (Path): Description.
+        cache_key (str): Description.
+
+    Returns:
+        Optional[str]: Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
@@ -73,6 +109,17 @@ def set_cached_answer(
     context: str,
     answer: str,
 ) -> None:
+    """Set cached answer.
+
+    Args:
+        db_path (Path): Description.
+        cache_key (str): Description.
+        query (str): Description.
+        paper_path (str): Description.
+        model (str): Description.
+        context (str): Description.
+        answer (str): Description.
+    """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()

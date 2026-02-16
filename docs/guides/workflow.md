@@ -71,10 +71,13 @@ docker compose run --rm workflow \
 ## Outputs
 
 Filesystem:
-- `reports/workflow/workflow-report-<run_id>.json`
-- `reports/prep/prep-manifest-<run_id>.json`
-- `reports/audit/audit-workflow-report-<run_id>.md`
-- `reports/audit/audit-workflow-report-<run_id>-latex.pdf` (if enabled)
+- `reports/workflow-report-<run_id>.json` (default path)
+- `reports/prep-manifest-<run_id>.json` (default path)
+- `reports/audit-workflow-report-<run_id>.md` (if enabled)
+- `reports/audit-workflow-report-<run_id>-latex.pdf` (if enabled)
+
+Optional organization:
+- You may move generated files into `reports/workflow/`, `reports/prep/`, and `reports/audit/` after runs.
 
 Postgres:
 - `workflow.run_records` (run/step/report/question/artifact lineage)

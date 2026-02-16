@@ -10,7 +10,10 @@ Workflow Diagram
 ----------------
 ```mermaid
 flowchart TD
-  Start["CLI: ragonometrics workflow"] --> Prep["Prep (profile corpus)"]
+  StartCLI["CLI: ragonometrics workflow"] --> Prep["Prep (profile corpus)"]
+  QueueTable[(workflow.async_jobs)] --> Worker["Queue worker"]
+  Worker --> StartAsync["Async: workflow_entrypoint"]
+  StartAsync --> Prep
   Prep --> Ingest["Ingest PDFs"]
   Ingest --> Enrich["External metadata"]
   Enrich --> Econ["Econ data (optional)"]
@@ -35,7 +38,7 @@ flowchart TD
 Entry Points
 ------------
 - CLI: `ragonometrics workflow --papers <path> [--agentic ...]`
-- Queue: [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py) enqueues `workflow_entrypoint`
+- Queue: [`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py) enqueues and executes `workflow_entrypoint` through `workflow.async_jobs`
 
 The `--papers` flag accepts either a **directory** or a **single PDF file**. The runner normalizes this into a list of PDF paths.
 
@@ -78,7 +81,7 @@ Step-by-Step Behavior
    - Computes light-weight chunk statistics (avg/max/min).
 
 8) Report  
-   - Writes a JSON report to [`reports/workflow/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow).
+   - Writes report artifacts under [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports) by default (`workflow-report-<run_id>.json`, `prep-manifest-<run_id>.json`, `audit-workflow-report-<run_id>.*`).
    - Generates audit Markdown/PDF artifacts when enabled (`WORKFLOW_RENDER_AUDIT_ARTIFACTS=1`).
 
 Artifacts and State
@@ -94,10 +97,11 @@ Artifacts and State
 - Index run linkage:
   - `indexing.pipeline_runs.workflow_run_id`
   - `indexing.pipeline_runs.workstream_id`
-- Prep manifest: [`reports/prep/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/prep)
-- Report JSON: [`reports/workflow/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow)
-- Audit Markdown: [`reports/audit/audit-workflow-report-<run_id>.md`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit)
-- Audit PDF: [`reports/audit/audit-workflow-report-<run_id>-latex.pdf`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit)
+- Prep manifest: [`reports/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Report JSON: [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Audit Markdown: [`reports/audit-workflow-report-<run_id>.md`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Audit PDF: [`reports/audit-workflow-report-<run_id>-latex.pdf`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Optional post-run organization into `reports/workflow/`, `reports/prep/`, and `reports/audit/`.
 - Usage tracking table (Postgres): `observability.token_usage`
 - Optional FAISS + metadata: [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index), [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes), Postgres tables.
 
