@@ -6,13 +6,13 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 ## Runtime Entry Points and Process Flows
 | Flow | Entry | Core Path | Primary Outputs |
 | --- | --- | --- | --- |
-| Workflow (sync) | `ragonometrics workflow` via `ragonometrics/cli/entrypoints.py:194` | `run_workflow` in `ragonometrics/pipeline/workflow.py:823` | `reports/workflow-report-<run_id>.json`, `reports/prep-manifest-<run_id>.json`, `workflow.workflow_*` rows, `workflow.workflow_reports` row |
+| Workflow (sync) | `ragonometrics workflow` via `ragonometrics/cli/entrypoints.py:194` | `run_workflow` in `ragonometrics/pipeline/workflow.py:823` | `reports/workflow/workflow-report-<run_id>.json`, `reports/prep/prep-manifest-<run_id>.json`, `workflow.run_records` rows |
 | Workflow (async) | `ragonometrics workflow --async` via `ragonometrics/cli/entrypoints.py:194` | `enqueue_workflow` -> Postgres queue worker -> `workflow_entrypoint` in `ragonometrics/integrations/rq_queue.py`, `ragonometrics/pipeline/workflow.py` | Same as sync, executed by Postgres queue worker |
 | Query CLI | `ragonometrics query` via `ragonometrics/cli/entrypoints.py:53` | `load_papers` -> chunk/embed -> `top_k_context` -> LLM answer | stdout answer + `retrieval.query_cache` rows |
 | Streamlit chat | `ragonometrics ui` via `ragonometrics/cli/entrypoints.py:116` | `ragonometrics/ui/streamlit_app.py:536` | Interactive answers, snapshots, usage metrics, cache rows |
 | Index-only | `ragonometrics index` via `ragonometrics/cli/entrypoints.py:32` | `build_index` in `ragonometrics/indexing/indexer.py:124` | `vectors.index`, `indexes/vectors-*.index`, index sidecar/manifests, Postgres vectors/metadata |
 | Metadata-only | `ragonometrics store-metadata` via `ragonometrics/cli/entrypoints.py:155` | `store_paper_metadata` in `ragonometrics/indexing/paper_store.py:89` | Postgres `paper_metadata` upserts |
-| Workflow report backfill | `ragonometrics store-workflow-reports` via `ragonometrics/cli/entrypoints.py:170` | `store_workflow_reports_from_dir` in `ragonometrics/pipeline/report_store.py:236` | Postgres `workflow_reports` backfilled from disk |
+| Workflow report backfill | `ragonometrics store-workflow-reports` via `ragonometrics/cli/entrypoints.py:170` | `store_workflow_reports_from_dir` in `ragonometrics/pipeline/report_store.py:236` | Postgres `workflow.run_records` (`record_kind=report/question/artifact`) backfilled from disk |
 
 ## Main Data Flows (as implemented)
 1. Workflow orchestration
@@ -26,23 +26,23 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 5. Workflow report persistence
    - JSON report file + optional DB store in `ragonometrics/pipeline/workflow.py:142` with storage helper in `ragonometrics/pipeline/report_store.py:219`.
 6. State and observability
-   - Step-level state in `workflow.workflow_runs`/`workflow.workflow_steps` via `ragonometrics/pipeline/state.py:54`; token usage in `observability.token_usage` via `ragonometrics/pipeline/token_usage.py`.
+   - Step-level state and lineage in `workflow.run_records` via `ragonometrics/pipeline/state.py:54`; token usage in `observability.token_usage` via `ragonometrics/pipeline/token_usage.py`.
 7. UI flow
    - Streamed Q&A, cache, math-LaTeX review pass, and snapshots in `ragonometrics/ui/streamlit_app.py:536`.
 
 ## Store and Artifact Map
 | Layer | Store/Artifact | Produced By | Consumed By |
 | --- | --- | --- | --- |
-| Filesystem | `reports/prep-manifest-<run_id>.json` | `prep_corpus` (`ragonometrics/pipeline/prep.py:71`) | Workflow audit/debug |
-| Filesystem | `reports/workflow-report-<run_id>.json` | Workflow finalization (`ragonometrics/pipeline/workflow.py:142`) | Humans + backfill command |
+| Filesystem | `reports/prep/prep-manifest-<run_id>.json` | `prep_corpus` (`ragonometrics/pipeline/prep.py:71`) | Workflow audit/debug |
+| Filesystem | `reports/workflow/workflow-report-<run_id>.json` | Workflow finalization (`ragonometrics/pipeline/workflow.py:142`) | Humans + backfill command |
 | Filesystem | `vectors.index` and `indexes/vectors-*.index` | `build_index` (`ragonometrics/indexing/indexer.py:124`) | Retriever fallback path |
 | Filesystem | index sidecar/manifests (`*.index.version.json`, run manifest) | `build_index` + manifest helpers | Index-version verification |
-| Postgres | `workflow.workflow_runs`, `workflow.workflow_steps` | `create_workflow_run`/`record_step` (`ragonometrics/pipeline/state.py:54`) | Workflow traceability |
+| Postgres | `workflow.run_records` | `create_workflow_run`/`record_step` (`ragonometrics/pipeline/state.py:54`) | Workflow traceability |
 | Postgres | `retrieval.query_cache` | `set_cached_answer` (`ragonometrics/pipeline/query_cache.py:54`) | Query CLI + Streamlit |
 | Postgres | `observability.token_usage` | `record_usage` (`ragonometrics/pipeline/token_usage.py`) | Usage tab and reporting |
 | Postgres | `enrichment.openalex_cache`, `enrichment.citec_cache` | integration caches | Ingestion enrichment |
 | Postgres | `indexing.vectors`, `ingestion.documents`, `ingestion.paper_metadata`, run/index tables | `build_index`, metadata helpers | Hybrid retrieval + metadata |
-| Postgres | `workflow.workflow_reports` (`jsonb` payload) | `store_workflow_report` (`ragonometrics/pipeline/report_store.py:219`) | Backfill/report querying |
+| Postgres | `workflow.run_records` (`record_kind=report/question/artifact`) | `store_workflow_report` (`ragonometrics/pipeline/report_store.py:219`) | Backfill/report querying |
 
 ## Key Current-State Findings (for simplification)
 - Legacy alternate CLI stack (`ragonometrics-cli`) has been removed in this branch.

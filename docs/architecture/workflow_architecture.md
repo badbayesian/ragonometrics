@@ -19,7 +19,7 @@ flowchart TD
   Index --> Eval["Evaluate"]
   Eval --> Report["Write report JSON"]
 
-  Prep --> StateDB[(workflow state DB)]
+  Prep --> StateDB[(workflow.run_records)]
   Ingest --> StateDB
   Enrich --> StateDB
   Econ --> StateDB
@@ -28,8 +28,8 @@ flowchart TD
   Eval --> StateDB
   Report --> StateDB
 
-  Agentic --> UsageDB[(token usage DB)]
-  Index --> Postgres[(metadata DB)]
+  Agentic --> UsageDB[(observability.token_usage)]
+  Index --> Postgres[(indexing.*)]
 ```
 
 Entry Points
@@ -78,7 +78,7 @@ Step-by-Step Behavior
    - Computes light-weight chunk statistics (avg/max/min).
 
 8) Report  
-   - Writes a JSON report to [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports).
+   - Writes a JSON report to [`reports/workflow/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow).
    - Generates audit Markdown/PDF artifacts when enabled (`WORKFLOW_RENDER_AUDIT_ARTIFACTS=1`).
 
 Artifacts and State
@@ -94,10 +94,10 @@ Artifacts and State
 - Index run linkage:
   - `indexing.pipeline_runs.workflow_run_id`
   - `indexing.pipeline_runs.workstream_id`
-- Prep manifest: [`reports/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
-- Report JSON: [`reports/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
-- Audit Markdown: [`reports/audit-workflow-report-<run_id>.md`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
-- Audit PDF: [`reports/audit-workflow-report-<run_id>-latex.pdf`](https://github.com/badbayesian/ragonometrics/tree/main/reports)
+- Prep manifest: [`reports/prep/prep-manifest-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/prep)
+- Report JSON: [`reports/workflow/workflow-report-<run_id>.json`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow)
+- Audit Markdown: [`reports/audit/audit-workflow-report-<run_id>.md`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit)
+- Audit PDF: [`reports/audit/audit-workflow-report-<run_id>-latex.pdf`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit)
 - Usage tracking table (Postgres): `observability.token_usage`
 - Optional FAISS + metadata: [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index), [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes), Postgres tables.
 

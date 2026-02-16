@@ -4,65 +4,70 @@ This document summarizes the current Ragonometrics architecture, design tradeoff
 
 Overview
 --------
-Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, indexes embeddings in FAISS, and serves retrieval + LLM summaries via CLI and a Streamlit UI. The system enriches papers with external metadata (OpenAlex and CitEc) when available. The system is designed to be reproducible, auditable, and scalable from local runs to a Postgres-backed deployment.
+Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, persists runtime metadata in Postgres, and serves retrieval + LLM summaries via CLI and a Streamlit UI. The system enriches papers with external metadata (OpenAlex and CitEc), supports async workflow execution through a Postgres-backed queue, and remains reproducible through run-level state/report recording plus filesystem artifacts.
 
 Architecture Diagram
 --------------------
 ```mermaid
 flowchart LR
-  subgraph Ingestion
-    PDFs[PDFs] -->|pdftotext/pdfinfo| Extract[Text + Metadata]
-    Extract -->|chunk + overlap| Chunks[Provenance Chunks]
+  subgraph Interfaces
+    CLI[CLI]
+    UI[Streamlit UI]
+    BATCH[Batch tools]
   end
 
-  subgraph Enrichment
-    Chunks -->|DOI/RePEc extract| Ids[Identifiers]
-    Ids -->|OpenAlex| OA[OpenAlex Cache]
-    Ids -->|CitEc| CitEc[CitEc Cache]
-  end
-
-  subgraph Indexing
-    Chunks -->|embeddings| Embeds[Embeddings]
-    Embeds -->|FAISS| Faiss[FAISS Index]
-    Chunks -->|metadata| PG[(Postgres)]
-  end
-
-  subgraph Retrieval
-    Query[User Query] -->|expand/rerank| Retrieve[Hybrid Retrieval]
-    Retrieve --> Context[Context Chunks]
-    Context --> LLM[LLM Answer]
-    OA --> LLM
-    CitEc --> LLM
-  end
-
-  subgraph EconData
-    FRED[FRED API] --> EconSeries[Time Series]
-    WB[World Bank API] --> EconSeries
+  subgraph Queue
+    Q[(workflow.async_jobs)]
+    WKR[Queue worker]
   end
 
   subgraph Workflow
-    Runner[Workflow Runner] --> StateDB[(Workflow State DB)]
-    Runner --> Report[Workflow Report]
-    Runner --> Agentic[Agentic LLM Steps]
+    WF[workflow orchestrator]
+    PREP[prep]
+    INGEST[ingest]
+    ENRICH[enrich]
+    ECON[econ data optional]
+    AGENTIC[agentic optional]
+    INDEX[index optional]
+    EVAL[evaluate]
+    REPORT[report]
   end
 
-  subgraph Interfaces
-    CLI[CLI] --> Query
-    UI[Streamlit UI] --> Query
+  subgraph Postgres
+    RUNREC[(workflow.run_records)]
+    DOC[(ingestion.documents + paper_metadata)]
+    ENRC[(enrichment caches)]
+    IDXT[(indexing tables)]
+    RET[(retrieval tables)]
+    OBS[(observability tables)]
   end
 
-  subgraph Containers
-    CUI[streamlit container] --> UI
-    CWF[workflow container] --> Runner
-    CRQ[rq-worker container] --> Runner
-    CPG[postgres container]
+  subgraph LocalArtifacts
+    RPT[reports folders]
+    FAISS[indexes/*.index]
   end
 
-  PG --> Retrieve
-  Faiss --> Retrieve
-  Runner --> PDFs
-  Runner --> EconSeries
+  CLI --> WF
+  UI --> WF
+  BATCH --> Q --> WKR --> WF
+
+  WF --> PREP --> INGEST --> ENRICH --> ECON --> AGENTIC --> INDEX --> EVAL --> REPORT
+  PREP --> RUNREC
+  INGEST --> DOC
+  ENRICH --> ENRC
+  AGENTIC --> RUNREC
+  AGENTIC --> OBS
+  INDEX --> IDXT
+  INDEX --> FAISS
+  WF --> RET
+  REPORT --> RUNREC
+  REPORT --> RPT
 ```
+
+Entity Relationship Diagram (ERD)
+---------------------------------
+- Full ERD is maintained in [`docs/architecture/data-model-erd.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/data-model-erd.md).
+- Source schema for the ERD: [`deploy/sql/001_unified_postgres_schema.sql`](https://github.com/badbayesian/ragonometrics/blob/main/deploy/sql/001_unified_postgres_schema.sql).
 
 Key Components
 --------------
@@ -116,7 +121,10 @@ Data and Metadata Stores
 - Local artifacts:
   - FAISS indexes in [`vectors.index`](https://github.com/badbayesian/ragonometrics/blob/main/vectors.index) and versioned shards in [`indexes/`](https://github.com/badbayesian/ragonometrics/tree/main/indexes).
   - Index version sidecar JSON next to each shard.
-  - Workflow JSON reports in [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports).
+  - Workflow JSON reports in [`reports/workflow/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workflow).
+  - Prep manifests in [`reports/prep/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/prep).
+  - Audit markdown/PDF artifacts in [`reports/audit/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/audit).
+  - Workstream comparison artifacts in [`reports/workstream/`](https://github.com/badbayesian/ragonometrics/tree/main/reports/workstream).
 
 Reproducibility
 ---------------

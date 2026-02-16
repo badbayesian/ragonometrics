@@ -7,6 +7,66 @@ Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with o
 
 This repo is a combination of coding + vibe coding.
 
+Architecture At A Glance
+------------------------
+```mermaid
+flowchart LR
+  subgraph Interfaces
+    CLI[CLI]
+    UI[Streamlit UI]
+    BATCH[Batch tools]
+  end
+
+  subgraph Queue
+    Q[(workflow.async_jobs)]
+    WKR[rq queue worker]
+  end
+
+  subgraph Workflow
+    WF[workflow orchestrator]
+    PREP[prep]
+    INGEST[ingest]
+    ENRICH[enrich]
+    AGENTIC[agentic]
+    INDEX[index]
+    REPORT[report]
+  end
+
+  subgraph Postgres
+    RR[(workflow.run_records)]
+    DOC[(ingestion.documents + paper_metadata)]
+    ENR[(enrichment caches)]
+    IDX[(indexing tables)]
+    RET[(retrieval tables)]
+    OBS[(observability tables)]
+  end
+
+  subgraph Artifacts
+    RPT[reports folders]
+    FAI[indexes/*.index]
+  end
+
+  CLI --> WF
+  UI --> WF
+  BATCH --> Q --> WKR --> WF
+
+  WF --> PREP --> INGEST --> ENRICH --> AGENTIC --> INDEX --> REPORT
+  PREP --> RR
+  INGEST --> DOC
+  ENRICH --> ENR
+  AGENTIC --> RR
+  AGENTIC --> OBS
+  INDEX --> IDX
+  INDEX --> FAI
+  REPORT --> RR
+  REPORT --> RPT
+  WF --> RET
+```
+
+Data Model ERD
+--------------
+- Full ERD: [`docs/architecture/data-model-erd.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/data-model-erd.md)
+
 Quick Start
 -----------
 1. Install dependencies in your enviroment.
@@ -69,11 +129,13 @@ python tools/standup_pgadmin.py
 
 Then open the URL printed by the script (default `http://localhost:5050`) and inspect tables under:
 - `workflow.run_records`
-- `workflow.workflow_runs`
-- `workflow.workflow_steps`
-- `workflow.workflow_reports`
-- `workflow.workstream_runs`
-- `workflow.artifacts`
+- `workflow.async_jobs`
+- `ingestion.documents`
+- `ingestion.paper_metadata`
+- `indexing.pipeline_runs`
+- `indexing.vectors`
+- `retrieval.query_cache`
+- `observability.token_usage`
 
 Recent Updates
 --------------
@@ -109,18 +171,18 @@ python -m ragonometrics.integrations.rq_queue worker --db-url "postgres://user:p
 ```
 
 Each run produces audit artifacts under [`reports/`](https://github.com/badbayesian/ragonometrics/tree/main/reports), including:
-- `reports/workflow-report-<run_id>.json`
-- `reports/prep-manifest-<run_id>.json`
+- `reports/workflow/workflow-report-<run_id>.json`
+- `reports/prep/prep-manifest-<run_id>.json`
 - optional human-readable audit renderings (Markdown/PDF)
 
 Example audit output from a real run:
-- [Audit workflow report (Markdown)](reports/audit-workflow-report-1308532de7a9446d813e57129826aa71.md)
-- [Audit workflow report (PDF)](reports/audit-workflow-report-1308532de7a9446d813e57129826aa71-latex.pdf)
+- [Audit workflow report (Markdown)](reports/audit/audit-workflow-report-1308532de7a9446d813e57129826aa71.md)
+- [Audit workflow report (PDF)](reports/audit/audit-workflow-report-1308532de7a9446d813e57129826aa71-latex.pdf)
 
 Regenerate audit LaTeX/PDF from markdown:
 
 ```bash
-python tools/markdown_to_latex_pdf.py --input reports/audit-workflow-report-1308532de7a9446d813e57129826aa71.md
+python tools/markdown_to_latex_pdf.py --input reports/audit/audit-workflow-report-1308532de7a9446d813e57129826aa71.md
 ```
 
 CLI Commands
@@ -160,6 +222,7 @@ Docs
 -------------
 Docs root: [docs/](https://github.com/badbayesian/ragonometrics/tree/main/docs)
 - [Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/architecture.md): System design, tradeoffs, and reproducibility.
+- [Data Model ERD](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/data-model-erd.md): Postgres entities and relationships used by workflow/indexing/retrieval.
 - [Workflow Architecture](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/workflow_architecture.md): Workflow steps, artifacts, and state.
 - [Pipeline Current-State Audit](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/pipeline-current-state-audit.md): Runtime flow inventory, persistence map, and essentialness matrix for simplification.
 - [Postgres Unification Plan](https://github.com/badbayesian/ragonometrics/blob/main/docs/architecture/postgres-unification-plan.md): Target schema-by-stage design, DDL, and phased cutover.
