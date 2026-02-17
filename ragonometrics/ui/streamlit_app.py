@@ -50,6 +50,8 @@ except Exception:
 
 st.set_page_config(page_title="Ragonometrics Chat", layout="wide")
 
+_QUERY_TIMINGS_KEY = "ui_query_timings"
+
 
 def list_papers(papers_dir: Path) -> List[Path]:
     """List PDF files in the provided directory.
@@ -65,6 +67,41 @@ def list_papers(papers_dir: Path) -> List[Path]:
     return sorted(papers_dir.glob("*.pdf"))
 
 
+def _reset_query_timings() -> None:
+    """Reset per-render query timing rows."""
+    st.session_state[_QUERY_TIMINGS_KEY] = []
+
+
+def _record_query_timing(label: str, elapsed_ms: float) -> None:
+    """Append one query timing row for optional debug rendering.
+
+    Args:
+        label (str): Short query label.
+        elapsed_ms (float): Elapsed milliseconds for the query call.
+    """
+    rows = st.session_state.setdefault(_QUERY_TIMINGS_KEY, [])
+    rows.append({"query": label, "elapsed_ms": round(float(elapsed_ms), 2)})
+
+
+def _timed_call(label: str, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    """Execute a callable and record elapsed time in session state.
+
+    Args:
+        label (str): Short query label shown in debug timings.
+        fn (Callable[..., Any]): Callable to execute.
+        *args (Any): Positional args for ``fn``.
+        **kwargs (Any): Keyword args for ``fn``.
+
+    Returns:
+        Any: Callable return value.
+    """
+    start = time.perf_counter()
+    result = fn(*args, **kwargs)
+    _record_query_timing(label, (time.perf_counter() - start) * 1000.0)
+    return result
+
+
+@st.cache_data(ttl=900, show_spinner=False)
 def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
     """Load OpenAlex metadata for a paper from Postgres enrichment table.
 
@@ -114,7 +151,7 @@ def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
-@st.cache_data
+@st.cache_data(ttl=1800, show_spinner=False)
 def load_and_prepare(path: Path, settings: Settings):
     """Load a paper, prepare chunks/embeddings, and cache the result.
 
@@ -927,6 +964,7 @@ def stream_openai_answer(
                     record_usage(
                         model=model,
                         operation=usage_context,
+                        step=usage_context,
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
                         total_tokens=total_tokens,
@@ -1084,6 +1122,7 @@ def maybe_review_math_latex(
                 record_usage(
                     model=review_model,
                     operation="math_latex_review",
+                    step="math_latex_review",
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
                     total_tokens=total_tokens,
@@ -1596,14 +1635,25 @@ def main():
 
     with tab_usage:
         st.subheader("Token Usage")
-        st.caption("Aggregates are computed from the local SQLite usage table.")
+        st.caption("Aggregates are computed from Postgres (`observability.token_usage`).")
+        _reset_query_timings()
 
         now = datetime.now(timezone.utc)
         last_24h = (now - timedelta(hours=24)).isoformat()
 
-        total = get_usage_summary(db_path=DEFAULT_USAGE_DB)
-        session_total = get_usage_summary(db_path=DEFAULT_USAGE_DB, session_id=st.session_state.session_id)
-        recent_total = get_usage_summary(db_path=DEFAULT_USAGE_DB, since=last_24h)
+        total = _timed_call("usage_summary:all_time", get_usage_summary, db_path=DEFAULT_USAGE_DB)
+        session_total = _timed_call(
+            "usage_summary:session",
+            get_usage_summary,
+            db_path=DEFAULT_USAGE_DB,
+            session_id=st.session_state.session_id,
+        )
+        recent_total = _timed_call(
+            "usage_summary:24h",
+            get_usage_summary,
+            db_path=DEFAULT_USAGE_DB,
+            since=last_24h,
+        )
 
         metrics_cols = st.columns(4)
         metrics_cols[0].metric("Total Tokens (All Time)", f"{total.total_tokens}")
@@ -1612,15 +1662,17 @@ def main():
         metrics_cols[3].metric("Calls (All Time)", f"{total.calls}")
 
         if st.session_state.last_request_id:
-            last_query = get_usage_summary(
+            last_query = _timed_call(
+                "usage_summary:last_request",
                 db_path=DEFAULT_USAGE_DB,
+                fn=get_usage_summary,
                 request_id=st.session_state.last_request_id,
             )
             st.metric("Last Query Tokens", f"{last_query.total_tokens}")
 
         st.markdown("---")
         st.subheader("Usage By Model")
-        by_model = get_usage_by_model(db_path=DEFAULT_USAGE_DB)
+        by_model = _timed_call("usage_by_model", get_usage_by_model, db_path=DEFAULT_USAGE_DB)
         if by_model:
             st.dataframe(by_model, width="stretch")
         else:
@@ -1628,11 +1680,23 @@ def main():
 
         st.markdown("---")
         st.subheader("Recent Usage Records")
-        recent = get_recent_usage(db_path=DEFAULT_USAGE_DB, limit=200)
+        recent_limit = st.slider("Recent rows", min_value=50, max_value=1000, value=200, step=50)
+        recent = _timed_call("usage_recent", get_recent_usage, db_path=DEFAULT_USAGE_DB, limit=int(recent_limit))
         if recent:
             st.dataframe(recent, width="stretch")
         else:
             st.info("No usage records yet.")
+
+        st.markdown("---")
+        show_timings = st.checkbox("Show query timings (debug)", value=False)
+        if show_timings:
+            rows = st.session_state.get(_QUERY_TIMINGS_KEY, [])
+            if rows:
+                total_ms = round(sum(float(r.get("elapsed_ms") or 0.0) for r in rows), 2)
+                st.caption(f"DB query wall time (this render): {total_ms} ms")
+                st.dataframe(rows, width="stretch")
+            else:
+                st.info("No timing rows captured yet.")
 
 
 if __name__ == "__main__":
