@@ -98,7 +98,7 @@ Key Components
   - Postgres metadata stores vectors, index shards, and index version rows.
   - Idempotent indexing based on a deterministic key (same corpus + params).
 - UI and CLI
-  - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat and Usage tabs.
+  - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, OpenAlex Metadata, Citation Network, and Usage tabs.
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
   - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-workflow-reports`.
 - Agentic workflow
@@ -107,9 +107,10 @@ Key Components
   - Optional async execution with a Postgres-backed queue ([`ragonometrics/integrations/rq_queue.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/rq_queue.py)).
   - Optional agentic step plans sub-questions, retrieves context, and synthesizes an answer.
 - Caching
-  - OpenAlex metadata cache in Postgres (`enrichment.openalex_cache`).
+  - OpenAlex HTTP response cache in Postgres (`enrichment.openalex_http_cache`).
+  - Canonical per-paper OpenAlex match payloads in Postgres (`enrichment.paper_openalex_metadata`).
+  - Legacy OpenAlex cache table (`enrichment.openalex_cache`) remains for compatibility but is not the canonical write target.
   - CitEc metadata cache in Postgres (`enrichment.citec_cache`).
-  - OpenAlex title+author paper matches in Postgres (`enrichment.paper_openalex_metadata`).
   - Query/answer cache in Postgres (`retrieval.query_cache`).
   - Token usage in Postgres (`observability.token_usage`).
 
@@ -117,7 +118,7 @@ Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
   - Ingestion: `ingestion.documents`, `ingestion.paper_metadata` (`ingestion.prep_manifests` is present in schema for optional prep-manifest persistence/backfills).
-  - Enrichment: `enrichment.openalex_cache`, `enrichment.citec_cache`, `enrichment.paper_openalex_metadata`.
+  - Enrichment: `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.openalex_title_overrides`, `enrichment.citec_cache` (`enrichment.openalex_cache` is legacy compatibility).
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.
   - Workflow: `workflow.run_records` (`record_kind`: `run|step|report|question|artifact|workstream_link`).
   - Retrieval: `retrieval.query_cache` (`retrieval.retrieval_events` is available for retrieval diagnostics).

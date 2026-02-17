@@ -40,7 +40,7 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 | Postgres | `workflow.run_records` | `create_workflow_run`/`record_step` (`ragonometrics/pipeline/state.py`) | Workflow traceability |
 | Postgres | `retrieval.query_cache` | `set_cached_answer` (`ragonometrics/pipeline/query_cache.py`) | Query CLI + Streamlit |
 | Postgres | `observability.token_usage` | `record_usage` (`ragonometrics/pipeline/token_usage.py`) | Usage tab and reporting |
-| Postgres | `enrichment.openalex_cache`, `enrichment.citec_cache` | integration caches | Ingestion enrichment |
+| Postgres | `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.citec_cache` | integration caches + canonical per-paper OpenAlex metadata | Ingestion enrichment |
 | Postgres | `indexing.vectors`, `ingestion.documents`, `ingestion.paper_metadata`, run/index tables | `build_index`, metadata helpers | Hybrid retrieval + metadata |
 | Postgres | `workflow.run_records` (`record_kind=report/question/artifact`) | `store_workflow_report` (`ragonometrics/pipeline/report_store.py`) | Backfill/report querying |
 

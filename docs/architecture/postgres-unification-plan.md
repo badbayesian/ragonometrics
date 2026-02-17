@@ -16,7 +16,7 @@ This document defines the target storage model for consolidating runtime persist
 
 ## Target Schemas
 - `ingestion`: extracted paper records and prep manifests.
-- `enrichment`: OpenAlex/CitEc cache and external fetch outcomes.
+- `enrichment`: OpenAlex/CitEc cache, title overrides, and external fetch outcomes.
 - `indexing`: vector/index metadata and shard/version records.
 - `workflow`: unified workflow ledger (`run_records`) and async jobs queue.
 - `retrieval`: query cache and retrieval telemetry.
@@ -30,7 +30,9 @@ This document defines the target storage model for consolidating runtime persist
 - `ingestion.prep_manifests`
 
 ### `enrichment`
-- `enrichment.openalex_cache`
+- `enrichment.openalex_http_cache` (request/response cache)
+- `enrichment.paper_openalex_metadata` (canonical per-paper OpenAlex metadata)
+- `enrichment.openalex_title_overrides` (manual/curated title matching overrides)
 - `enrichment.citec_cache`
 
 ### `indexing`
@@ -67,7 +69,8 @@ The concrete DDL is tracked in:
   - workflow state + reports (`workflow.run_records`)
   - query cache (`retrieval.query_cache`)
   - token usage (`observability.token_usage`)
-  - enrichment caches (`enrichment.openalex_cache`, `enrichment.citec_cache`)
+  - enrichment caches (`enrichment.openalex_http_cache`, `enrichment.citec_cache`)
+  - paper-level OpenAlex metadata (`enrichment.paper_openalex_metadata`)
 - Keep SQLite writes as fallback while parity is validated.
 
 ### Phase 2: Backfill
@@ -76,7 +79,7 @@ The concrete DDL is tracked in:
   - sqlite workflow state -> `workflow.run_records` (`record_kind=run|step`)
   - sqlite query cache -> `retrieval.query_cache`
   - sqlite token usage -> `observability.token_usage`
-  - sqlite enrichment caches -> `enrichment.*_cache`
+  - sqlite enrichment caches -> `enrichment.citec_cache` and compatibility-only `enrichment.openalex_cache` (if needed)
 - Validate counts and sample-row parity.
 
 ### Phase 3: Read Cutover
