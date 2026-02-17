@@ -75,16 +75,6 @@ CREATE INDEX IF NOT EXISTS ingestion_prep_manifests_created_at_idx
 -- =========================
 -- enrichment
 -- =========================
-CREATE TABLE IF NOT EXISTS enrichment.openalex_cache (
-    cache_key TEXT PRIMARY KEY,
-    work_id TEXT,
-    query TEXT,
-    response JSONB NOT NULL,
-    fetched_at TIMESTAMPTZ NOT NULL
-);
-CREATE INDEX IF NOT EXISTS enrichment_openalex_cache_fetched_at_idx
-    ON enrichment.openalex_cache(fetched_at DESC);
-
 CREATE TABLE IF NOT EXISTS enrichment.openalex_http_cache (
     request_key TEXT PRIMARY KEY,
     url TEXT NOT NULL,

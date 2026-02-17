@@ -79,7 +79,7 @@ The concrete DDL is tracked in:
   - sqlite workflow state -> `workflow.run_records` (`record_kind=run|step`)
   - sqlite query cache -> `retrieval.query_cache`
   - sqlite token usage -> `observability.token_usage`
-  - sqlite enrichment caches -> `enrichment.citec_cache` and compatibility-only `enrichment.openalex_cache` (if needed)
+  - sqlite enrichment caches -> `enrichment.citec_cache` (OpenAlex request caching uses `enrichment.openalex_http_cache`)
 - Validate counts and sample-row parity.
 
 ### Phase 3: Read Cutover

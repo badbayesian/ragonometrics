@@ -109,7 +109,6 @@ Key Components
 - Caching
   - OpenAlex HTTP response cache in Postgres (`enrichment.openalex_http_cache`).
   - Canonical per-paper OpenAlex match payloads in Postgres (`enrichment.paper_openalex_metadata`).
-  - Legacy OpenAlex cache table (`enrichment.openalex_cache`) remains for compatibility but is not the canonical write target.
   - CitEc metadata cache in Postgres (`enrichment.citec_cache`).
   - Query/answer cache in Postgres (`retrieval.query_cache`).
   - Token usage in Postgres (`observability.token_usage`).
@@ -118,7 +117,7 @@ Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
   - Ingestion: `ingestion.documents`, `ingestion.paper_metadata` (`ingestion.prep_manifests` is present in schema for optional prep-manifest persistence/backfills).
-  - Enrichment: `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.openalex_title_overrides`, `enrichment.citec_cache` (`enrichment.openalex_cache` is legacy compatibility).
+  - Enrichment: `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.openalex_title_overrides`, `enrichment.citec_cache`.
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.
   - Workflow: `workflow.run_records` (`record_kind`: `run|step|report|question|artifact|workstream_link`).
   - Retrieval: `retrieval.query_cache` (`retrieval.retrieval_events` is available for retrieval diagnostics).

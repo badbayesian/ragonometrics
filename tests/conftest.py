@@ -67,7 +67,7 @@ class SQLiteConnWrapper:
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num TEXT PRIMARY KEY)")
         cur.execute("DELETE FROM alembic_version")
-        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0004')")
+        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0005')")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS run_records (
