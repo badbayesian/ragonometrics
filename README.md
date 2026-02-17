@@ -33,7 +33,15 @@ docker compose run --rm migrate
 3. Start core services:
 
 ```bash
-docker compose up -d --build postgres streamlit rq-worker
+docker compose up -d --build
+```
+
+By default this starts the core runtime only: `postgres`, `streamlit`, `rq-worker`, and `pgadmin`.
+
+Batch services are profile-gated and started explicitly:
+
+```bash
+docker compose --profile batch up -d worker indexer workflow
 ```
 
 4. Open Streamlit:
@@ -50,7 +58,7 @@ Run The Full Workflow
 Run all papers in `/app/papers`:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -62,7 +70,7 @@ docker compose run --rm workflow \
 Run one paper:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
   --agentic \
@@ -73,7 +81,7 @@ docker compose run --rm workflow \
 Async mode (queue-backed):
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -106,11 +114,17 @@ Primary Postgres tables:
 Schema ownership:
 - Alembic revisions under `alembic/versions/*` are the source of truth.
 - Runtime modules no longer create/alter tables in hot paths.
+- Postgres is the only supported runtime persistence backend.
 
-Migration and backfill commands:
+Migration command:
 
 ```bash
 ragonometrics db migrate --db-url "$DATABASE_URL"
+```
+
+Historical import/backfill (optional):
+
+```bash
 python tools/backfill_sqlite_to_postgres.py --db-url "$DATABASE_URL"
 python tools/validate_backfill_parity.py --db-url "$DATABASE_URL"
 ```

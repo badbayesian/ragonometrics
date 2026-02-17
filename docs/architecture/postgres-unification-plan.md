@@ -6,7 +6,7 @@ This document defines the target storage model for consolidating runtime persist
 - Store workflow state, reports, retrieval cache, usage telemetry, and enrichment caches in Postgres.
 - Preserve lineage across all artifacts with consistent IDs.
 - Keep writes auditable and idempotent.
-- Support phased migration with dual-write and safe cutover.
+- Keep migration/backfill procedures explicit and auditable.
 
 ## Canonical Lineage Model
 - `run_id`: workflow execution id (text UUID/hex), primary lineage key.
@@ -57,38 +57,28 @@ This document defines the target storage model for consolidating runtime persist
 The concrete DDL is tracked in:
 - `deploy/sql/001_unified_postgres_schema.sql`
 
-## Migration Strategy (Phased)
+## Migration and Runtime Ownership
 
-### Phase 0: Schema Bootstrap
-- Apply `deploy/sql/001_unified_postgres_schema.sql`.
-- Validate extensions (`vector` / `vectorscale`) and schema ownership.
+### Current State
+- Runtime persistence is Postgres-only.
+- Alembic (`alembic/versions/*`) is the schema source of truth.
+- Runtime modules do not perform hot-path DDL.
+- Historical SQLite data can be imported using backfill tools, but SQLite is not part of active runtime paths.
 
-### Phase 1: Dual-Write (No Read Changes)
-- Continue current reads.
-- Add Postgres writes for:
-  - workflow state + reports (`workflow.run_records`)
-  - query cache (`retrieval.query_cache`)
-  - token usage (`observability.token_usage`)
-  - enrichment caches (`enrichment.openalex_http_cache`, `enrichment.citec_cache`)
-  - paper-level OpenAlex metadata (`enrichment.paper_openalex_metadata`)
-- Keep SQLite writes as fallback while parity is validated.
+### Bootstrap
+1. Run migrations to head:
+   - `ragonometrics db migrate --db-url "$DATABASE_URL"`
+2. Validate required extensions (`vector` / `vectorscale`) and schema presence.
+3. Start runtime services.
 
-### Phase 2: Backfill
-- Backfill historical sqlite/report artifacts into Postgres:
+### Historical Backfill (Optional)
+- Import historical sqlite/report artifacts into Postgres:
   - workflow json reports -> `workflow.run_records` (`record_kind=report`)
   - sqlite workflow state -> `workflow.run_records` (`record_kind=run|step`)
   - sqlite query cache -> `retrieval.query_cache`
   - sqlite token usage -> `observability.token_usage`
   - sqlite enrichment caches -> `enrichment.citec_cache` (OpenAlex request caching uses `enrichment.openalex_http_cache`)
-- Validate counts and sample-row parity.
-
-### Phase 3: Read Cutover
-- Flip reads to Postgres for state/cache/usage/enrichment.
-- Keep dual-write for one release window.
-
-### Phase 4: SQLite Decommission
-- Remove SQLite writers/readers from active runtime paths.
-- Keep one-time import tooling for offline historical data only.
+- Validate counts and sampled checksums after import.
 
 ## Constraints and Idempotency
 - Ensure uniqueness where natural keys exist:
@@ -106,5 +96,5 @@ The concrete DDL is tracked in:
 ## Acceptance Criteria
 1. One Postgres server stores all active runtime persistence.
 2. Workflow reports/state/cache/usage are queryable without SQLite.
-3. Existing CLI/UI/workflow behavior remains functionally unchanged after cutover.
+3. Existing CLI/UI/workflow behavior remains functionally unchanged under Postgres-only runtime.
 4. Audit lineage (`run_id`, `doc_id`, `chunk_id`) is preserved end-to-end.

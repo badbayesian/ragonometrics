@@ -100,7 +100,7 @@ Key Components
 - UI and CLI
   - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, OpenAlex Metadata, Citation Network, and Usage tabs.
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
-  - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-workflow-reports`.
+  - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-workflow-reports | db migrate | usage`.
 - Agentic workflow
   - [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
   - State persisted in Postgres (`workflow.run_records`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py) and [`ragonometrics/pipeline/report_store.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/report_store.py).
@@ -189,6 +189,8 @@ Entrypoints
 Containerization
 ----------------
 - [`Dockerfile`](https://github.com/badbayesian/ragonometrics/blob/main/Dockerfile) installs package dependencies and Poppler.
-- [`compose.yml`](https://github.com/badbayesian/ragonometrics/blob/main/compose.yml) defines services for UI, workflow, queue worker, and Postgres.
+- [`compose.yml`](https://github.com/badbayesian/ragonometrics/blob/main/compose.yml) defines core runtime services plus profile-gated batch services.
+- Default `docker compose up -d --build` starts `postgres`, `streamlit`, `rq-worker`, and `pgadmin`.
+- Batch jobs (`worker`, `indexer`, `workflow`) are started explicitly with `--profile batch`.
 - Services run code from the image by default; add a bind mount for live code editing if desired.
 

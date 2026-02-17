@@ -25,7 +25,19 @@ docker compose run --rm migrate
 Core stack (recommended):
 
 ```bash
-docker compose up -d --build postgres streamlit rq-worker
+docker compose up -d --build
+```
+
+Default startup brings up core runtime services only:
+- `postgres`
+- `streamlit`
+- `rq-worker`
+- `pgadmin`
+
+Batch services are profile-gated and started on demand:
+
+```bash
+docker compose --profile batch up -d worker indexer workflow
 ```
 
 Check status:
@@ -42,7 +54,7 @@ Open Streamlit:
 All papers:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -53,7 +65,7 @@ docker compose run --rm workflow \
 Single paper:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
   --agentic \
@@ -64,7 +76,7 @@ docker compose run --rm workflow \
 Async enqueue:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -96,6 +108,7 @@ Postgres:
 Migration ownership:
 - Alembic (`alembic/versions/*`) is the schema source of truth.
 - Runtime modules do not run hot-path DDL.
+- Postgres is the only supported runtime persistence backend.
 
 ## pgAdmin
 
