@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ragonometrics.db.connection import connect
+from ragonometrics.db.connection import pooled_connection
 
 # Kept for call-site compatibility; runtime persistence now uses Postgres.
 DEFAULT_USAGE_DB = Path("postgres_token_usage")
@@ -37,18 +37,6 @@ def _database_url() -> str:
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for token usage persistence.")
     return db_url
-
-
-def _connect(_db_path: Path):
-    """Connect.
-
-    Args:
-        _db_path (Path): Description.
-
-    Returns:
-        Any: Description.
-    """
-    return connect(_database_url(), require_migrated=True)
 
 
 def record_usage(
@@ -94,8 +82,7 @@ def record_usage(
         cost_usd_total (Optional[float]): Description.
         meta (Optional[Dict[str, Any]]): Description.
     """
-    conn = _connect(db_path)
-    try:
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
         resolved_run_id = run_id
         resolved_step = step
         resolved_question_id = question_id
@@ -148,8 +135,6 @@ def record_usage(
             ),
         )
         conn.commit()
-    finally:
-        conn.close()
 
 
 def _where_clauses(
@@ -202,8 +187,7 @@ def get_usage_summary(
     Returns:
         UsageSummary: Description.
     """
-    conn = _connect(db_path)
-    try:
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
         cur = conn.cursor()
         cur.execute(
@@ -224,8 +208,6 @@ def get_usage_summary(
             output_tokens=int(row[2] or 0),
             total_tokens=int(row[3] or 0),
         )
-    finally:
-        conn.close()
 
 
 def get_usage_by_model(
@@ -246,8 +228,7 @@ def get_usage_by_model(
     Returns:
         List[Dict[str, Any]]: Description.
     """
-    conn = _connect(db_path)
-    try:
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
         cur = conn.cursor()
         cur.execute(
@@ -267,8 +248,6 @@ def get_usage_by_model(
             {"model": row[0], "calls": int(row[1] or 0), "total_tokens": int(row[2] or 0)}
             for row in rows
         ]
-    finally:
-        conn.close()
 
 
 def get_recent_usage(
@@ -289,8 +268,7 @@ def get_recent_usage(
     Returns:
         List[Dict[str, Any]]: Description.
     """
-    conn = _connect(db_path)
-    try:
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=None)
         params.append(int(limit))
         cur = conn.cursor()
@@ -321,5 +299,3 @@ def get_recent_usage(
             }
             for row in rows
         ]
-    finally:
-        conn.close()
