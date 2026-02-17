@@ -18,14 +18,8 @@ try:
     DB_MODULE = _db_module
     DB_MODULE_NAME = "psycopg"
 except ModuleNotFoundError:
-    try:
-        import psycopg2 as _db_module  # type: ignore
-
-        DB_MODULE = _db_module
-        DB_MODULE_NAME = "psycopg2"
-    except ModuleNotFoundError:
-        DB_MODULE = None
-        DB_MODULE_NAME = ""
+    DB_MODULE = None
+    DB_MODULE_NAME = ""
 
 
 def parse_args() -> argparse.Namespace:
@@ -175,7 +169,7 @@ def main() -> int:
     args = parse_args()
     if DB_MODULE is None:
         print(
-            "[error] Missing database driver. Install one of: `pip install psycopg[binary]` or `pip install psycopg2-binary`.",
+            "[error] Missing database driver. Install: `pip install psycopg[binary]`.",
             file=sys.stderr,
         )
         return 1
