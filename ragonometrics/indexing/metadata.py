@@ -1,4 +1,4 @@
-"""Postgres metadata schema and helpers for pipeline runs and index shards. Used by indexing and retrieval to store and resolve artifacts."""
+"""Postgres metadata CRUD helpers for indexing and ingestion artifacts."""
 
 from __future__ import annotations
 
@@ -6,86 +6,11 @@ from datetime import datetime, timezone
 import json
 from typing import Any, Optional
 
-import psycopg2
-
-
-def _safe_execute(cur, sql: str, params: tuple | None = None) -> bool:
-    """Execute SQL and suppress backend-specific incompatibilities.
-
-    Args:
-        cur (Any): Description.
-        sql (str): Description.
-        params (tuple | None): Description.
-
-    Returns:
-        bool: Description.
-    """
-    savepoint_name = "ragonometrics_safe_execute"
-    has_savepoint = False
-    try:
-        cur.execute(f"SAVEPOINT {savepoint_name}")
-        has_savepoint = True
-    except Exception:
-        has_savepoint = False
-    try:
-        cur.execute(sql, params or ())
-        if has_savepoint:
-            try:
-                cur.execute(f"RELEASE SAVEPOINT {savepoint_name}")
-            except Exception:
-                pass
-        return True
-    except Exception:
-        if has_savepoint:
-            try:
-                cur.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
-            except Exception:
-                pass
-            try:
-                cur.execute(f"RELEASE SAVEPOINT {savepoint_name}")
-            except Exception:
-                pass
-        return False
-
-
-def ensure_vector_extensions(cur) -> None:
-    """Enable vector extensions when supported by the backend.
-
-    Args:
-        cur (Any): Description.
-    """
-    # vectorscale cascades to pgvector on supported images.
-    if not _safe_execute(cur, "CREATE EXTENSION IF NOT EXISTS vectorscale CASCADE"):
-        # fallback to pgvector-only setups
-        _safe_execute(cur, "CREATE EXTENSION IF NOT EXISTS vector")
-
-
-def ensure_vector_indexes(cur) -> None:
-    """Ensure ANN vector indexes exist when backend supports vector indexes.
-
-    Args:
-        cur (Any): Description.
-    """
-    if _safe_execute(
-        cur,
-        """
-        CREATE INDEX IF NOT EXISTS vectors_embedding_diskann_idx
-        ON indexing.vectors USING diskann (embedding vector_cosine_ops)
-        """,
-    ):
-        return
-    # Fallback for environments that have pgvector but not vectorscale.
-    _safe_execute(
-        cur,
-        """
-        CREATE INDEX IF NOT EXISTS vectors_embedding_ivfflat_idx
-        ON indexing.vectors USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
-        """,
-    )
+from ragonometrics.db.connection import connect, ensure_schema_ready
 
 
 def init_metadata_db(db_url: str):
-    """Initialize metadata tables for pipeline runs and vectors.
+    """Open validated metadata DB connection.
 
     Args:
         db_url (str): Description.
@@ -93,153 +18,8 @@ def init_metadata_db(db_url: str):
     Returns:
         Any: Description.
     """
-    conn = psycopg2.connect(db_url)
-    cur = conn.cursor()
-    ensure_vector_extensions(cur)
-
-    _safe_execute(cur, "CREATE SCHEMA IF NOT EXISTS ingestion")
-    _safe_execute(cur, "CREATE SCHEMA IF NOT EXISTS indexing")
-    _safe_execute(cur, "CREATE SCHEMA IF NOT EXISTS observability")
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS ingestion.documents (
-            doc_id TEXT PRIMARY KEY,
-            path TEXT,
-            title TEXT,
-            author TEXT,
-            extracted_at TIMESTAMPTZ,
-            file_hash TEXT,
-            text_hash TEXT
-        )
-        """,
-    )
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS ingestion.paper_metadata (
-            doc_id TEXT PRIMARY KEY REFERENCES ingestion.documents(doc_id) ON DELETE CASCADE,
-            path TEXT,
-            title TEXT,
-            author TEXT,
-            authors_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-            primary_doi TEXT,
-            dois_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-            openalex_id TEXT,
-            openalex_doi TEXT,
-            publication_year INTEGER,
-            venue TEXT,
-            repec_handle TEXT,
-            source_url TEXT,
-            openalex_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            citec_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            extracted_at TIMESTAMPTZ,
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """,
-    )
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS paper_metadata_primary_doi_idx ON ingestion.paper_metadata (primary_doi)")
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS paper_metadata_path_idx ON ingestion.paper_metadata (path)")
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS indexing.pipeline_runs (
-            id BIGSERIAL PRIMARY KEY,
-            workflow_run_id TEXT,
-            workstream_id TEXT,
-            arm TEXT,
-            paper_set_hash TEXT,
-            index_build_reason TEXT,
-            git_sha TEXT,
-            extractor_version TEXT,
-            embedding_model TEXT,
-            chunk_words INTEGER,
-            chunk_overlap INTEGER,
-            normalized BOOLEAN,
-            idempotency_key TEXT UNIQUE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """,
-    )
-    _safe_execute(cur, "ALTER TABLE indexing.pipeline_runs ADD COLUMN IF NOT EXISTS workflow_run_id TEXT")
-    _safe_execute(cur, "ALTER TABLE indexing.pipeline_runs ADD COLUMN IF NOT EXISTS workstream_id TEXT")
-    _safe_execute(cur, "ALTER TABLE indexing.pipeline_runs ADD COLUMN IF NOT EXISTS arm TEXT")
-    _safe_execute(cur, "ALTER TABLE indexing.pipeline_runs ADD COLUMN IF NOT EXISTS paper_set_hash TEXT")
-    _safe_execute(cur, "ALTER TABLE indexing.pipeline_runs ADD COLUMN IF NOT EXISTS index_build_reason TEXT")
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS indexing_pipeline_runs_workflow_run_idx ON indexing.pipeline_runs(workflow_run_id)")
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS indexing_pipeline_runs_workstream_idx ON indexing.pipeline_runs(workstream_id)")
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS indexing.index_versions (
-            index_id TEXT PRIMARY KEY,
-            created_at TIMESTAMPTZ,
-            embedding_model TEXT,
-            chunk_words INTEGER,
-            chunk_overlap INTEGER,
-            corpus_fingerprint TEXT,
-            index_path TEXT,
-            shard_path TEXT
-        )
-        """,
-    )
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS indexing.index_shards (
-            id BIGSERIAL PRIMARY KEY,
-            shard_name TEXT UNIQUE,
-            path TEXT,
-            pipeline_run_id BIGINT REFERENCES indexing.pipeline_runs(id),
-            index_id TEXT REFERENCES indexing.index_versions(index_id),
-            created_at TIMESTAMPTZ,
-            is_active BOOLEAN DEFAULT FALSE
-        )
-        """,
-    )
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS indexing.vectors (
-            id BIGINT PRIMARY KEY,
-            doc_id TEXT REFERENCES ingestion.documents(doc_id) ON DELETE CASCADE,
-            chunk_id TEXT UNIQUE,
-            chunk_hash TEXT,
-            paper_path TEXT,
-            page INTEGER,
-            start_word INTEGER,
-            end_word INTEGER,
-            text TEXT,
-            embedding VECTOR,
-            pipeline_run_id BIGINT REFERENCES indexing.pipeline_runs(id),
-            created_at TIMESTAMPTZ
-        )
-        """,
-    )
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS indexing_vectors_doc_id_idx ON indexing.vectors(doc_id)")
-    _safe_execute(cur, "CREATE INDEX IF NOT EXISTS indexing_vectors_pipeline_run_id_idx ON indexing.vectors(pipeline_run_id)")
-
-    _safe_execute(
-        cur,
-        """
-        CREATE TABLE IF NOT EXISTS observability.request_failures (
-            id BIGSERIAL PRIMARY KEY,
-            component TEXT,
-            error TEXT,
-            context_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """,
-    )
-
-    ensure_vector_indexes(cur)
-    conn.commit()
+    conn = connect(db_url, require_migrated=True)
+    ensure_schema_ready(conn)
     return conn
 
 

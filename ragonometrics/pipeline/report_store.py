@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
-import psycopg2
+from ragonometrics.db.connection import connect
 
 from ragonometrics.pipeline.run_records import ensure_run_records_table
 
@@ -524,7 +524,7 @@ def store_workflow_report(
         payload (Dict[str, Any]): Description.
         status (str | None): Description.
     """
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     try:
         ensure_workflow_report_store(conn)
         upsert_workflow_report(conn, run_id=run_id, report_path=report_path, payload=payload, status=status)
@@ -558,7 +558,7 @@ def store_workflow_reports_from_dir(
     if limit and limit > 0:
         paths = paths[:limit]
 
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     stored = 0
     skipped = 0
     try:

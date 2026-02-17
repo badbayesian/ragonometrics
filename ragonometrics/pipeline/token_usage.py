@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import psycopg2
+from ragonometrics.db.connection import connect
 
 # Kept for call-site compatibility; runtime persistence now uses Postgres.
 DEFAULT_USAGE_DB = Path("postgres_token_usage")
@@ -39,89 +39,16 @@ def _database_url() -> str:
     return db_url
 
 
-def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+def _connect(_db_path: Path):
     """Connect.
 
     Args:
         _db_path (Path): Description.
 
     Returns:
-        psycopg2.extensions.connection: Description.
+        Any: Description.
     """
-    conn = psycopg2.connect(_database_url())
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS observability")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS observability.token_usage (
-            id BIGSERIAL PRIMARY KEY,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            model TEXT,
-            operation TEXT,
-            step TEXT,
-            question_id TEXT,
-            input_tokens INTEGER,
-            output_tokens INTEGER,
-            total_tokens INTEGER,
-            session_id TEXT,
-            request_id TEXT,
-            provider_request_id TEXT,
-            latency_ms INTEGER,
-            cache_hit BOOLEAN,
-            cost_usd_input DOUBLE PRECISION,
-            cost_usd_output DOUBLE PRECISION,
-            cost_usd_total DOUBLE PRECISION,
-            run_id TEXT,
-            meta JSONB NOT NULL DEFAULT '{}'::jsonb
-        )
-        """
-    )
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS step TEXT")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS question_id TEXT")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS provider_request_id TEXT")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS latency_ms INTEGER")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS cache_hit BOOLEAN")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS cost_usd_input DOUBLE PRECISION")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS cost_usd_output DOUBLE PRECISION")
-    cur.execute("ALTER TABLE observability.token_usage ADD COLUMN IF NOT EXISTS cost_usd_total DOUBLE PRECISION")
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_created_at_idx
-        ON observability.token_usage(created_at DESC)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_session_idx
-        ON observability.token_usage(session_id)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_request_idx
-        ON observability.token_usage(request_id)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_run_idx
-        ON observability.token_usage(run_id)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_step_idx
-        ON observability.token_usage(step)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS observability_token_usage_question_idx
-        ON observability.token_usage(question_id)
-        """
-    )
-    conn.commit()
-    return conn
+    return connect(_database_url(), require_migrated=True)
 
 
 def record_usage(

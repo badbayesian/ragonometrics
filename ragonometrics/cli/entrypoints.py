@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 from openai import OpenAI
 
+from ragonometrics.db.connection import connect
 from ragonometrics.eval.benchmark import bench_papers
 from ragonometrics.indexing.indexer import build_index
 from ragonometrics.indexing.paper_store import store_paper_metadata
@@ -28,6 +30,97 @@ from ragonometrics.pipeline.workflow import run_workflow
 from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
 from ragonometrics.integrations.openalex_store import store_openalex_metadata_by_title_author
+
+
+def cmd_db_migrate(args: argparse.Namespace) -> int:
+    """Apply Alembic migrations to the target Postgres database.
+
+    Args:
+        args (argparse.Namespace): Parsed CLI args.
+
+    Returns:
+        int: Process return code.
+    """
+    db_url = (args.db_url or os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        print("No database URL configured. Pass --db-url or set DATABASE_URL.")
+        return 1
+    cmd = [
+        sys.executable,
+        "-m",
+        "alembic",
+        "-c",
+        str(Path("alembic.ini").resolve()),
+        "-x",
+        f"db_url={db_url}",
+        "upgrade",
+        "head",
+    ]
+    return subprocess.call(cmd)
+
+
+def cmd_usage(args: argparse.Namespace) -> int:
+    """Print token usage rollup rows for a run/workstream.
+
+    Args:
+        args (argparse.Namespace): Parsed CLI args.
+
+    Returns:
+        int: Process return code.
+    """
+    db_url = (args.db_url or os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        print("No database URL configured. Pass --db-url or set DATABASE_URL.")
+        return 1
+    if not args.run_id and not args.workstream_id:
+        print("Provide at least one filter: --run-id or --workstream-id.")
+        return 1
+
+    conn = connect(db_url, require_migrated=True)
+    try:
+        cur = conn.cursor()
+        if args.run_id:
+            cur.execute(
+                """
+                SELECT run_id, step, model, question_id, call_count, input_tokens, output_tokens, total_tokens, cost_usd_total
+                FROM observability.token_usage_rollup
+                WHERE run_id = %s
+                ORDER BY step, model, question_id
+                """,
+                (args.run_id,),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT
+                    t.run_id, t.step, t.model, t.question_id, t.call_count,
+                    t.input_tokens, t.output_tokens, t.total_tokens, t.cost_usd_total
+                FROM observability.token_usage_rollup t
+                JOIN workflow.run_records r
+                  ON r.run_id = t.run_id
+                 AND r.record_kind = 'run'
+                 AND r.step = ''
+                 AND r.record_key = 'main'
+                WHERE r.workstream_id = %s
+                ORDER BY t.run_id, t.step, t.model, t.question_id
+                """,
+                (args.workstream_id,),
+            )
+        rows = cur.fetchall() or []
+    finally:
+        conn.close()
+
+    if not rows:
+        print("No usage rows found.")
+        return 0
+    print("run_id\tstep\tmodel\tquestion_id\tcalls\tinput\toutput\ttotal\tcost_usd_total")
+    for row in rows:
+        print(
+            f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t"
+            f"{int(row[4] or 0)}\t{int(row[5] or 0)}\t{int(row[6] or 0)}\t"
+            f"{int(row[7] or 0)}\t{float(row[8] or 0.0):.6f}"
+        )
+    return 0
 
 
 def cmd_index(args: argparse.Namespace) -> int:
@@ -302,6 +395,18 @@ def build_parser() -> argparse.ArgumentParser:
     """
     p = argparse.ArgumentParser(prog="ragonometrics")
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    db = sub.add_parser("db", help="Database operations")
+    db_sub = db.add_subparsers(dest="db_cmd", required=True)
+    db_migrate = db_sub.add_parser("migrate", help="Apply Alembic migrations to Postgres")
+    db_migrate.add_argument("--db-url", type=str, default=None)
+    db_migrate.set_defaults(func=cmd_db_migrate)
+
+    usage = sub.add_parser("usage", help="Show token usage rollups from Postgres")
+    usage.add_argument("--db-url", type=str, default=None)
+    usage.add_argument("--run-id", type=str, default=None)
+    usage.add_argument("--workstream-id", type=str, default=None)
+    usage.set_defaults(func=cmd_usage)
 
     s = sub.add_parser("index", help="Build Postgres/FAISS vector indexes from PDFs")
     s.add_argument("--papers-dir", type=str, default=None)

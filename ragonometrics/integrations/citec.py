@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import xml.etree.ElementTree as ET
 
 import requests
-import psycopg2
+from ragonometrics.db.connection import connect
 
 DEFAULT_CACHE_PATH = Path("postgres_citec_cache")
 DEFAULT_BASE_URL = os.environ.get("CITEC_API_BASE", "http://citec.repec.org/api").rstrip("/")
@@ -32,36 +32,16 @@ def _database_url() -> str:
     return db_url
 
 
-def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+def _connect(_db_path: Path):
     """Connect.
 
     Args:
         _db_path (Path): Description.
 
     Returns:
-        psycopg2.extensions.connection: Description.
+        Any: Description.
     """
-    conn = psycopg2.connect(_database_url())
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enrichment.citec_cache (
-            cache_key TEXT PRIMARY KEY,
-            repec_handle TEXT,
-            response JSONB NOT NULL,
-            fetched_at TIMESTAMPTZ NOT NULL
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_citec_cache_fetched_at_idx
-        ON enrichment.citec_cache(fetched_at DESC)
-        """
-    )
-    conn.commit()
-    return conn
+    return connect(_database_url(), require_migrated=True)
 
 
 def _cache_ttl_seconds() -> int:

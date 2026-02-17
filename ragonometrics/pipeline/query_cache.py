@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import psycopg2
+from ragonometrics.db.connection import connect
 
 # Kept for call-site compatibility; runtime persistence now uses Postgres.
 DEFAULT_CACHE_PATH = Path("postgres_query_cache")
@@ -28,39 +28,16 @@ def _database_url() -> str:
     return db_url
 
 
-def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+def _connect(_db_path: Path):
     """Connect.
 
     Args:
         _db_path (Path): Description.
 
     Returns:
-        psycopg2.extensions.connection: Description.
+        Any: Description.
     """
-    conn = psycopg2.connect(_database_url())
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS retrieval")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS retrieval.query_cache (
-            cache_key TEXT PRIMARY KEY,
-            query TEXT,
-            paper_path TEXT,
-            model TEXT,
-            context_hash TEXT,
-            answer TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS retrieval_query_cache_created_at_idx
-        ON retrieval.query_cache(created_at DESC)
-        """
-    )
-    conn.commit()
-    return conn
+    return connect(_database_url(), require_migrated=True)
 
 
 def make_cache_key(query: str, paper_path: str, model: str, context: str) -> str:

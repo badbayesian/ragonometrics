@@ -16,7 +16,7 @@ report_store = _load_mod("ragonometrics/pipeline/report_store.py", "ragonometric
 
 
 def test_upsert_workflow_report():
-    conn = report_store.psycopg2.connect("dummy")
+    conn = report_store.connect("dummy", require_migrated=False)
     report_store.ensure_workflow_report_store(conn)
 
     payload = {

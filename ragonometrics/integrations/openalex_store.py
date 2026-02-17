@@ -9,9 +9,9 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-import psycopg2
 from openai import OpenAI
 
+from ragonometrics.db.connection import connect, ensure_schema_ready
 from ragonometrics.core.main import load_papers
 from ragonometrics.core.io_loaders import run_pdftotext_pages
 from ragonometrics.integrations.openalex import (
@@ -501,44 +501,7 @@ def _ensure_table(conn) -> None:
     Args:
         conn (Any): Description.
     """
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enrichment.paper_openalex_metadata (
-            paper_path TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            authors TEXT NOT NULL,
-            query_title TEXT NOT NULL,
-            query_authors TEXT NOT NULL,
-            query_year INTEGER,
-            openalex_id TEXT,
-            openalex_doi TEXT,
-            openalex_title TEXT,
-            openalex_publication_year INTEGER,
-            openalex_authors_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-            openalex_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            match_status TEXT NOT NULL,
-            error_text TEXT,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            CHECK (match_status IN ('matched', 'not_found', 'error'))
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_paper_openalex_metadata_updated_idx
-        ON enrichment.paper_openalex_metadata(updated_at DESC)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_paper_openalex_metadata_openalex_id_idx
-        ON enrichment.paper_openalex_metadata(openalex_id)
-        """
-    )
-    conn.commit()
+    ensure_schema_ready(conn)
 
 
 def _has_existing_match(conn, paper_path: str) -> bool:
@@ -695,7 +658,7 @@ def store_openalex_metadata_by_title_author(
     previous_db_url = os.environ.get("DATABASE_URL")
     previous_openalex_disable = os.environ.get("OPENALEX_DISABLE")
     os.environ["DATABASE_URL"] = resolved_db_url
-    conn = psycopg2.connect(resolved_db_url)
+    conn = connect(resolved_db_url, require_migrated=True)
     try:
         _ensure_table(conn)
         paths = [Path(p) for p in paper_paths]

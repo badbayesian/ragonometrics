@@ -39,6 +39,7 @@ from ragonometrics.pipeline.state import (
 from ragonometrics.pipeline.report_store import store_workflow_report
 from ragonometrics.pipeline.prep import prep_corpus
 from ragonometrics.integrations.econ_data import fetch_fred_series
+from ragonometrics.db.connection import connect as db_connect
 
 
 def _utc_now() -> str:
@@ -136,9 +137,7 @@ def _can_connect_db(db_url: str) -> bool:
         bool: Description.
     """
     try:
-        import psycopg2
-
-        conn = psycopg2.connect(db_url, connect_timeout=3)
+        conn = db_connect(db_url, require_migrated=False)
         conn.close()
         return True
     except Exception:

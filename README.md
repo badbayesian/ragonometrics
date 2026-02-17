@@ -24,16 +24,22 @@ PAPERS_HOST_DIR=./papers
 CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
-2. Start core services:
+2. Apply DB migrations (required once per environment):
+
+```bash
+docker compose run --rm migrate
+```
+
+3. Start core services:
 
 ```bash
 docker compose up -d --build postgres streamlit rq-worker
 ```
 
-3. Open Streamlit:
+4. Open Streamlit:
 - `http://localhost:8585`
 
-4. Verify papers are mounted:
+5. Verify papers are mounted:
 
 ```bash
 docker compose exec -T streamlit ls -la /app/papers
@@ -97,6 +103,24 @@ Primary Postgres tables:
 - `ingestion.documents`, `ingestion.paper_metadata`
 - `indexing.pipeline_runs`, `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`
 
+Schema ownership:
+- Alembic revisions under `alembic/versions/*` are the source of truth.
+- Runtime modules no longer create/alter tables in hot paths.
+
+Migration and backfill commands:
+
+```bash
+ragonometrics db migrate --db-url "$DATABASE_URL"
+python tools/backfill_sqlite_to_postgres.py --db-url "$DATABASE_URL"
+python tools/validate_backfill_parity.py --db-url "$DATABASE_URL"
+```
+
+Usage rollups:
+
+```bash
+ragonometrics usage --db-url "$DATABASE_URL" --run-id "<run_id>"
+```
+
 OpenAlex title+author metadata process:
 
 ```bash
@@ -119,4 +143,5 @@ Key Docs
 - Data model ERD: [docs/architecture/data-model-erd.md](docs/architecture/data-model-erd.md)
 - Workflow architecture: [docs/architecture/workflow_architecture.md](docs/architecture/workflow_architecture.md)
 - Docker guide: [docs/deployment/docker.md](docs/deployment/docker.md)
+- Migrations/backfill: [docs/deployment/migrations.md](docs/deployment/migrations.md)
 - Workflow CLI guide: [docs/guides/workflow.md](docs/guides/workflow.md)

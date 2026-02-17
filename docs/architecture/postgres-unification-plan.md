@@ -98,7 +98,7 @@ The concrete DDL is tracked in:
 ## Operational Recommendations
 - Partition heavy append tables (`observability.token_usage`, optionally `indexing.vectors` at scale).
 - Add retention policy for low-value telemetry tables.
-- Add migration version tracking (Alembic or equivalent) before broad refactors.
+- Migration version tracking is implemented with Alembic (`alembic/versions/*`).
 
 ## Acceptance Criteria
 1. One Postgres server stores all active runtime persistence.

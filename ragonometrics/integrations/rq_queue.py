@@ -7,6 +7,7 @@ This module replaces Redis/RQ usage with a queue table in Postgres
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import socket
 import time
@@ -16,8 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import psycopg2
-from psycopg2.extras import Json
+from ragonometrics.db.connection import connect, ensure_schema_ready
 
 from ragonometrics.core.main import load_settings
 from ragonometrics.indexing.indexer import build_index
@@ -68,9 +68,7 @@ def _connect(db_url: str):
     Returns:
         Any: Description.
     """
-    conn = psycopg2.connect(db_url)
-    conn.autocommit = False
-    return conn
+    return connect(db_url, require_migrated=True)
 
 
 def ensure_async_jobs_table(conn) -> None:
@@ -79,53 +77,7 @@ def ensure_async_jobs_table(conn) -> None:
     Args:
         conn (Any): Description.
     """
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS workflow")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS workflow.async_jobs (
-            id BIGSERIAL PRIMARY KEY,
-            job_id TEXT NOT NULL UNIQUE,
-            queue_name TEXT NOT NULL DEFAULT 'default',
-            job_type TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'queued',
-            payload_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            result_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-            error_text TEXT,
-            attempt_count INTEGER NOT NULL DEFAULT 0,
-            max_attempts INTEGER NOT NULL DEFAULT 3,
-            retry_delay_seconds INTEGER NOT NULL DEFAULT 10,
-            available_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            locked_at TIMESTAMPTZ,
-            worker_id TEXT,
-            started_at TIMESTAMPTZ,
-            finished_at TIMESTAMPTZ,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            CHECK (status IN ('queued', 'retry', 'running', 'completed', 'failed')),
-            CHECK (job_type IN ('workflow', 'index'))
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS workflow_async_jobs_status_available_idx
-            ON workflow.async_jobs(status, available_at, created_at)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS workflow_async_jobs_queue_status_idx
-            ON workflow.async_jobs(queue_name, status, available_at)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS workflow_async_jobs_worker_idx
-            ON workflow.async_jobs(worker_id, status)
-        """
-    )
-    conn.commit()
+    ensure_schema_ready(conn)
 
 
 def _enqueue_job(
@@ -164,7 +116,7 @@ def _enqueue_job(
             )
             VALUES
             (
-                %s, %s, %s, 'queued', %s,
+                %s, %s, %s, 'queued', %s::jsonb,
                 %s, %s, NOW(), NOW(), NOW()
             )
             """,
@@ -172,7 +124,7 @@ def _enqueue_job(
                 job_id,
                 queue_name,
                 job_type,
-                Json(payload),
+                json.dumps(payload, ensure_ascii=False),
                 int(max_attempts),
                 int(retry_delay_seconds),
             ),
@@ -350,14 +302,14 @@ def _mark_completed(conn, *, job_id: str, result: Dict[str, Any]) -> None:
         """
         UPDATE workflow.async_jobs
         SET status = 'completed',
-            result_json = %s,
+            result_json = %s::jsonb,
             error_text = NULL,
             finished_at = NOW(),
             locked_at = NULL,
             updated_at = NOW()
         WHERE job_id = %s
         """,
-        (Json(result), job_id),
+        (json.dumps(result, ensure_ascii=False), job_id),
     )
 
 

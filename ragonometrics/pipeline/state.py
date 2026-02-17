@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import psycopg2
+from ragonometrics.db.connection import connect
 
 from ragonometrics.pipeline.run_records import ensure_run_records_table
 
@@ -23,6 +24,12 @@ def _utc_now() -> str:
         str: Description.
     """
     return datetime.now(timezone.utc).isoformat()
+
+
+def _stable_hash(value: Dict[str, Any]) -> str:
+    """Return stable SHA-256 for a JSON-serializable dictionary."""
+    serialized = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _database_url() -> str:
@@ -59,16 +66,16 @@ def _to_iso(value: Any) -> str | None:
     return str(value)
 
 
-def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+def _connect(_db_path: Path):
     """Connect.
 
     Args:
         _db_path (Path): Description.
 
     Returns:
-        psycopg2.extensions.connection: Description.
+        Any: Description.
     """
-    conn = psycopg2.connect(_database_url())
+    conn = connect(_database_url(), require_migrated=True)
     ensure_run_records_table(conn)
     return conn
 
@@ -287,6 +294,10 @@ def record_step(
     error_message: Optional[str] = None,
     worker_id: Optional[str] = None,
     retry_of_attempt_id: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+    input_hash: Optional[str] = None,
+    reuse_source_run_id: Optional[str] = None,
+    reuse_source_record_key: Optional[str] = None,
     output: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Record step.
@@ -307,11 +318,65 @@ def record_step(
         error_message (Optional[str]): Description.
         worker_id (Optional[str]): Description.
         retry_of_attempt_id (Optional[str]): Description.
+        idempotency_key (Optional[str]): Description.
+        input_hash (Optional[str]): Description.
+        reuse_source_run_id (Optional[str]): Description.
+        reuse_source_record_key (Optional[str]): Description.
         output (Optional[Dict[str, Any]]): Description.
     """
     conn = _connect(db_path)
     try:
         cur = conn.cursor()
+        run_context: Dict[str, Any] = {}
+        cur.execute(
+            """
+            SELECT config_hash, paper_set_hash, question, report_question_set, workstream_id, arm
+            FROM workflow.run_records
+            WHERE run_id = %s
+              AND record_kind = 'run'
+              AND step = ''
+              AND record_key = 'main'
+            LIMIT 1
+            """,
+            (run_id,),
+        )
+        run_row = cur.fetchone()
+        if run_row:
+            run_context = {
+                "config_hash": run_row[0],
+                "paper_set_hash": run_row[1],
+                "question": run_row[2],
+                "report_question_set": run_row[3],
+                "workstream_id": run_row[4],
+                "arm": run_row[5],
+            }
+
+        reused_from = (output or {}).get("_reused_from") if isinstance(output, dict) else None
+        if isinstance(reused_from, dict):
+            if reuse_source_run_id is None:
+                reuse_source_run_id = str(reused_from.get("run_id") or "").strip() or None
+            if reuse_source_record_key is None:
+                reuse_source_record_key = "main"
+
+        if input_hash is None:
+            input_hash = _stable_hash(
+                {
+                    "step": step,
+                    "status": status,
+                    "run_context": run_context,
+                    "status_reason": status_reason,
+                    "error_code": error_code,
+                }
+            )
+        if idempotency_key is None:
+            idempotency_key = _stable_hash(
+                {
+                    "step": step,
+                    "run_context": run_context,
+                    "input_hash": input_hash,
+                }
+            )
+
         meta = {
             "step_attempt_id": step_attempt_id,
             "attempt_no": attempt_no,
@@ -328,16 +393,22 @@ def record_step(
             INSERT INTO workflow.run_records
             (
                 run_id, record_kind, step, record_key, status,
+                idempotency_key, input_hash, reuse_source_run_id, reuse_source_record_key,
                 started_at, finished_at, created_at, updated_at,
                 output_json, metadata_json
             )
             VALUES (
                 %s, 'step', %s, 'main', %s,
+                %s, %s, %s, %s,
                 %s, %s, NOW(), NOW(),
                 %s::jsonb, %s::jsonb
             )
             ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
                 status = EXCLUDED.status,
+                idempotency_key = COALESCE(EXCLUDED.idempotency_key, workflow.run_records.idempotency_key),
+                input_hash = COALESCE(EXCLUDED.input_hash, workflow.run_records.input_hash),
+                reuse_source_run_id = COALESCE(EXCLUDED.reuse_source_run_id, workflow.run_records.reuse_source_run_id),
+                reuse_source_record_key = COALESCE(EXCLUDED.reuse_source_record_key, workflow.run_records.reuse_source_record_key),
                 started_at = COALESCE(workflow.run_records.started_at, EXCLUDED.started_at),
                 finished_at = COALESCE(EXCLUDED.finished_at, workflow.run_records.finished_at),
                 output_json = CASE
@@ -352,6 +423,10 @@ def record_step(
                 run_id,
                 step,
                 status,
+                idempotency_key,
+                input_hash,
+                reuse_source_run_id,
+                reuse_source_record_key,
                 started_at,
                 finished_at,
                 json.dumps(output or {}, ensure_ascii=False),

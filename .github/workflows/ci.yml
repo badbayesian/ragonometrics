@@ -9,6 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ragonometrics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ragonometrics"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/ragonometrics
     strategy:
       matrix:
         python-version: [3.11]
@@ -27,6 +43,13 @@ jobs:
           pip install pytest
       - name: Run tests
         run: |
+          ragonometrics db migrate --db-url "$DATABASE_URL"
+          ragonometrics --help
+          ragonometrics workflow --help
+          ragonometrics query --help
+          ragonometrics index --help
+          ragonometrics store-metadata --help
+          ragonometrics store-workflow-reports --help
           pytest -q
       - name: Lint (optional)
         run: |

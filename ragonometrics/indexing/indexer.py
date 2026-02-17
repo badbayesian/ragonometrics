@@ -20,11 +20,11 @@ from ragonometrics.core.main import (
     prepare_chunks_for_paper,
 )
 import os
-import psycopg2
 from datetime import datetime
 import hashlib
 import uuid
 from . import metadata
+from ragonometrics.db.connection import connect
 from ragonometrics.indexing.manifest import build_index_version, build_run_manifest, write_index_version_sidecar, write_run_manifest
 from ragonometrics.core.logging_utils import log_event
 
@@ -402,17 +402,15 @@ def build_index(
     if not db_url:
         raise RuntimeError("No meta DB URL provided and DATABASE_URL not set")
 
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
-    # ensure metadata tables exist
-    metadata.init_metadata_db(db_url)
     # idempotency key for run
     corpus_fingerprint = hashlib.sha256("|".join(sorted(doc_ids)).encode("utf-8")).hexdigest()
     idempotency_key = hashlib.sha256(
         f"{settings.embedding_model}|{settings.chunk_words}|{settings.chunk_overlap}|{corpus_fingerprint}".encode("utf-8")
     ).hexdigest()
     # create a pipeline run (or reuse existing)
-    run_conn = psycopg2.connect(db_url)
+    run_conn = connect(db_url, require_migrated=True)
     run_id = metadata.create_pipeline_run(
         run_conn,
         git_sha=None,
@@ -439,8 +437,6 @@ def build_index(
                 return
         except Exception:
             pass
-    cur.execute("CREATE SCHEMA IF NOT EXISTS indexing")
-    cur.execute("CREATE SCHEMA IF NOT EXISTS ingestion")
     for paper_meta in paper_manifests:
         cur.execute(
             """
@@ -530,7 +526,7 @@ def build_index(
     # build index version metadata
     index_id = str(uuid.uuid4())
     # register index version + shard in metadata and atomically mark active
-    reg_conn = psycopg2.connect(db_url)
+    reg_conn = connect(db_url, require_migrated=True)
     metadata.create_index_version(
         reg_conn,
         index_id=index_id,

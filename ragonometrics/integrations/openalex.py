@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import requests
-import psycopg2
+from ragonometrics.db.connection import connect
 
 DEFAULT_CACHE_PATH = Path("postgres_openalex_cache")
 DEFAULT_SELECT = ",".join(
@@ -51,89 +51,16 @@ def _database_url() -> str:
     return db_url
 
 
-def _connect(_db_path: Path) -> psycopg2.extensions.connection:
+def _connect(_db_path: Path):
     """Connect.
 
     Args:
         _db_path (Path): Description.
 
     Returns:
-        psycopg2.extensions.connection: Description.
+        Any: Description.
     """
-    conn = psycopg2.connect(_database_url())
-    cur = conn.cursor()
-    cur.execute("CREATE SCHEMA IF NOT EXISTS enrichment")
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enrichment.openalex_cache (
-            cache_key TEXT PRIMARY KEY,
-            work_id TEXT,
-            query TEXT,
-            response JSONB NOT NULL,
-            fetched_at TIMESTAMPTZ NOT NULL
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_openalex_cache_fetched_at_idx
-        ON enrichment.openalex_cache(fetched_at DESC)
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enrichment.openalex_http_cache (
-            request_key TEXT PRIMARY KEY,
-            url TEXT NOT NULL,
-            params_json JSONB NOT NULL,
-            status_code INTEGER NOT NULL,
-            response JSONB NOT NULL,
-            fetched_at TIMESTAMPTZ NOT NULL
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_openalex_http_cache_fetched_at_idx
-        ON enrichment.openalex_http_cache(fetched_at DESC)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_openalex_http_cache_status_idx
-        ON enrichment.openalex_http_cache(status_code)
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enrichment.openalex_title_overrides (
-            id BIGSERIAL PRIMARY KEY,
-            title_pattern TEXT NOT NULL,
-            match_type TEXT NOT NULL DEFAULT 'contains',
-            openalex_work_id TEXT NOT NULL,
-            priority INTEGER NOT NULL DEFAULT 0,
-            note TEXT,
-            enabled BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            CHECK (match_type IN ('contains', 'exact'))
-        )
-        """
-    )
-    cur.execute(
-        """
-        CREATE UNIQUE INDEX IF NOT EXISTS enrichment_openalex_title_overrides_unique_idx
-        ON enrichment.openalex_title_overrides (title_pattern, match_type, openalex_work_id)
-        """
-    )
-    cur.execute(
-        """
-        CREATE INDEX IF NOT EXISTS enrichment_openalex_title_overrides_enabled_idx
-        ON enrichment.openalex_title_overrides(enabled, priority DESC, updated_at DESC)
-        """
-    )
-    conn.commit()
-    return conn
+    return connect(_database_url(), require_migrated=True)
 
 
 def _cache_ttl_seconds() -> int:
@@ -194,28 +121,11 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
     Returns:
         Optional[Dict[str, Any]]: Description.
     """
-    conn = _connect(db_path)
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT fetched_at, response FROM enrichment.openalex_cache WHERE cache_key = %s",
-            (cache_key,),
-        )
-        row = cur.fetchone()
-        if not row:
-            return None
-        fetched_at, response = row
-        fetched_epoch = int(fetched_at.timestamp()) if hasattr(fetched_at, "timestamp") else int(time.time())
-        if time.time() - fetched_epoch > _cache_ttl_seconds():
-            return None
-        if isinstance(response, dict):
-            return response
-        try:
-            return json.loads(str(response))
-        except Exception:
-            return None
-    finally:
-        conn.close()
+    # Deprecated by design: canonical metadata persistence is
+    # `enrichment.paper_openalex_metadata`, while request-level caching is handled
+    # in `enrichment.openalex_http_cache`.
+    _ = (db_path, cache_key)
+    return None
 
 
 def set_cached_metadata(
@@ -235,30 +145,8 @@ def set_cached_metadata(
         query (Optional[str]): Description.
         response (Dict[str, Any]): Description.
     """
-    conn = _connect(db_path)
-    try:
-        cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO enrichment.openalex_cache
-            (cache_key, work_id, query, response, fetched_at)
-            VALUES (%s, %s, %s, %s::jsonb, NOW())
-            ON CONFLICT (cache_key) DO UPDATE SET
-                work_id = EXCLUDED.work_id,
-                query = EXCLUDED.query,
-                response = EXCLUDED.response,
-                fetched_at = EXCLUDED.fetched_at
-            """,
-            (
-                cache_key,
-                work_id,
-                query,
-                json.dumps(response, ensure_ascii=False),
-            ),
-        )
-        conn.commit()
-    finally:
-        conn.close()
+    # Deprecated by design: retained for call-site compatibility.
+    _ = (db_path, cache_key, work_id, query, response)
 
 
 def _normalize_cache_param_value(value: Any) -> Any:

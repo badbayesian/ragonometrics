@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-import psycopg2
 from typing import Optional
 from tqdm import tqdm
 
@@ -36,6 +35,7 @@ from ragonometrics.integrations.openalex import (
     format_openalex_context,
 )
 from ragonometrics.integrations.citec import fetch_citec_plain, format_citec_context
+from ragonometrics.db.connection import connect
 from ragonometrics.pipeline import call_openai
 
 
@@ -971,7 +971,7 @@ def top_k_context(
                         stats["score_mean_norm"] = float(sum(normed) / len(normed))
 
                     # fetch rows by id and return ordered context
-                    conn = psycopg2.connect(db_url)
+                    conn = connect(db_url, require_migrated=True)
                     cur = conn.cursor()
                     ids = [h[0] for h in hits]
                     placeholders = ",".join(["%s"] * len(ids))

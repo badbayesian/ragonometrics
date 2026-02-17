@@ -18,7 +18,9 @@ x-app-env: &app_env
 services:
   streamlit:
     build: .
-    command: streamlit run ragonometrics/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      streamlit run ragonometrics/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0"
     ports:
       - "8585:8501"
     environment:
@@ -30,7 +32,9 @@ services:
 
   worker:
     build: .
-    command: python -m ragonometrics.core.main
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      python -m ragonometrics.core.main"
     environment:
       <<: *app_env
       PAPERS_DIR: /app/papers
@@ -40,7 +44,9 @@ services:
 
   indexer:
     build: .
-    command: python -m ragonometrics.indexing.indexer --index-path vectors-3072.index --meta-db-url $${DATABASE_URL}
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      python -m ragonometrics.indexing.indexer --index-path vectors-3072.index --meta-db-url $${DATABASE_URL}"
     environment:
       <<: *app_env
       PAPERS_DIR: /app/papers
@@ -52,7 +58,9 @@ services:
 
   rq-worker:
     build: .
-    command: python -m ragonometrics.integrations.rq_queue worker --queue-name default --poll-seconds 2
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      python -m ragonometrics.integrations.rq_queue worker --queue-name default --poll-seconds 2"
     environment:
       <<: *app_env
       PAPERS_DIR: /app/papers
@@ -65,13 +73,24 @@ services:
 
   workflow:
     build: .
-    command: ragonometrics workflow --papers /app/papers --agentic --agentic-citations
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      ragonometrics workflow --papers /app/papers --agentic --agentic-citations"
     environment:
       <<: *app_env
       PAPERS_DIR: /app/papers
     volumes:
       - ${PAPERS_HOST_DIR}:/app/papers:rw
       - ./reports:/app/reports:rw
+    depends_on:
+      - postgres
+    restart: "no"
+
+  migrate:
+    build: .
+    command: alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head
+    environment:
+      <<: *app_env
     depends_on:
       - postgres
     restart: "no"

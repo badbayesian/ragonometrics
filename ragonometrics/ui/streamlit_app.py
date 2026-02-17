@@ -17,9 +17,9 @@ from typing import Any, Callable, Dict, List, Optional
 
 import streamlit as st
 import streamlit.components.v1 as components
-import psycopg2
 from openai import OpenAI, BadRequestError
 
+from ragonometrics.db.connection import connect, pooled_connection
 from ragonometrics.core.main import (
     Settings,
     Paper,
@@ -80,42 +80,38 @@ def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
 
     normalized_path = str(path).replace("\\", "/")
     basename_suffix = f"%/{path.name.lower()}"
-    conn = None
     try:
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT openalex_json
-            FROM enrichment.paper_openalex_metadata
-            WHERE match_status = 'matched'
-              AND (
-                    lower(replace(paper_path, '\\', '/')) = lower(%s)
-                 OR lower(replace(paper_path, '\\', '/')) LIKE %s
-              )
-            ORDER BY updated_at DESC
-            LIMIT 1
-            """,
-            (normalized_path, basename_suffix),
-        )
-        row = cur.fetchone()
-        if not row:
-            return None
-        payload = row[0]
-        if isinstance(payload, dict):
-            return payload
-        if isinstance(payload, str):
-            try:
-                parsed = json.loads(payload)
-            except Exception:
+        with pooled_connection(db_url) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT openalex_json
+                FROM enrichment.paper_openalex_metadata
+                WHERE match_status = 'matched'
+                  AND (
+                        lower(replace(paper_path, '\\', '/')) = lower(%s)
+                     OR lower(replace(paper_path, '\\', '/')) LIKE %s
+                  )
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """,
+                (normalized_path, basename_suffix),
+            )
+            row = cur.fetchone()
+            if not row:
                 return None
-            return parsed if isinstance(parsed, dict) else None
-        return None
+            payload = row[0]
+            if isinstance(payload, dict):
+                return payload
+            if isinstance(payload, str):
+                try:
+                    parsed = json.loads(payload)
+                except Exception:
+                    return None
+                return parsed if isinstance(parsed, dict) else None
+            return None
     except Exception:
         return None
-    finally:
-        if conn is not None:
-            conn.close()
 
 
 @st.cache_data
@@ -946,10 +942,9 @@ def stream_openai_answer(
                 db_url = os.environ.get("DATABASE_URL")
                 if db_url:
                     try:
-                        import psycopg2
                         from ragonometrics.indexing import metadata
 
-                        conn = psycopg2.connect(db_url)
+                        conn = connect(db_url, require_migrated=True)
                         metadata.record_failure(
                             conn,
                             "openai",

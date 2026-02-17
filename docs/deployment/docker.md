@@ -16,6 +16,12 @@ Notes:
 
 ## Start services
 
+Apply migrations first:
+
+```bash
+docker compose run --rm migrate
+```
+
 Core stack (recommended):
 
 ```bash
@@ -86,6 +92,10 @@ Postgres:
 - Queue: `workflow.async_jobs`
 - Retrieval cache: `retrieval.query_cache`
 - Usage telemetry: `observability.token_usage`
+
+Migration ownership:
+- Alembic (`alembic/versions/*`) is the schema source of truth.
+- Runtime modules do not run hot-path DDL.
 
 ## pgAdmin
 

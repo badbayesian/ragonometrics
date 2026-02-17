@@ -11,7 +11,7 @@ import faiss
 import numpy as np
 from openai import OpenAI
 from rank_bm25 import BM25Okapi
-import psycopg2
+from ragonometrics.db.connection import connect
 
 
 def _normalize(vec: np.ndarray) -> np.ndarray:
@@ -93,7 +93,7 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     Returns:
         List[Tuple[str, faiss.Index]]: Description.
     """
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
     cur.execute("SELECT shard_name, path, index_id FROM indexing.index_shards WHERE is_active = TRUE ORDER BY created_at DESC")
     rows = cur.fetchall()
@@ -115,7 +115,7 @@ def _load_texts_for_shards(db_url: str) -> Tuple[List[str], List[int]]:
     Returns:
         Tuple[List[str], List[int]]: Description.
     """
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
     cur.execute("SELECT id, text FROM indexing.vectors ORDER BY id")
     rows = cur.fetchall()
@@ -154,7 +154,7 @@ def _embedding_search_pg(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple
     Returns:
         List[Tuple[int, float]]: Description.
     """
-    conn = psycopg2.connect(db_url)
+    conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
     vector_literal = _to_pgvector_literal(vec)
     rows = []

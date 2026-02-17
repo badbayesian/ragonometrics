@@ -14,6 +14,7 @@ from openai import OpenAI
 
 from ragonometrics.core.io_loaders import load_pdf, load_text_file
 from ragonometrics.core.prompts import PIPELINE_CITATION_EXTRACT_INSTRUCTIONS
+from ragonometrics.db.connection import connect
 
 
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-nano")
@@ -230,10 +231,9 @@ def call_openai(
                 db_url = os.environ.get("DATABASE_URL")
                 if db_url:
                     try:
-                        import psycopg2
                         from ragonometrics.indexing import metadata
 
-                        conn = psycopg2.connect(db_url)
+                        conn = connect(db_url, require_migrated=True)
                         metadata.record_failure(
                             conn,
                             "openai",
