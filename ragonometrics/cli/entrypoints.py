@@ -10,7 +10,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from ragonometrics.db.connection import connect
+from ragonometrics.db.connection import connect, normalize_alembic_version_marker
 from ragonometrics.eval.benchmark import bench_papers
 from ragonometrics.indexing.indexer import build_index
 from ragonometrics.indexing.paper_store import store_paper_metadata
@@ -45,6 +45,18 @@ def cmd_db_migrate(args: argparse.Namespace) -> int:
     if not db_url:
         print("No database URL configured. Pass --db-url or set DATABASE_URL.")
         return 1
+    try:
+        conn = connect(db_url, require_migrated=False)
+        try:
+            raw, normalized, changed = normalize_alembic_version_marker(conn)
+            if changed:
+                conn.commit()
+                print(f"Normalized alembic revision marker: {raw} -> {normalized}")
+        finally:
+            conn.close()
+    except Exception:
+        # Migration command remains best-effort when preflight normalization fails.
+        pass
     cmd = [
         sys.executable,
         "-m",
