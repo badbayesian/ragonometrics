@@ -461,6 +461,134 @@ def _store_report_in_db(
     return out
 
 
+def _collect_usage_rollup_for_run(*, db_url: str | None, run_id: str) -> Dict[str, Any]:
+    """Collect token-usage rollup rows for a workflow run.
+
+    Args:
+        db_url (str | None): Postgres connection URL.
+        run_id (str): Workflow run id.
+
+    Returns:
+        Dict[str, Any]: Usage summary payload for workflow reports.
+    """
+    out: Dict[str, Any] = {"database_url": bool(db_url)}
+    if not db_url:
+        out["status"] = "skipped"
+        out["reason"] = "db_url_missing"
+        return out
+    if not _can_connect_db(db_url):
+        out["status"] = "skipped"
+        out["reason"] = "db_unreachable"
+        return out
+
+    try:
+        conn = db_connect(db_url, require_migrated=True)
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT
+                    COALESCE(step, '') AS step,
+                    COALESCE(model, '') AS model,
+                    COALESCE(question_id, '') AS question_id,
+                    call_count,
+                    input_tokens,
+                    output_tokens,
+                    total_tokens,
+                    cost_usd_input,
+                    cost_usd_output,
+                    cost_usd_total,
+                    first_seen_at,
+                    last_seen_at
+                FROM observability.token_usage_rollup
+                WHERE run_id = %s
+                ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
+                """,
+                (run_id,),
+            )
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+    except Exception as exc:
+        out["status"] = "failed"
+        out["error"] = str(exc)
+        return out
+
+    usage_rows: List[Dict[str, Any]] = []
+    totals = {
+        "calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd_input": 0.0,
+        "cost_usd_output": 0.0,
+        "cost_usd_total": 0.0,
+    }
+    by_step: Dict[str, Dict[str, Any]] = {}
+
+    for row in rows:
+        step = str(row[0] or "")
+        model = str(row[1] or "")
+        question_id = str(row[2] or "")
+        calls = int(row[3] or 0)
+        input_tokens = int(row[4] or 0)
+        output_tokens = int(row[5] or 0)
+        total_tokens = int(row[6] or 0)
+        cost_usd_input = float(row[7] or 0.0)
+        cost_usd_output = float(row[8] or 0.0)
+        cost_usd_total = float(row[9] or 0.0)
+        first_seen = row[10].isoformat() if hasattr(row[10], "isoformat") else row[10]
+        last_seen = row[11].isoformat() if hasattr(row[11], "isoformat") else row[11]
+
+        usage_rows.append(
+            {
+                "step": step,
+                "model": model,
+                "question_id": question_id,
+                "calls": calls,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+                "cost_usd_input": cost_usd_input,
+                "cost_usd_output": cost_usd_output,
+                "cost_usd_total": cost_usd_total,
+                "first_seen_at": first_seen,
+                "last_seen_at": last_seen,
+            }
+        )
+
+        totals["calls"] += calls
+        totals["input_tokens"] += input_tokens
+        totals["output_tokens"] += output_tokens
+        totals["total_tokens"] += total_tokens
+        totals["cost_usd_input"] += cost_usd_input
+        totals["cost_usd_output"] += cost_usd_output
+        totals["cost_usd_total"] += cost_usd_total
+
+        step_bucket = by_step.setdefault(
+            step,
+            {
+                "calls": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "total_tokens": 0,
+                "cost_usd_total": 0.0,
+            },
+        )
+        step_bucket["calls"] += calls
+        step_bucket["input_tokens"] += input_tokens
+        step_bucket["output_tokens"] += output_tokens
+        step_bucket["total_tokens"] += total_tokens
+        step_bucket["cost_usd_total"] += cost_usd_total
+
+    out["status"] = "fetched"
+    out["row_count"] = len(usage_rows)
+    out["totals"] = totals
+    out["by_step"] = by_step
+    out["rows"] = usage_rows
+    return out
+
+
 def _finalize_workflow_report(
     *,
     report_dir: Path,
@@ -486,6 +614,7 @@ def _finalize_workflow_report(
         Dict[str, Any]: Description.
     """
     summary.setdefault("finished_at", _utc_now())
+    summary["usage_store"] = _collect_usage_rollup_for_run(db_url=db_url, run_id=run_id)
     summary["report_store"] = {"status": "pending", "database_url": bool(db_url)}
     summary["audit_artifacts"] = {"status": "pending"}
     report_path = _write_report(report_dir, run_id, summary)
