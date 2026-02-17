@@ -32,6 +32,7 @@ services:
 
   worker:
     build: .
+    profiles: ["batch"]
     command: >
       sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
       python -m ragonometrics.core.main"
@@ -44,6 +45,7 @@ services:
 
   indexer:
     build: .
+    profiles: ["batch"]
     command: >
       sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
       python -m ragonometrics.indexing.indexer --index-path vectors-3072.index --meta-db-url $${DATABASE_URL}"
@@ -73,6 +75,7 @@ services:
 
   workflow:
     build: .
+    profiles: ["batch"]
     command: >
       sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
       ragonometrics workflow --papers /app/papers --agentic --agentic-citations"
@@ -88,7 +91,9 @@ services:
 
   migrate:
     build: .
-    command: alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head
+    profiles: ["ops"]
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head"
     environment:
       <<: *app_env
     depends_on:
@@ -122,8 +127,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  papers:
-    driver: local
   pgdata:
     driver: local
   pgadmin_data:
