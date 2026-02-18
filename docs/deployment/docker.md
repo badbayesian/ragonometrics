@@ -37,6 +37,17 @@ Default startup brings up core runtime services only:
 - `rq-worker`
 - `pgadmin`
 
+Flask API + React web surface (incremental migration target):
+
+```bash
+docker compose --profile web up -d --build web
+```
+
+This does not replace Streamlit yet; both UIs are intended to run side-by-side.
+
+Web URL:
+- `http://localhost:8590`
+
 Batch services are profile-gated and started on demand:
 
 ```bash

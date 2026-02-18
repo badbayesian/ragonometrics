@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -56,6 +57,14 @@ def make_cache_key(query: str, paper_path: str, model: str, context: str) -> str
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def normalize_query_for_cache(query: str) -> str:
+    """Build a normalized query key for broader fallback cache lookups."""
+    text = str(query or "").strip().lower()
+    text = re.sub(r"[^a-z0-9\s]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def get_cached_answer(db_path: Path, cache_key: str) -> Optional[str]:
     """Get cached answer.
 
@@ -70,6 +79,38 @@ def get_cached_answer(db_path: Path, cache_key: str) -> Optional[str]:
     try:
         cur = conn.cursor()
         cur.execute("SELECT answer FROM retrieval.query_cache WHERE cache_key = %s", (cache_key,))
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def get_cached_answer_by_normalized_query(
+    db_path: Path,
+    *,
+    query: str,
+    paper_path: str,
+    model: str,
+) -> Optional[str]:
+    """Fetch most recent cached answer by normalized query + paper + model."""
+    normalized_query = normalize_query_for_cache(query)
+    if not normalized_query:
+        return None
+    conn = _connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT answer
+            FROM retrieval.query_cache
+            WHERE query_normalized = %s
+              AND paper_path = %s
+              AND model = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (normalized_query, paper_path, model),
+        )
         row = cur.fetchone()
         return row[0] if row else None
     finally:
@@ -103,10 +144,11 @@ def set_cached_answer(
         cur.execute(
             """
             INSERT INTO retrieval.query_cache
-            (cache_key, query, paper_path, model, context_hash, answer, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, NOW())
+            (cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
             ON CONFLICT (cache_key) DO UPDATE SET
                 query = EXCLUDED.query,
+                query_normalized = EXCLUDED.query_normalized,
                 paper_path = EXCLUDED.paper_path,
                 model = EXCLUDED.model,
                 context_hash = EXCLUDED.context_hash,
@@ -116,6 +158,7 @@ def set_cached_answer(
             (
                 cache_key,
                 query,
+                normalize_query_for_cache(query),
                 paper_path,
                 model,
                 hashlib.sha256(context.encode("utf-8")).hexdigest(),

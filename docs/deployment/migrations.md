@@ -41,3 +41,4 @@ python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --a
 - `deploy/sql/*.sql` remain human-readable SQL references used by migrations.
 - Runtime modules fail fast if migrations are missing/outdated.
 - Expected schema revision is enforced in `ragonometrics/db/connection.py`.
+- Latest additive migration: `0008_web_chat_history` creates `retrieval.chat_history_turns` for server-side web chat persistence.

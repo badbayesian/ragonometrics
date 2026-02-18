@@ -32,6 +32,7 @@ CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE IF NOT EXISTS auth.streamlit_users (
     id BIGSERIAL PRIMARY KEY,
     username TEXT NOT NULL,
+    email TEXT,
     password_hash TEXT NOT NULL,
     display_name TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -43,6 +44,9 @@ CREATE TABLE IF NOT EXISTS auth.streamlit_users (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS auth_streamlit_users_username_ci_idx
     ON auth.streamlit_users ((lower(username)));
+CREATE UNIQUE INDEX IF NOT EXISTS auth_streamlit_users_email_ci_idx
+    ON auth.streamlit_users ((lower(email)))
+    WHERE email IS NOT NULL AND length(trim(email)) > 0;
 CREATE INDEX IF NOT EXISTS auth_streamlit_users_active_idx
     ON auth.streamlit_users(is_active, updated_at DESC);
 
@@ -65,6 +69,44 @@ CREATE INDEX IF NOT EXISTS auth_streamlit_sessions_username_ci_idx
     ON auth.streamlit_sessions((lower(username)), authenticated_at DESC);
 CREATE INDEX IF NOT EXISTS auth_streamlit_sessions_authenticated_idx
     ON auth.streamlit_sessions(authenticated_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth.password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES auth.streamlit_users(id) ON DELETE CASCADE,
+    email TEXT,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    request_ip TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (length(trim(token_hash)) > 0)
+);
+CREATE INDEX IF NOT EXISTS auth_password_reset_tokens_user_id_created_idx
+    ON auth.password_reset_tokens(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS auth_password_reset_tokens_email_created_idx
+    ON auth.password_reset_tokens((lower(email)), created_at DESC);
+CREATE INDEX IF NOT EXISTS auth_password_reset_tokens_expires_idx
+    ON auth.password_reset_tokens(expires_at DESC);
+
+CREATE TABLE IF NOT EXISTS auth.request_rate_limits (
+    id BIGSERIAL PRIMARY KEY,
+    subject_key TEXT NOT NULL,
+    route TEXT NOT NULL,
+    window_start TIMESTAMPTZ NOT NULL,
+    window_seconds INTEGER NOT NULL,
+    request_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (length(trim(subject_key)) > 0),
+    CHECK (length(trim(route)) > 0),
+    CHECK (window_seconds > 0),
+    CHECK (request_count >= 0)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS auth_request_rate_limits_unique_idx
+    ON auth.request_rate_limits(subject_key, route, window_start);
+CREATE INDEX IF NOT EXISTS auth_request_rate_limits_route_window_idx
+    ON auth.request_rate_limits(route, window_start DESC);
 
 -- =========================
 -- ingestion
@@ -390,6 +432,7 @@ CREATE INDEX IF NOT EXISTS workflow_async_jobs_worker_idx
 CREATE TABLE IF NOT EXISTS retrieval.query_cache (
     cache_key TEXT PRIMARY KEY,
     query TEXT,
+    query_normalized TEXT,
     paper_path TEXT,
     model TEXT,
     context_hash TEXT,
@@ -398,6 +441,58 @@ CREATE TABLE IF NOT EXISTS retrieval.query_cache (
 );
 CREATE INDEX IF NOT EXISTS retrieval_query_cache_created_at_idx
     ON retrieval.query_cache(created_at DESC);
+CREATE INDEX IF NOT EXISTS retrieval_query_cache_normalized_idx
+    ON retrieval.query_cache(paper_path, model, query_normalized, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS retrieval.chat_history_turns (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT,
+    username TEXT NOT NULL,
+    session_id TEXT,
+    paper_id TEXT NOT NULL,
+    paper_path TEXT,
+    model TEXT,
+    variation_mode BOOLEAN NOT NULL DEFAULT FALSE,
+    query TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    citations_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    retrieval_stats_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    cache_hit BOOLEAN,
+    request_id TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (length(trim(username)) > 0),
+    CHECK (length(trim(paper_id)) > 0),
+    CHECK (length(trim(query)) > 0)
+);
+CREATE INDEX IF NOT EXISTS retrieval_chat_history_user_paper_created_idx
+    ON retrieval.chat_history_turns(user_id, paper_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS retrieval_chat_history_session_paper_created_idx
+    ON retrieval.chat_history_turns(session_id, paper_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS retrieval_chat_history_username_paper_created_idx
+    ON retrieval.chat_history_turns((lower(username)), paper_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS retrieval_chat_history_request_id_idx
+    ON retrieval.chat_history_turns(request_id);
+
+CREATE TABLE IF NOT EXISTS retrieval.paper_notes (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT,
+    username TEXT NOT NULL,
+    paper_id TEXT NOT NULL,
+    page_number INTEGER,
+    highlight_text TEXT,
+    highlight_terms_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    note_text TEXT NOT NULL,
+    color TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (length(trim(username)) > 0),
+    CHECK (length(trim(paper_id)) > 0),
+    CHECK (length(trim(note_text)) > 0)
+);
+CREATE INDEX IF NOT EXISTS retrieval_paper_notes_user_paper_page_idx
+    ON retrieval.paper_notes(user_id, paper_id, page_number, created_at DESC);
+CREATE INDEX IF NOT EXISTS retrieval_paper_notes_username_paper_page_idx
+    ON retrieval.paper_notes((lower(username)), paper_id, page_number, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS retrieval.retrieval_events (
     id BIGSERIAL PRIMARY KEY,

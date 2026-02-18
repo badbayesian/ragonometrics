@@ -52,6 +52,17 @@ erDiagram
     timestamptz updated_at
   }
 
+  AUTH_REQUEST_RATE_LIMITS {
+    bigint id PK
+    text subject_key
+    text route
+    timestamptz window_start
+    int window_seconds
+    int request_count
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
   ENRICHMENT_OPENALEX_CACHE {
     text cache_key PK
     text work_id
@@ -204,6 +215,7 @@ Run-Lineage Links (Not Enforced as Foreign Keys)
 - `INDEXING_PIPELINE_RUNS.workflow_run_id` links index builds to workflow runs.
 - `INGESTION_PREP_MANIFESTS.run_id` links preflight manifests to workflow runs.
 - Streamlit auth and session history live under `auth.streamlit_users` and `auth.streamlit_sessions`.
+- Web auth/chat fixed-window counters live under `auth.request_rate_limits`.
 - OpenAlex manual title pinning rules live in `enrichment.openalex_title_overrides`.
 
 These links are intentionally flexible to support partial runs, async jobs, and backfills.

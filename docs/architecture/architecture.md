@@ -4,7 +4,7 @@ This document summarizes the current Ragonometrics architecture, design tradeoff
 
 Overview
 --------
-Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, persists runtime metadata in Postgres, and serves retrieval + LLM summaries via CLI and a Streamlit UI. The system enriches papers with external metadata (OpenAlex and CitEc), supports async workflow execution through a Postgres-backed queue, and remains reproducible through run-level state/report recording plus filesystem artifacts.
+Ragonometrics ingests PDFs, extracts per-page text for provenance, chunks with overlap, embeds chunks, persists runtime metadata in Postgres, and serves retrieval + LLM summaries via CLI, Streamlit, and a Flask API + React web UI. The system enriches papers with external metadata (OpenAlex and CitEc), supports async workflow execution through a Postgres-backed queue, and remains reproducible through run-level state/report recording plus filesystem artifacts.
 
 Architecture Diagram
 --------------------
@@ -13,6 +13,7 @@ flowchart LR
   subgraph Interfaces
     CLI[CLI]
     UI[Streamlit UI]
+    WEB[Flask API + React UI]
     BATCH[Batch tools]
   end
 
@@ -52,6 +53,8 @@ flowchart LR
   CLI --> IDXT
   UI --> RET
   UI --> OBS
+  WEB --> RET
+  WEB --> OBS
   BATCH --> Q --> WKR --> WF
 
   WF --> PREP --> INGEST --> ENRICH --> ECON --> AGENTIC --> INDEX --> EVAL --> REPORT
@@ -99,6 +102,7 @@ Key Components
   - Idempotent indexing based on a deterministic key (same corpus + params).
 - UI and CLI
   - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage tabs.
+  - Flask API + React web app ([`ragonometrics/web/`](https://github.com/badbayesian/ragonometrics/tree/main/ragonometrics/web), [`webapp/`](https://github.com/badbayesian/ragonometrics/tree/main/webapp)) provides multi-user auth/session, paper-scoped chat, structured generation/export, and usage endpoints.
   - Structured Workstream export supports `Compact` and `Full` modes. Full mode resolves rich question payloads from `workflow.run_records` and includes confidence/retrieval/citation-anchor fields when available.
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
   - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-openalex-metadata | store-workflow-reports | db migrate | usage`.
@@ -118,7 +122,7 @@ Key Components
 Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
-  - Auth: `auth.streamlit_users`, `auth.streamlit_sessions` (Streamlit login/session persistence).
+  - Auth: `auth.streamlit_users`, `auth.streamlit_sessions`, `auth.request_rate_limits` (shared Streamlit/Flask auth/session/rate-limit persistence).
   - Ingestion: `ingestion.documents`, `ingestion.paper_metadata` (`ingestion.prep_manifests` is present in schema for optional prep-manifest persistence/backfills).
   - Enrichment: `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.openalex_title_overrides`, `enrichment.citec_cache`.
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.
@@ -186,6 +190,7 @@ Entrypoints
 - `ragonometrics index` builds FAISS indexes.
 - `ragonometrics query` runs a question against a paper.
 - `ragonometrics ui` launches the Streamlit UI.
+- `ragonometrics web` launches the Flask API + SPA surface.
 - `ragonometrics benchmark` runs the benchmark suite.
 - `ragonometrics workflow` runs the multi-step (optionally agentic) workflow.
 

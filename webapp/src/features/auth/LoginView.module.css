@@ -1,0 +1,59 @@
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border-2);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 520px;
+  margin: 48px auto 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.title {
+  margin: 0 0 8px;
+  color: var(--text-strong);
+}
+
+.subtitle {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.label {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.button {
+  margin-top: 6px;
+  border: 1px solid var(--accent-700);
+  background: var(--accent-600);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.helpPanel {
+  margin-top: 12px;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+}

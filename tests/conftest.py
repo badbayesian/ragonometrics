@@ -67,7 +67,7 @@ class SQLiteConnWrapper:
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num TEXT PRIMARY KEY)")
         cur.execute("DELETE FROM alembic_version")
-        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0006')")
+        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0009')")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS run_records (
@@ -120,6 +120,7 @@ class SQLiteConnWrapper:
             CREATE TABLE IF NOT EXISTS query_cache (
                 cache_key TEXT PRIMARY KEY,
                 query TEXT,
+                query_normalized TEXT,
                 paper_path TEXT,
                 model TEXT,
                 context_hash TEXT,
@@ -317,6 +318,7 @@ class SQLiteConnWrapper:
             CREATE TABLE IF NOT EXISTS streamlit_users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
+                email TEXT,
                 password_hash TEXT NOT NULL,
                 display_name TEXT,
                 is_active INTEGER NOT NULL DEFAULT 1,
@@ -334,6 +336,13 @@ class SQLiteConnWrapper:
         )
         cur.execute(
             """
+            CREATE UNIQUE INDEX IF NOT EXISTS streamlit_users_email_ci_idx
+            ON streamlit_users (email COLLATE NOCASE)
+            WHERE email IS NOT NULL AND length(trim(email)) > 0
+            """
+        )
+        cur.execute(
+            """
             CREATE TABLE IF NOT EXISTS streamlit_sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT NOT NULL UNIQUE,
@@ -345,6 +354,103 @@ class SQLiteConnWrapper:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS request_rate_limits (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject_key TEXT NOT NULL,
+                route TEXT NOT NULL,
+                window_start TEXT NOT NULL,
+                window_seconds INTEGER NOT NULL,
+                request_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                email TEXT,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at TEXT NOT NULL,
+                used_at TEXT,
+                request_ip TEXT,
+                user_agent TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS request_rate_limits_unique_idx
+            ON request_rate_limits (subject_key, route, window_start)
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chat_history_turns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT NOT NULL,
+                session_id TEXT,
+                paper_id TEXT NOT NULL,
+                paper_path TEXT,
+                model TEXT,
+                variation_mode INTEGER NOT NULL DEFAULT 0,
+                query TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                citations_json TEXT DEFAULT '[]',
+                retrieval_stats_json TEXT DEFAULT '{}',
+                cache_hit INTEGER,
+                request_id TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS chat_history_user_paper_created_idx
+            ON chat_history_turns (user_id, paper_id, created_at DESC)
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS chat_history_session_paper_created_idx
+            ON chat_history_turns (session_id, paper_id, created_at DESC)
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS paper_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT NOT NULL,
+                paper_id TEXT NOT NULL,
+                page_number INTEGER,
+                highlight_text TEXT,
+                highlight_terms_json TEXT DEFAULT '[]',
+                note_text TEXT NOT NULL,
+                color TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS paper_notes_user_paper_page_idx
+            ON paper_notes (user_id, paper_id, page_number, created_at DESC)
+            """
+        )
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS paper_notes_username_paper_page_idx
+            ON paper_notes (username COLLATE NOCASE, paper_id, page_number, created_at DESC)
             """
         )
         self._conn.commit()

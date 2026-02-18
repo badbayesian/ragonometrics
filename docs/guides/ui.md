@@ -44,3 +44,47 @@ Notes
 - Math/function formatting review pass can render Markdown-friendly LaTeX.
 - Optional page snapshots require `pdf2image` + Poppler; OCR highlighting uses `pytesseract`.
 - OpenAlex and CitEc metadata are injected as auxiliary answer context when available.
+
+Flask + React Web Guide
+-----------------------
+Incremental migration adds a Flask API and React SPA while Streamlit remains available.
+
+Run locally:
+
+```bash
+ragonometrics web --host 0.0.0.0 --port 8590
+```
+
+Or in Docker:
+
+```bash
+docker compose up -d --build web
+```
+
+Base URL:
+- `http://localhost:8590`
+
+API contracts:
+- Success envelope: `{"ok": true, "data": ..., "request_id": "..."}`
+- Error envelope: `{"ok": false, "error": {"code": "...", "message": "..."}, "request_id": "..."}`
+
+Core endpoints:
+- `POST /api/v1/auth/login`
+- `POST /api/v1/auth/logout`
+- `GET /api/v1/auth/me`
+- `GET /api/v1/papers`
+- `GET /api/v1/chat/suggestions`
+- `GET /api/v1/chat/history`
+- `DELETE /api/v1/chat/history`
+- `POST /api/v1/chat/turn`
+- `POST /api/v1/chat/turn-stream` (NDJSON)
+- `GET /api/v1/openalex/metadata`
+- `GET /api/v1/openalex/citation-network`
+- `GET /api/v1/structured/questions`
+- `GET /api/v1/structured/answers`
+- `POST /api/v1/structured/generate`
+- `POST /api/v1/structured/generate-missing`
+- `POST /api/v1/structured/export`
+- `GET /api/v1/usage/summary`
+- `GET /api/v1/usage/by-model`
+- `GET /api/v1/usage/recent`

@@ -3,6 +3,7 @@ Ragonometrics
 
 Docker-first RAG workflow for economics papers with:
 - Streamlit chat + structured workstream UI
+- Flask API + React SPA web surface (`/api/v1/*`)
 - Agentic + structured workflow runs
 - OpenAlex/CitEc enrichment
 - Unified Postgres lineage (`workflow.run_records`)
@@ -36,9 +37,17 @@ docker compose up -d --build
 ```
 
 This starts: `postgres`, `streamlit`, `rq-worker`, `pgadmin`.
+Optional web app (Flask + React SPA):
+
+```bash
+docker compose --profile web up -d --build web
+```
+
+Streamlit is still fully supported and remains active; the Flask web app is additive during migration.
 
 4. Open UI:
 - `http://localhost:8585`
+- `http://localhost:8590`
 
 5. Verify papers mount:
 
@@ -97,6 +106,34 @@ If older rows are compact-only:
 python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
 ```
 
+Flask Web API
+-------------
+Run locally:
+
+```bash
+ragonometrics web --host 0.0.0.0 --port 8590
+```
+
+API base: `http://localhost:8590/api/v1`
+
+Core endpoints:
+- `POST /api/v1/auth/login`
+- `GET /api/v1/papers`
+- `GET /api/v1/chat/suggestions`
+- `GET /api/v1/chat/history`
+- `DELETE /api/v1/chat/history`
+- `POST /api/v1/chat/turn`
+- `POST /api/v1/chat/turn-stream` (NDJSON)
+- `GET /api/v1/openalex/metadata`
+- `GET /api/v1/openalex/citation-network`
+- `GET /api/v1/structured/questions`
+- `POST /api/v1/structured/generate`
+- `POST /api/v1/structured/generate-missing`
+- `POST /api/v1/structured/export`
+- `GET /api/v1/usage/summary`
+
+Operational reference: `docs/guides/web_button_matrix.md`
+
 Useful Commands
 ---------------
 Migrate schema:
@@ -124,6 +161,24 @@ OpenAlex metadata store pass:
 ragonometrics store-openalex-metadata --papers-dir papers --meta-db-url "$DATABASE_URL"
 ```
 
+Concurrent web cache benchmark (many users reading structured cached questions):
+
+```bash
+ragonometrics benchmark-web-cache --base-url http://localhost:8590 --identifier admin --password "$WEB_PASSWORD" --users 50 --iterations 10
+```
+
+Concurrent web tab benchmark (Chat/Structured/OpenAlex/Network/Usage endpoint reads):
+
+```bash
+ragonometrics benchmark-web-tabs --base-url http://localhost:8590 --identifier admin --password "$WEB_PASSWORD" --users 30 --iterations 5
+```
+
+Concurrent web chat benchmark (chat turns + cache-hit ratio):
+
+```bash
+ragonometrics benchmark-web-chat --base-url http://localhost:8590 --identifier admin --password "$WEB_PASSWORD" --users 20 --iterations 5 --question "What is the main contribution?"
+```
+
 Core Docs
 ---------
 - Architecture: `docs/architecture/architecture.md`
@@ -131,6 +186,7 @@ Core Docs
 - Workflow architecture: `docs/architecture/workflow_architecture.md`
 - Config/env reference: `docs/configuration/configuration.md`
 - UI guide: `docs/guides/ui.md`
+- Web migration checklist: `docs/guides/web_migration_checklist.md`
 - Workflow guide: `docs/guides/workflow.md`
 - Docker guide: `docs/deployment/docker.md`
 - Migrations/backfill: `docs/deployment/migrations.md`

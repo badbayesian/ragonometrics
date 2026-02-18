@@ -28,10 +28,19 @@ def test_normalize_alembic_revision_aliases():
     assert db_connection.normalize_alembic_revision("0004_run_record_idempotency_usage") == "0004"
     assert db_connection.normalize_alembic_revision("0005_drop_legacy_openalex_cache") == "0005"
     assert db_connection.normalize_alembic_revision("0006_streamlit_auth_tables") == "0006"
+    assert db_connection.normalize_alembic_revision("0007_web_rate_limits") == "0007"
+    assert db_connection.normalize_alembic_revision("0008_web_chat_history") == "0008"
+    assert db_connection.normalize_alembic_revision("0009_web_ux_auth_upgrades") == "0009"
     assert db_connection.normalize_alembic_revision("0004_extra_text") == "0004"
     assert db_connection.normalize_alembic_revision("0006_extra_text") == "0006"
+    assert db_connection.normalize_alembic_revision("0007_extra_text") == "0007"
+    assert db_connection.normalize_alembic_revision("0008_extra_text") == "0008"
+    assert db_connection.normalize_alembic_revision("0009_extra_text") == "0009"
     assert db_connection.normalize_alembic_revision("0004") == "0004"
     assert db_connection.normalize_alembic_revision("0006") == "0006"
+    assert db_connection.normalize_alembic_revision("0007") == "0007"
+    assert db_connection.normalize_alembic_revision("0008") == "0008"
+    assert db_connection.normalize_alembic_revision("0009") == "0009"
     assert db_connection.normalize_alembic_revision(None) == ""
 
 
@@ -50,7 +59,7 @@ def test_normalize_alembic_version_marker_updates_db():
         row = cur.fetchone()
         assert row[0] == "0002"
     finally:
-        _set_revision("0006")
+        _set_revision("0009")
 
 
 def test_ensure_schema_ready_accepts_legacy_marker_alias():
@@ -59,4 +68,4 @@ def test_ensure_schema_ready_accepts_legacy_marker_alias():
     try:
         db_connection.ensure_schema_ready(conn, expected_revision="0005")
     finally:
-        _set_revision("0006")
+        _set_revision("0009")

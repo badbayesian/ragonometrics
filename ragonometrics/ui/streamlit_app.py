@@ -37,6 +37,7 @@ from ragonometrics.core.prompts import MATH_LATEX_REVIEW_PROMPT, RESEARCHER_QA_P
 from ragonometrics.pipeline import call_llm
 from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
 from ragonometrics.pipeline.token_usage import DEFAULT_USAGE_DB, get_recent_usage, get_usage_by_model, get_usage_summary, record_usage
+from ragonometrics.services import auth as auth_service
 
 try:
     from pdf2image import convert_from_path
@@ -2639,28 +2640,7 @@ def load_streamlit_credentials() -> Dict[str, str]:
     Returns:
         Dict[str, str]: Username/password mapping for login validation.
     """
-    raw_users_json = (os.getenv("STREAMLIT_USERS_JSON") or "").strip()
-    credentials: Dict[str, str] = {}
-
-    if raw_users_json:
-        try:
-            parsed = json.loads(raw_users_json)
-        except Exception:
-            parsed = None
-        if isinstance(parsed, dict):
-            for raw_user, raw_password in parsed.items():
-                user = str(raw_user or "").strip()
-                password = str(raw_password or "").strip()
-                if user and password:
-                    credentials[user] = password
-        if credentials:
-            return credentials
-
-    expected_user = (os.getenv("STREAMLIT_USERNAME") or "").strip()
-    expected_pass = (os.getenv("STREAMLIT_PASSWORD") or "").strip()
-    if expected_user and expected_pass:
-        credentials[expected_user] = expected_pass
-    return credentials
+    return auth_service.load_env_credentials()
 
 
 _STREAMLIT_HASH_PREFIX = "pbkdf2_sha256"
@@ -2670,40 +2650,12 @@ _STREAMLIT_HASH_DEFAULT_ITERATIONS = 390_000
 
 def _streamlit_password_hash(password: str, *, iterations: int | None = None, salt: bytes | None = None) -> str:
     """Build a PBKDF2-SHA256 hash for a Streamlit password."""
-    secret = str(password or "")
-    if not secret:
-        return ""
-    iter_count = int(iterations or os.getenv("STREAMLIT_AUTH_PBKDF2_ITERATIONS", _STREAMLIT_HASH_DEFAULT_ITERATIONS))
-    iter_count = max(_STREAMLIT_HASH_MIN_ITERATIONS, iter_count)
-    salt_bytes = salt or os.urandom(16)
-    digest = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), salt_bytes, iter_count)
-    salt_text = base64.urlsafe_b64encode(salt_bytes).decode("ascii").rstrip("=")
-    digest_text = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
-    return f"{_STREAMLIT_HASH_PREFIX}${iter_count}${salt_text}${digest_text}"
+    return auth_service.password_hash(password, iterations=iterations, salt=salt)
 
 
 def _streamlit_password_verify(password: str, password_hash: str) -> bool:
     """Verify plaintext password against hash (or legacy plaintext value)."""
-    secret = str(password or "")
-    stored = str(password_hash or "")
-    if not secret or not stored:
-        return False
-    if not stored.startswith(f"{_STREAMLIT_HASH_PREFIX}$"):
-        return hmac.compare_digest(secret, stored)
-    parts = stored.split("$", 3)
-    if len(parts) != 4:
-        return False
-    _, iter_text, salt_text, digest_text = parts
-    try:
-        iter_count = max(_STREAMLIT_HASH_MIN_ITERATIONS, int(iter_text))
-        salt_pad = "=" * (-len(salt_text) % 4)
-        digest_pad = "=" * (-len(digest_text) % 4)
-        salt_bytes = base64.urlsafe_b64decode((salt_text + salt_pad).encode("ascii"))
-        expected = base64.urlsafe_b64decode((digest_text + digest_pad).encode("ascii"))
-    except Exception:
-        return False
-    computed = hashlib.pbkdf2_hmac("sha256", secret.encode("utf-8"), salt_bytes, iter_count)
-    return hmac.compare_digest(computed, expected)
+    return auth_service.password_verify(password, password_hash)
 
 
 def _streamlit_auth_db_url() -> str:

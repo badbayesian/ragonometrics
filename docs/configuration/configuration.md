@@ -45,6 +45,16 @@ Runtime + workflow settings (env-only)
 | `STREAMLIT_USERNAME` | Optional UI username. | unset | string | Login disabled if missing. |
 | `STREAMLIT_PASSWORD` | Optional UI password. | unset | string | Login disabled if missing. |
 | `STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV` | Auto-seed env credentials into `auth.streamlit_users` when DB table is empty. | `1` | bool | Set `0` to disable bootstrap seeding. |
+| `WEB_COOKIE_SECURE` | Set Flask auth/session cookie `Secure` flag. | `0` (local) | bool | Set `1` behind HTTPS reverse proxy. |
+| `WEB_COOKIE_SAMESITE` | SameSite policy for Flask auth/session cookies. | `Lax` | string | `Lax|Strict|None`. |
+| `WEB_SESSION_MAX_AGE_SECONDS` | Flask auth/session cookie max age. | `43200` | int | 12h default. |
+| `WEB_LOGIN_RATE_LIMIT` | Login attempts per fixed window per username. | `10` | int | Backed by `auth.request_rate_limits`. |
+| `WEB_LOGIN_RATE_WINDOW_SECONDS` | Login rate-limit window size. | `60` | int | |
+| `WEB_CHAT_RATE_LIMIT` | Chat requests per fixed window per user/session. | `30` | int | Backed by `auth.request_rate_limits`. |
+| `WEB_CHAT_RATE_WINDOW_SECONDS` | Chat rate-limit window size. | `60` | int | |
+| `WEB_GUNICORN_TIMEOUT` | Gunicorn hard timeout for Flask web worker requests. | `180` | int | Helps long-running uncached chat requests complete. |
+| `WEB_GUNICORN_GRACEFUL_TIMEOUT` | Gunicorn graceful shutdown timeout. | `30` | int | Applies during worker restarts/shutdown. |
+| `WEB_GUNICORN_KEEPALIVE` | Gunicorn keep-alive duration. | `5` | int | HTTP keep-alive for web clients. |
 | `OPENALEX_API_KEY` | OpenAlex API key. | unset | string | Required for higher rate limits. |
 | `OPENALEX_MAILTO` | Contact email for OpenAlex polite pool. | unset | string | Recommended by OpenAlex. |
 | `FRED_API_KEY` | FRED API key for econ step. | unset | string | Enables econ step. |

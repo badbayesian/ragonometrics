@@ -15,8 +15,40 @@ x-app-env: &app_env
   WORKFLOW_QUESTION: ${WORKFLOW_QUESTION}
   WORKFLOW_AGENTIC_MODEL: ${WORKFLOW_AGENTIC_MODEL}
   WORKFLOW_AGENTIC_CITATIONS: ${WORKFLOW_AGENTIC_CITATIONS}
+  WEB_COOKIE_SECURE: ${WEB_COOKIE_SECURE:-0}
+  WEB_COOKIE_SAMESITE: ${WEB_COOKIE_SAMESITE:-Lax}
+  WEB_SESSION_MAX_AGE_SECONDS: ${WEB_SESSION_MAX_AGE_SECONDS:-43200}
+  WEB_LOGIN_RATE_LIMIT: ${WEB_LOGIN_RATE_LIMIT:-10}
+  WEB_LOGIN_RATE_WINDOW_SECONDS: ${WEB_LOGIN_RATE_WINDOW_SECONDS:-60}
+  WEB_CHAT_RATE_LIMIT: ${WEB_CHAT_RATE_LIMIT:-30}
+  WEB_CHAT_RATE_WINDOW_SECONDS: ${WEB_CHAT_RATE_WINDOW_SECONDS:-60}
+  WEB_GUNICORN_TIMEOUT: ${WEB_GUNICORN_TIMEOUT:-180}
+  WEB_GUNICORN_GRACEFUL_TIMEOUT: ${WEB_GUNICORN_GRACEFUL_TIMEOUT:-30}
+  WEB_GUNICORN_KEEPALIVE: ${WEB_GUNICORN_KEEPALIVE:-5}
 
 services:
+  web:
+    build: .
+    profiles: ["web"]
+    command: >
+      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
+      gunicorn --workers $${WEB_GUNICORN_WORKERS:-2}
+      --timeout $${WEB_GUNICORN_TIMEOUT:-180}
+      --graceful-timeout $${WEB_GUNICORN_GRACEFUL_TIMEOUT:-30}
+      --keep-alive $${WEB_GUNICORN_KEEPALIVE:-5}
+      --bind 0.0.0.0:8590 'ragonometrics.web.app:create_app()'"
+    ports:
+      - "8590:8590"
+    environment:
+      <<: *app_env
+      PAPERS_DIR: /app/papers
+    volumes:
+      - ${PAPERS_HOST_DIR}:/app/papers:rw
+      - ./reports:/app/reports:rw
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
   streamlit:
     build: .
     command: >
