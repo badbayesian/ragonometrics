@@ -9,7 +9,7 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 | Workflow (sync) | `ragonometrics workflow` via `ragonometrics/cli/entrypoints.py` | `run_workflow` in `ragonometrics/pipeline/workflow.py` | `reports/workflow-report-<run_id>.json`, `reports/prep-manifest-<run_id>.json`, `workflow.run_records` rows |
 | Workflow (async) | `ragonometrics workflow --async` via `ragonometrics/cli/entrypoints.py` | `enqueue_workflow` -> Postgres queue worker -> `workflow_entrypoint` in `ragonometrics/integrations/rq_queue.py`, `ragonometrics/pipeline/workflow.py` | Same as sync, executed by Postgres queue worker |
 | Query CLI | `ragonometrics query` via `ragonometrics/cli/entrypoints.py` | `load_papers` -> chunk/embed -> `top_k_context` -> LLM answer | stdout answer + `retrieval.query_cache` rows |
-| Streamlit chat | `ragonometrics ui` via `ragonometrics/cli/entrypoints.py` | `ragonometrics/ui/streamlit_app.py` | Interactive answers, snapshots, usage metrics, cache rows |
+| Streamlit chat + structured workstream | `ragonometrics ui` via `ragonometrics/cli/entrypoints.py` | `ragonometrics/ui/streamlit_app.py` | Interactive answers, structured Q&A caching, compact/full exports, snapshots, usage metrics |
 | Index-only | `ragonometrics index` via `ragonometrics/cli/entrypoints.py` | `build_index` in `ragonometrics/indexing/indexer.py` | `vectors.index`, `indexes/vectors-*.index`, index sidecar/manifests, Postgres vectors/metadata |
 | Metadata-only | `ragonometrics store-metadata` via `ragonometrics/cli/entrypoints.py` | `store_paper_metadata` in `ragonometrics/indexing/paper_store.py` | Postgres `paper_metadata` upserts |
 | Workflow report backfill | `ragonometrics store-workflow-reports` via `ragonometrics/cli/entrypoints.py` | `store_workflow_reports_from_dir` in `ragonometrics/pipeline/report_store.py` | Postgres `workflow.run_records` (`record_kind=report/question/artifact`) backfilled from disk |
@@ -28,7 +28,7 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 6. State and observability
    - Step-level state and lineage in `workflow.run_records` via `ragonometrics/pipeline/state.py`; token usage in `observability.token_usage` via `ragonometrics/pipeline/token_usage.py`.
 7. UI flow
-   - Streamed Q&A, cache, math-LaTeX review pass, and snapshots in `ragonometrics/ui/streamlit_app.py`.
+   - Streamed Q&A, structured workstream cache/export flows, math-LaTeX review pass, and snapshots in `ragonometrics/ui/streamlit_app.py`.
 
 ## Store and Artifact Map
 | Layer | Store/Artifact | Produced By | Consumed By |
@@ -42,7 +42,7 @@ Scope includes all runtime flows: workflow, query/UI, indexing, metadata-only, a
 | Postgres | `observability.token_usage` | `record_usage` (`ragonometrics/pipeline/token_usage.py`) | Usage tab and reporting |
 | Postgres | `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.citec_cache` | integration caches + canonical per-paper OpenAlex metadata | Ingestion enrichment |
 | Postgres | `indexing.vectors`, `ingestion.documents`, `ingestion.paper_metadata`, run/index tables | `build_index`, metadata helpers | Hybrid retrieval + metadata |
-| Postgres | `workflow.run_records` (`record_kind=report/question/artifact`) | `store_workflow_report` (`ragonometrics/pipeline/report_store.py`) | Backfill/report querying |
+| Postgres | `workflow.run_records` (`record_kind=report/question/artifact`) | `store_workflow_report` (`ragonometrics/pipeline/report_store.py`) | Backfill/report querying + Streamlit full structured export source |
 
 ## Key Current-State Findings (for simplification)
 - Ingest and external enrichment are coupled in `load_papers`, reducing composability.

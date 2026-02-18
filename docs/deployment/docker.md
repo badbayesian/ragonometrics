@@ -13,6 +13,9 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 Notes:
 - `PAPERS_HOST_DIR` is mounted to `/app/papers` in app containers.
 - `CONTAINER_DATABASE_URL` is used inside containers and should use host `postgres` (not `localhost`).
+- Optional Streamlit auth bootstrap:
+  - `STREAMLIT_USERS_JSON={"admin":"pass","tester":"pass"}`
+  - `STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV=1`
 
 ## Start services
 
@@ -48,6 +51,7 @@ docker compose ps
 
 Open Streamlit:
 - `http://localhost:8585`
+- UI tabs include Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage.
 
 ## Run workflow from Docker
 

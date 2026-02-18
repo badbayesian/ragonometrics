@@ -20,7 +20,7 @@ All run lineage is persisted to `workflow.run_records` keyed by `run_id`.
 All papers in mounted `/app/papers`:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -32,7 +32,7 @@ docker compose run --rm workflow \
 Single paper:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
   --agentic \
@@ -43,7 +43,7 @@ docker compose run --rm workflow \
 Async enqueue:
 
 ```bash
-docker compose run --rm workflow \
+docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
   --papers /app/papers \
   --agentic \
@@ -84,6 +84,13 @@ Postgres:
 - `observability.token_usage`
 - `retrieval.query_cache`
 - indexing and ingestion tables when indexing is enabled
+
+Structured question payloads in `workflow.run_records` are the source for Streamlit
+`Full` structured exports. If older rows are compact-only, run:
+
+```bash
+python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
+```
 
 ## Related docs
 

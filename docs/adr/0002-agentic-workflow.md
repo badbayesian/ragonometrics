@@ -14,10 +14,10 @@ optional asynchronous execution for long-running tasks.
 Decision
 --------
 Implement a Postgres-backed workflow state store and provide a multi-step runner
-with optional Redis/RQ execution.
+with optional asynchronous execution backed by Postgres queue records (`workflow.async_jobs`) consumed by `rq-worker`.
 
 Consequences
 ------------
 - Reproducible workflow runs with per-step status and outputs.
-- Async execution via RQ for background indexing and evaluation.
+- Async execution via worker processes polling `workflow.async_jobs`.
 - Unified operational storage in Postgres across workflow, retrieval cache, and observability.

@@ -30,9 +30,14 @@ Validate row-count parity:
 python tools/validate_backfill_parity.py --db-url "$DATABASE_URL"
 ```
 
+Backfill full structured-question fields for older compact Streamlit rows:
+
+```bash
+python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
+```
+
 ## Notes
 
 - `deploy/sql/*.sql` remain human-readable SQL references used by migrations.
 - Runtime modules fail fast if migrations are missing/outdated.
 - Expected schema revision is enforced in `ragonometrics/db/connection.py`.
-

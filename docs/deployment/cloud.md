@@ -7,7 +7,7 @@ Target Architecture (AWS)
 -------------------------
 - Compute: ECS/Fargate service for API + Streamlit UI
 - Data: RDS Postgres for metadata + vector text
-- Cache/Queue: ElastiCache Redis for RQ workers
+- Queue: Postgres-backed async jobs (`workflow.async_jobs`) consumed by `rq-worker`
 - Storage: S3 for artifacts (indexes, manifests, reports)
 - Observability: CloudWatch logs/metrics, structured app logs
 
@@ -15,7 +15,7 @@ Target Architecture (GCP)
 -------------------------
 - Compute: Cloud Run or GKE for API + Streamlit UI
 - Data: Cloud SQL Postgres
-- Cache/Queue: Memorystore Redis
+- Queue: Postgres-backed async jobs (`workflow.async_jobs`) consumed by worker service
 - Storage: GCS for artifacts
 - Observability: Cloud Logging + Cloud Monitoring
 
@@ -27,7 +27,7 @@ Secrets and Config
 
 Deployment Checklist
 --------------------
-- Provision Postgres + Redis with private networking.
+- Provision Postgres with private networking.
 - Create an artifact bucket for index shards and run manifests.
 - Build/push images (UI + worker) to ECR/GCR.
 - Apply network policies to restrict DB access to services.

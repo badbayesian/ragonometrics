@@ -89,7 +89,7 @@ Key Components
   - Per-page extraction supports provenance (page + word offsets).
   - Optional section-aware chunking (title/abstract/introduction/methods/results) via `SECTION_AWARE_CHUNKING`.
 - Embeddings and retrieval
-  - OpenAI embeddings via `embed_texts`.
+  - Provider-routed embeddings via `ragonometrics/llm/runtime.py` and `embed_texts` (OpenAI, Anthropic-compatible routing, or OpenAI-compatible endpoints).
   - Hybrid BM25 + Postgres vector retrieval when `DATABASE_URL` is configured, with FAISS fallback.
   - Optional query expansion (`QUERY_EXPANSION`) and LLM reranking (`RERANKER_MODEL`, `RERANK_TOP_N`).
 - Indexing
@@ -98,9 +98,10 @@ Key Components
   - Postgres metadata stores vectors, index shards, and index version rows.
   - Idempotent indexing based on a deterministic key (same corpus + params).
 - UI and CLI
-  - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, OpenAlex Metadata, Citation Network, and Usage tabs.
+  - Streamlit UI ([`ragonometrics/ui/streamlit_app.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/ui/streamlit_app.py)) provides Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage tabs.
+  - Structured Workstream export supports `Compact` and `Full` modes. Full mode resolves rich question payloads from `workflow.run_records` and includes confidence/retrieval/citation-anchor fields when available.
   - External metadata (OpenAlex with CitEc fallback) is shown in a UI expander and injected into prompts.
-  - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-workflow-reports | db migrate | usage`.
+  - Console entrypoints: `ragonometrics index | query | ui | benchmark | workflow | store-metadata | store-openalex-metadata | store-workflow-reports | db migrate | usage`.
 - Agentic workflow
   - [`ragonometrics/pipeline/workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/workflow.py) orchestrates prep -> ingest -> enrich -> index -> evaluate -> report.
   - State persisted in Postgres (`workflow.run_records`) via [`ragonometrics/pipeline/state.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/state.py) and [`ragonometrics/pipeline/report_store.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/pipeline/report_store.py).
@@ -109,6 +110,7 @@ Key Components
 - Caching
   - OpenAlex HTTP response cache in Postgres (`enrichment.openalex_http_cache`).
   - Canonical per-paper OpenAlex match payloads in Postgres (`enrichment.paper_openalex_metadata`).
+  - OpenAlex lookup includes deterministic title-variant fallback in core lookup (`fetch_openalex_metadata`) for robust matching of common title-token variants.
   - CitEc metadata cache in Postgres (`enrichment.citec_cache`).
   - Query/answer cache in Postgres (`retrieval.query_cache`).
   - Token usage in Postgres (`observability.token_usage`).
@@ -116,6 +118,7 @@ Key Components
 Data and Metadata Stores
 ------------------------
 - Postgres (`DATABASE_URL`):
+  - Auth: `auth.streamlit_users`, `auth.streamlit_sessions` (Streamlit login/session persistence).
   - Ingestion: `ingestion.documents`, `ingestion.paper_metadata` (`ingestion.prep_manifests` is present in schema for optional prep-manifest persistence/backfills).
   - Enrichment: `enrichment.openalex_http_cache`, `enrichment.paper_openalex_metadata`, `enrichment.openalex_title_overrides`, `enrichment.citec_cache`.
   - Indexing: `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`, `indexing.pipeline_runs`.

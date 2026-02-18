@@ -94,6 +94,8 @@ Artifacts and State
   - `record_kind='question'` stores normalized report questions.
   - `record_kind='artifact'` stores generated artifact paths/hashes.
   - `record_kind='workstream_link'` stores lineage/grouping links.
+  - Streamlit structured Q&A writes also land in `record_kind='question'` rows (same ledger), keyed by deterministic run id (`streamlit-structured-...`) and `question_id`.
+  - Malformed question payloads are rejected on write (for example accidental SDK config strings instead of question text).
 - Index run linkage:
   - `indexing.pipeline_runs.workflow_run_id`
   - `indexing.pipeline_runs.workstream_id`
@@ -123,6 +125,16 @@ Agentic outputs include:
   - `confidence` is derived from retrieval scores (not model self-report).
   - `confidence_score` is the numeric retrieval score used to set the label.
 - `report_question_confidence` summary stats (mean/median/min/max/p25/p75 + label counts).
+
+Streamlit Structured Exports
+----------------------------
+The Streamlit **Structured Workstream** tab supports two export modes:
+- `Compact`: minimal cached question/answer shape.
+- `Full`: enriched rows with workflow question payloads (`confidence_score`, `retrieval_method`, `citation_anchors`, etc.) selected from the best available record for the paper/question.
+
+When historical rows are compact-only, use either:
+- UI action: `Regenerate Missing Full Fields (Export Scope)`.
+- CLI backfill: `python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply`.
 
 Concurrency
 -----------

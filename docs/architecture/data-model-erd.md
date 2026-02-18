@@ -30,11 +30,43 @@ erDiagram
     jsonb payload
   }
 
+  AUTH_STREAMLIT_USERS {
+    bigint id PK
+    text username
+    text password_hash
+    bool is_active
+    timestamptz last_login_at
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  AUTH_STREAMLIT_SESSIONS {
+    bigint id PK
+    text session_id
+    bigint user_id FK
+    text username
+    text source
+    timestamptz authenticated_at
+    timestamptz revoked_at
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
   ENRICHMENT_OPENALEX_CACHE {
     text cache_key PK
     text work_id
     text query
     timestamptz fetched_at
+  }
+
+  ENRICHMENT_OPENALEX_TITLE_OVERRIDES {
+    bigint id PK
+    text title_pattern
+    text match_type
+    text openalex_work_id
+    int priority
+    bool enabled
+    timestamptz updated_at
   }
 
   ENRICHMENT_CITEC_CACHE {
@@ -156,6 +188,7 @@ erDiagram
     timestamptz created_at
   }
 
+  AUTH_STREAMLIT_USERS ||--o{ AUTH_STREAMLIT_SESSIONS : "user_id"
   INGESTION_DOCUMENTS ||--|| INGESTION_PAPER_METADATA : "doc_id"
   INGESTION_DOCUMENTS ||--o{ INDEXING_VECTORS : "doc_id"
   INDEXING_PIPELINE_RUNS ||--o{ INDEXING_VECTORS : "pipeline_run_id"
@@ -170,5 +203,7 @@ Run-Lineage Links (Not Enforced as Foreign Keys)
 - `RETRIEVAL_RETRIEVAL_EVENTS.run_id` links retrieval traces to a run.
 - `INDEXING_PIPELINE_RUNS.workflow_run_id` links index builds to workflow runs.
 - `INGESTION_PREP_MANIFESTS.run_id` links preflight manifests to workflow runs.
+- Streamlit auth and session history live under `auth.streamlit_users` and `auth.streamlit_sessions`.
+- OpenAlex manual title pinning rules live in `enrichment.openalex_title_overrides`.
 
 These links are intentionally flexible to support partial runs, async jobs, and backfills.
