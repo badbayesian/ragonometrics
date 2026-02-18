@@ -134,3 +134,4 @@ Core Docs
 - Workflow guide: `docs/guides/workflow.md`
 - Docker guide: `docs/deployment/docker.md`
 - Migrations/backfill: `docs/deployment/migrations.md`
+- Archived docs: `docs/archive/README.md`

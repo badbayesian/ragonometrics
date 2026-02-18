@@ -165,7 +165,7 @@ Operational Hardening
 Economics Data
 --------------
 - FRED and World Bank connectors live in [`ragonometrics/integrations/econ_data.py`](https://github.com/badbayesian/ragonometrics/blob/main/ragonometrics/integrations/econ_data.py).
-- Example workflow in [`tools/econ_workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/tools/econ_workflow.py) (see [`docs/data/econ_schema.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/data/econ_schema.md)).
+- Example workflow in [`tools/econ_workflow.py`](https://github.com/badbayesian/ragonometrics/blob/main/tools/econ_workflow.py) (see archived reference [`docs/archive/data/econ_schema.md`](https://github.com/badbayesian/ragonometrics/blob/main/docs/archive/data/econ_schema.md)).
 
 Evaluation
 ----------
