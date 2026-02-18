@@ -234,3 +234,61 @@ def test_cmd_benchmark_web_chat_writes_report(monkeypatch) -> None:
     monkeypatch.setattr(entrypoints, "write_web_cache_benchmark_report", lambda report, out_path: out_path)
     rc = entrypoints.cmd_benchmark_web_chat(args)
     assert rc == 0
+
+
+def test_compare_parser_accepts_subcommands() -> None:
+    parser = entrypoints.build_parser()
+    suggest = parser.parse_args(["compare", "suggest", "--paper-id", "p1", "--limit", "15"])
+    assert suggest.paper_id == "p1"
+    assert suggest.limit == 15
+
+    create = parser.parse_args(
+        [
+            "compare",
+            "create",
+            "--paper-id",
+            "p1",
+            "--paper-id",
+            "p2",
+            "--question",
+            "Q1",
+            "--question",
+            "Q2",
+            "--model",
+            "gpt-5-nano",
+        ]
+    )
+    assert create.paper_id == ["p1", "p2"]
+    assert create.question == ["Q1", "Q2"]
+    assert create.model == "gpt-5-nano"
+
+
+def test_cmd_compare_export_writes_json(monkeypatch, tmp_path) -> None:
+    parser = entrypoints.build_parser()
+    out_path = tmp_path / "cmp.json"
+    args = parser.parse_args(
+        [
+            "compare",
+            "export",
+            "--comparison-id",
+            "cmp1",
+            "--format",
+            "json",
+            "--out",
+            str(out_path),
+        ]
+    )
+
+    monkeypatch.setattr(
+        entrypoints.paper_compare_service,
+        "export_comparison",
+        lambda comparison_id, export_format="json": {
+            "format": "json",
+            "filename": "cmp1.json",
+            "payload": {"comparison_id": comparison_id, "format": export_format},
+        },
+    )
+    rc = entrypoints.cmd_compare_export(args)
+    assert rc == 0
+    assert out_path.exists()
+    assert "comparison_id" in out_path.read_text(encoding="utf-8")

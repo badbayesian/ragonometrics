@@ -2223,7 +2223,9 @@ def _response_text_from_final_response(response: object) -> str:
     """
     text = getattr(response, "output_text", None) or getattr(response, "text", None)
     if text:
-        return str(text).strip()
+        value = str(text).strip()
+        if value and not any(pattern.search(value) for pattern in _INVALID_STRUCTURED_QUESTION_PATTERNS):
+            return value
     parts: List[str] = []
     for item in getattr(response, "output", []) or []:
         if getattr(item, "type", None) != "message":
@@ -2232,7 +2234,11 @@ def _response_text_from_final_response(response: object) -> str:
             if getattr(content, "type", None) == "output_text":
                 chunk = getattr(content, "text", None)
                 if chunk:
-                    parts.append(str(chunk))
+                    chunk_value = str(chunk).strip()
+                    if chunk_value and not any(
+                        pattern.search(chunk_value) for pattern in _INVALID_STRUCTURED_QUESTION_PATTERNS
+                    ):
+                        parts.append(chunk_value)
     return "\n".join(parts).strip()
 
 

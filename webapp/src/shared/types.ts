@@ -13,6 +13,7 @@ export type PaperRow = {
   title?: string;
   display_authors?: string;
   authors?: string[];
+  author_items?: Array<{ name: string; id?: string; openalex_url?: string }>;
   display_abstract?: string;
   abstract?: string;
   openalex_url?: string;
@@ -22,7 +23,38 @@ export type PaperRow = {
   venue?: string;
   landing_url?: string;
 };
-export type TabKey = "chat" | "structured" | "openalex" | "network" | "usage" | "viewer" | "workflow";
+
+export type ProjectRow = {
+  project_id: string;
+  name: string;
+  slug?: string;
+  role?: string;
+  is_active?: boolean;
+  allow_cross_project_answer_reuse?: boolean;
+  allow_custom_question_sharing?: boolean;
+  default_persona_id?: string;
+};
+
+export type PersonaRow = {
+  persona_id: string;
+  slug?: string;
+  name: string;
+  is_default?: boolean;
+  is_active?: boolean;
+  default_model?: string;
+};
+
+export type ProjectContextRow = {
+  project_id: string;
+  project_name: string;
+  role?: string;
+  persona_id: string;
+  persona_name: string;
+  allow_cross_project_answer_reuse?: boolean;
+  allow_custom_question_sharing?: boolean;
+};
+
+export type TabKey = "chat" | "structured" | "openalex" | "network" | "usage" | "viewer" | "workflow" | "cache" | "compare";
 
 export type ChatHistoryItem = {
   query: string;
@@ -44,6 +76,21 @@ export type CitationChunk = {
   end_word?: number | null;
   section?: string | null;
   text?: string;
+};
+
+export type ProvenanceWarning = {
+  code: string;
+  message: string;
+};
+
+export type ProvenanceScore = {
+  paper_id: string;
+  paper_path?: string;
+  question: string;
+  score: number;
+  status: "high" | "medium" | "low";
+  warnings: ProvenanceWarning[];
+  metrics?: Record<string, unknown>;
 };
 
 export type PaperNote = {
@@ -133,4 +180,124 @@ export type WorkflowInternalRow = {
   summary?: Record<string, unknown>;
   usage?: Record<string, unknown>;
   sample?: unknown[];
+};
+
+export type ChatCacheInspectPayload = {
+  paper_id: string;
+  paper_path: string;
+  question: string;
+  query_normalized: string;
+  model: string;
+  top_k: number;
+  cache_key: string;
+  cache_context_hash: string;
+  selected_layer: string;
+  cache_miss_reason: string;
+  strict_hit: boolean;
+  fallback_hit: boolean;
+  strict_row?: Record<string, unknown>;
+  fallback_row?: Record<string, unknown>;
+  retrieval_stats?: Record<string, unknown>;
+  context_preview?: string;
+};
+
+export type StructuredCacheInspectRow = {
+  id: string;
+  category: string;
+  question: string;
+  cached: boolean;
+  run_id?: string;
+  question_id?: string;
+  source?: string;
+  model?: string;
+  cached_at?: string;
+  answer_preview?: string;
+  record_status?: string;
+  record_step?: string;
+  record_key?: string;
+};
+
+export type StructuredCacheInspectPayload = {
+  paper_id: string;
+  paper_path: string;
+  model: string;
+  total_questions: number;
+  cached_questions: number;
+  missing_questions: number;
+  coverage_ratio: number;
+  missing_question_ids: string[];
+  rows: StructuredCacheInspectRow[];
+};
+
+export type SimilarPaperSuggestion = {
+  paper_id: string;
+  name: string;
+  path: string;
+  title: string;
+  authors: string;
+  openalex_url: string;
+  score: number;
+  score_breakdown?: {
+    topic_similarity: number;
+    keyword_overlap: number;
+  };
+  overlap_topics?: string[];
+  overlap_concepts?: string[];
+};
+
+export type CompareQuestion = {
+  id: string;
+  text: string;
+  normalized: string;
+};
+
+export type CompareCell = {
+  paper_id: string;
+  paper_path: string;
+  question_id: string;
+  question_text: string;
+  question_normalized: string;
+  model: string;
+  cell_status: "cached" | "missing" | "generated" | "failed";
+  answer: string;
+  answer_source?: string;
+  cache_hit_layer?: string;
+  cache_key?: string;
+  context_hash?: string;
+  structured_fields?: Record<string, unknown>;
+  error_text?: string;
+};
+
+export type CompareMatrixRow = {
+  question_id: string;
+  question_text: string;
+  question_normalized: string;
+  cells: CompareCell[];
+};
+
+export type CompareRun = {
+  comparison_id: string;
+  name: string;
+  created_by_user_id?: number | null;
+  created_by_username: string;
+  model: string;
+  compute_mode: string;
+  visibility: string;
+  status: string;
+  paper_ids: string[];
+  questions: CompareQuestion[];
+  summary: {
+    total_cells: number;
+    cached_cells: number;
+    missing_cells: number;
+    generated_cells: number;
+    failed_cells: number;
+    ready_cells: number;
+  };
+  seed_paper_id?: string;
+  created_at: string;
+  updated_at: string;
+  papers?: PaperRow[];
+  cells?: CompareCell[];
+  matrix?: CompareMatrixRow[];
 };

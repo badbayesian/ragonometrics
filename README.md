@@ -8,6 +8,20 @@ Docker-first RAG workflow for economics papers with:
 - OpenAlex/CitEc enrichment
 - Unified Postgres lineage (`workflow.run_records`)
 
+Web App Highlights
+------------------
+- Auth: login with email/username, create account, forgot/reset password.
+- Project + persona selectors in top bar (when available in your account context).
+- Paper Finder: type-to-search with author/venue/year filters and deduped paper titles.
+- Chat: conversation timeline, suggested prompts, queue support (`Ask`/`Ask (Stream)`), evidence preview (top 3 chunks), provenance score badges, and robot assistant avatar.
+- Paper Viewer: PDF view with highlight/notes workflow from chat evidence.
+- Structured Workstream: cache refresh, generate missing, compact/full exports.
+- OpenAlex Metadata: link-rich entities and manual OpenAlex link override tool.
+- Citation Network: interactive graph with hop controls, auto-reload, reset, and cache metadata.
+- Usage: account-scoped usage by default (with session-only toggle).
+- Compare: cache-first multi-paper comparison runs with fill-missing and export.
+- Debug mode toggle hides/shows `Workflow Cache` and `Cache Inspector` tabs.
+
 Quick Start (Docker)
 --------------------
 1. Create `.env`:
@@ -118,6 +132,9 @@ API base: `http://localhost:8590/api/v1`
 
 Core endpoints:
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
 - `GET /api/v1/papers`
 - `GET /api/v1/chat/suggestions`
 - `GET /api/v1/chat/history`
@@ -125,12 +142,17 @@ Core endpoints:
 - `POST /api/v1/chat/turn`
 - `POST /api/v1/chat/turn-stream` (NDJSON)
 - `GET /api/v1/openalex/metadata`
+- `POST /api/v1/openalex/metadata/manual-link`
 - `GET /api/v1/openalex/citation-network`
 - `GET /api/v1/structured/questions`
 - `POST /api/v1/structured/generate`
 - `POST /api/v1/structured/generate-missing`
 - `POST /api/v1/structured/export`
 - `GET /api/v1/usage/summary`
+- `GET /api/v1/compare/similar-papers`
+- `POST /api/v1/compare/runs`
+- `POST /api/v1/compare/runs/<comparison_id>/fill-missing`
+- `POST /api/v1/compare/runs/<comparison_id>/export`
 
 Operational reference: `docs/guides/web_button_matrix.md`
 
@@ -161,6 +183,15 @@ OpenAlex metadata store pass:
 ragonometrics store-openalex-metadata --papers-dir papers --meta-db-url "$DATABASE_URL"
 ```
 
+Manual OpenAlex link (when auto-match fails):
+
+```bash
+python tools/manual_openalex_link.py \
+  --paper "Impact of Restaurant Hygiene Grade Cards on Foodborne-Disease Hospitalizations in Los Angeles County - Simon et al. (2005).pdf" \
+  --openalex-api-url "https://api.openalex.org/w28470166" \
+  --db-url "$DATABASE_URL"
+```
+
 Concurrent web cache benchmark (many users reading structured cached questions):
 
 ```bash
@@ -177,6 +208,18 @@ Concurrent web chat benchmark (chat turns + cache-hit ratio):
 
 ```bash
 ragonometrics benchmark-web-chat --base-url http://localhost:8590 --identifier admin --password "$WEB_PASSWORD" --users 20 --iterations 5 --question "What is the main contribution?"
+```
+
+Frontend tests (works without local Node/npm):
+
+```bash
+python tools/run_frontend_tests.py
+```
+
+Rebuild web container after frontend changes:
+
+```bash
+docker compose --profile web up -d --build web
 ```
 
 Core Docs

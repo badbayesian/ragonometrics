@@ -52,6 +52,8 @@ def record_usage(
     run_id: Optional[str] = None,
     step: Optional[str] = None,
     question_id: Optional[str] = None,
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
     provider_request_id: Optional[str] = None,
     latency_ms: Optional[int] = None,
     cache_hit: Optional[bool] = None,
@@ -86,6 +88,8 @@ def record_usage(
         resolved_run_id = run_id
         resolved_step = step
         resolved_question_id = question_id
+        resolved_project_id = str(project_id or "").strip() or None
+        resolved_persona_id = str(persona_id or "").strip() or None
         if isinstance(meta, dict):
             if resolved_run_id is None:
                 resolved_run_id = meta.get("run_id")
@@ -93,6 +97,10 @@ def record_usage(
                 resolved_step = meta.get("step")
             if resolved_question_id is None:
                 resolved_question_id = meta.get("question_id")
+            if resolved_project_id is None:
+                resolved_project_id = str(meta.get("project_id") or "").strip() or None
+            if resolved_persona_id is None:
+                resolved_persona_id = str(meta.get("persona_id") or "").strip() or None
         cur = conn.cursor()
         cur.execute(
             """
@@ -100,6 +108,7 @@ def record_usage(
             (
                 created_at, model, operation, step, question_id,
                 input_tokens, output_tokens, total_tokens,
+                project_id, persona_id,
                 session_id, request_id, provider_request_id,
                 latency_ms, cache_hit,
                 cost_usd_input, cost_usd_output, cost_usd_total,
@@ -108,6 +117,7 @@ def record_usage(
             VALUES (
                 NOW(), %s, %s, %s, %s,
                 %s, %s, %s,
+                %s, %s,
                 %s, %s, %s,
                 %s, %s,
                 %s, %s, %s,
@@ -122,6 +132,8 @@ def record_usage(
                 int(input_tokens),
                 int(output_tokens),
                 int(total_tokens),
+                resolved_project_id,
+                resolved_persona_id,
                 session_id,
                 request_id,
                 provider_request_id,

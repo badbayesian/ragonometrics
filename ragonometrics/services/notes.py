@@ -26,10 +26,12 @@ def list_notes(
     *,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
     paper_id: str,
     page_number: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     clean_user = _clean_username(username)
+    clean_project = str(project_id or "").strip()
     clean_paper = str(paper_id or "").strip()
     if not db_url or not clean_user or not clean_paper:
         return []
@@ -49,11 +51,12 @@ def list_notes(
                     note_text, color, created_at, updated_at
                 FROM retrieval.paper_notes
                 WHERE paper_id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                   {page_clause}
                 ORDER BY created_at DESC
                 """,
-                tuple(params),
+                tuple([clean_paper, clean_project, clean_project, *scope_params, *([] if page_number is None else [int(page_number)])]),
             )
             rows = cur.fetchall()
     except Exception:
@@ -87,6 +90,7 @@ def create_note(
     *,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
     paper_id: str,
     page_number: Optional[int],
     highlight_text: str,
@@ -95,6 +99,7 @@ def create_note(
     color: Optional[str] = None,
 ) -> Dict[str, Any]:
     clean_user = _clean_username(username)
+    clean_project = str(project_id or "").strip()
     clean_paper = str(paper_id or "").strip()
     clean_note = str(note_text or "").strip()
     if not db_url or not clean_user or not clean_paper or not clean_note:
@@ -108,9 +113,10 @@ def create_note(
                 INSERT INTO retrieval.paper_notes
                 (
                     user_id, username, paper_id, page_number, highlight_text,
+                    project_id,
                     highlight_terms_json, note_text, color, created_at, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, NOW(), NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, NOW(), NOW())
                 RETURNING id
                 """,
                 (
@@ -119,6 +125,7 @@ def create_note(
                     clean_paper,
                     int(page_number) if page_number is not None else None,
                     str(highlight_text or ""),
+                    clean_project or None,
                     json.dumps(terms, ensure_ascii=False),
                     clean_note,
                     str(color or ""),
@@ -129,7 +136,7 @@ def create_note(
             note_id = int((row or [0])[0] or 0)
     except Exception:
         return {}
-    notes = list_notes(db_url, user_id=user_id, username=clean_user, paper_id=clean_paper)
+    notes = list_notes(db_url, user_id=user_id, username=clean_user, project_id=clean_project, paper_id=clean_paper)
     for item in notes:
         if int(item.get("id") or 0) == note_id:
             return item
@@ -142,12 +149,14 @@ def update_note(
     note_id: int,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
     note_text: Optional[str] = None,
     color: Optional[str] = None,
     highlight_text: Optional[str] = None,
     highlight_terms: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     clean_user = _clean_username(username)
+    clean_project = str(project_id or "").strip()
     if not db_url or not clean_user or int(note_id) <= 0:
         return {}
     scope_sql, scope_params = _scope_sql(user_id=user_id, username=clean_user)
@@ -176,10 +185,11 @@ def update_note(
                 UPDATE retrieval.paper_notes
                 SET {", ".join(updates)}, updated_at = NOW()
                 WHERE id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 RETURNING paper_id
                 """,
-                tuple(params + [int(note_id), *scope_params]),
+                tuple(params + [int(note_id), clean_project, clean_project, *scope_params]),
             )
             row = cur.fetchone()
             conn.commit()
@@ -188,7 +198,7 @@ def update_note(
             paper_id = str(row[0] or "")
     except Exception:
         return {}
-    notes = list_notes(db_url, user_id=user_id, username=clean_user, paper_id=paper_id)
+    notes = list_notes(db_url, user_id=user_id, username=clean_user, project_id=clean_project, paper_id=paper_id)
     for item in notes:
         if int(item.get("id") or 0) == int(note_id):
             return item
@@ -201,8 +211,10 @@ def delete_note(
     note_id: int,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
 ) -> bool:
     clean_user = _clean_username(username)
+    clean_project = str(project_id or "").strip()
     if not db_url or not clean_user or int(note_id) <= 0:
         return False
     scope_sql, scope_params = _scope_sql(user_id=user_id, username=clean_user)
@@ -214,10 +226,11 @@ def delete_note(
                 SELECT 1
                 FROM retrieval.paper_notes
                 WHERE id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 LIMIT 1
                 """,
-                (int(note_id), *scope_params),
+                (int(note_id), clean_project, clean_project, *scope_params),
             )
             if not cur.fetchone():
                 return False
@@ -225,9 +238,10 @@ def delete_note(
                 f"""
                 DELETE FROM retrieval.paper_notes
                 WHERE id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 """,
-                (int(note_id), *scope_params),
+                (int(note_id), clean_project, clean_project, *scope_params),
             )
             check = conn.cursor()
             check.execute(
@@ -235,10 +249,11 @@ def delete_note(
                 SELECT 1
                 FROM retrieval.paper_notes
                 WHERE id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 LIMIT 1
                 """,
-                (int(note_id), *scope_params),
+                (int(note_id), clean_project, clean_project, *scope_params),
             )
             deleted = 0 if check.fetchone() else 1
             conn.commit()

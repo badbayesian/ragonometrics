@@ -18,6 +18,9 @@
   --danger-100: #fdeeed;
   --danger-300: #e7b4ae;
   --danger-700: #8d2f22;
+  --warning-100: #fff4dd;
+  --warning-300: #eac989;
+  --warning-700: #815f19;
 
   --text-strong: #102233;
   --text: #203648;
@@ -50,6 +53,9 @@
   --danger-100: #3a1d20;
   --danger-300: #7d3d44;
   --danger-700: #ffc5cb;
+  --warning-100: #352b18;
+  --warning-300: #786238;
+  --warning-700: #ffd58a;
 
   --text-strong: #e6f1ff;
   --text: #d3e2f4;

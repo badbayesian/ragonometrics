@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -35,6 +36,7 @@ from ragonometrics.pipeline.workflow import run_workflow
 from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
 from ragonometrics.integrations.openalex_store import store_openalex_metadata_by_title_author
+from ragonometrics.services import paper_compare as paper_compare_service
 
 
 def _env_int(name: str, default: int) -> int:
@@ -630,6 +632,131 @@ def cmd_workflow(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare_suggest(args: argparse.Namespace) -> int:
+    """Suggest similar papers for a seed paper id."""
+    try:
+        try:
+            out = paper_compare_service.suggest_similar_papers(
+                str(args.paper_id or "").strip(),
+                limit=int(args.limit or 20),
+                project_id=str(args.project_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.suggest_similar_papers(
+                str(args.paper_id or "").strip(),
+                limit=int(args.limit or 20),
+            )
+    except Exception as exc:
+        print(f"Compare suggest failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_create(args: argparse.Namespace) -> int:
+    """Create one comparison run from paper ids and custom questions."""
+    paper_ids = [str(item or "").strip() for item in list(args.paper_id or []) if str(item or "").strip()]
+    questions = [str(item or "").strip() for item in list(args.question or []) if str(item or "").strip()]
+    try:
+        try:
+            out = paper_compare_service.create_comparison_run(
+                seed_paper_id=str(args.seed_paper_id or "").strip() or None,
+                paper_ids=paper_ids,
+                questions=questions,
+                model=str(args.model or "").strip() or None,
+                name=str(args.name or "").strip() or None,
+                created_by_user_id=None,
+                created_by_username=str(args.username or "cli"),
+                project_id=str(args.project_id or "").strip() or None,
+                persona_id=str(args.persona_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.create_comparison_run(
+                seed_paper_id=str(args.seed_paper_id or "").strip() or None,
+                paper_ids=paper_ids,
+                questions=questions,
+                model=str(args.model or "").strip() or None,
+                name=str(args.name or "").strip() or None,
+                created_by_user_id=None,
+                created_by_username=str(args.username or "cli"),
+            )
+    except Exception as exc:
+        print(f"Compare create failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_show(args: argparse.Namespace) -> int:
+    """Show one comparison run payload."""
+    try:
+        out = paper_compare_service.get_comparison_run(
+            str(args.comparison_id or "").strip(),
+            project_id=str(args.project_id or "").strip() or None,
+        )
+    except TypeError:
+        out = paper_compare_service.get_comparison_run(str(args.comparison_id or "").strip())
+    if not out:
+        print("Comparison run not found.")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_fill_missing(args: argparse.Namespace) -> int:
+    """Fill missing cells for one comparison run."""
+    paper_ids = [str(item or "").strip() for item in list(args.paper_id or []) if str(item or "").strip()]
+    question_ids = [str(item or "").strip() for item in list(args.question_id or []) if str(item or "").strip()]
+    try:
+        try:
+            out = paper_compare_service.fill_missing_cells(
+                comparison_id=str(args.comparison_id or "").strip(),
+                paper_ids=paper_ids,
+                question_ids=question_ids,
+                project_id=str(args.project_id or "").strip() or None,
+                persona_id=str(args.persona_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.fill_missing_cells(
+                comparison_id=str(args.comparison_id or "").strip(),
+                paper_ids=paper_ids,
+                question_ids=question_ids,
+            )
+    except Exception as exc:
+        print(f"Compare fill-missing failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_export(args: argparse.Namespace) -> int:
+    """Export one comparison run to JSON or CSV."""
+    fmt = str(args.format or "json").strip().lower()
+    try:
+        try:
+            out = paper_compare_service.export_comparison(
+                str(args.comparison_id or "").strip(),
+                export_format=fmt,
+                project_id=str(args.project_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.export_comparison(
+                str(args.comparison_id or "").strip(),
+                export_format=fmt,
+            )
+    except Exception as exc:
+        print(f"Compare export failed: {exc}")
+        return 1
+    output_path = Path(args.out) if args.out else Path(out.get("filename") or f"comparison.{fmt}")
+    if fmt == "json":
+        payload = out.get("payload") if isinstance(out.get("payload"), dict) else {}
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        output_path.write_text(str(out.get("content") or ""), encoding="utf-8")
+    print(f"Wrote {fmt} export to {output_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -842,6 +969,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report questions: structured|agentic|both|none (overrides WORKFLOW_REPORT_QUESTIONS_SET).",
     )
     w.set_defaults(func=cmd_workflow)
+
+    cmp_parser = sub.add_parser("compare", help="Multi-paper comparison workflows")
+    cmp_sub = cmp_parser.add_subparsers(dest="compare_cmd", required=True)
+
+    cmp_suggest = cmp_sub.add_parser("suggest", help="Suggest similar papers by topic/concept overlap")
+    cmp_suggest.add_argument("--paper-id", type=str, required=True)
+    cmp_suggest.add_argument("--limit", type=int, default=20)
+    cmp_suggest.add_argument("--project-id", type=str, default=None)
+    cmp_suggest.set_defaults(func=cmd_compare_suggest)
+
+    cmp_create = cmp_sub.add_parser("create", help="Create one cache-first comparison run")
+    cmp_create.add_argument("--seed-paper-id", type=str, default=None)
+    cmp_create.add_argument("--paper-id", action="append", required=True, help="Repeat --paper-id for multiple papers")
+    cmp_create.add_argument("--question", action="append", required=True, help="Repeat --question for multiple custom questions")
+    cmp_create.add_argument("--model", type=str, default=None)
+    cmp_create.add_argument("--name", type=str, default=None)
+    cmp_create.add_argument("--username", type=str, default="cli")
+    cmp_create.add_argument("--project-id", type=str, default=None)
+    cmp_create.add_argument("--persona-id", type=str, default=None)
+    cmp_create.set_defaults(func=cmd_compare_create)
+
+    cmp_show = cmp_sub.add_parser("show", help="Show a saved comparison run")
+    cmp_show.add_argument("--comparison-id", type=str, required=True)
+    cmp_show.add_argument("--project-id", type=str, default=None)
+    cmp_show.set_defaults(func=cmd_compare_show)
+
+    cmp_fill = cmp_sub.add_parser("fill-missing", help="Generate answers for missing comparison cells")
+    cmp_fill.add_argument("--comparison-id", type=str, required=True)
+    cmp_fill.add_argument("--paper-id", action="append", default=[], help="Optional paper-id filter, repeatable")
+    cmp_fill.add_argument("--question-id", action="append", default=[], help="Optional question-id filter, repeatable")
+    cmp_fill.add_argument("--project-id", type=str, default=None)
+    cmp_fill.add_argument("--persona-id", type=str, default=None)
+    cmp_fill.set_defaults(func=cmd_compare_fill_missing)
+
+    cmp_export = cmp_sub.add_parser("export", help="Export a saved comparison run")
+    cmp_export.add_argument("--comparison-id", type=str, required=True)
+    cmp_export.add_argument("--format", choices=["json", "csv"], default="json")
+    cmp_export.add_argument("--out", type=str, default=None)
+    cmp_export.add_argument("--project-id", type=str, default=None)
+    cmp_export.set_defaults(func=cmd_compare_export)
 
     return p
 

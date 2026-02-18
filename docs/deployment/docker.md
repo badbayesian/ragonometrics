@@ -47,6 +47,8 @@ This does not replace Streamlit yet; both UIs are intended to run side-by-side.
 
 Web URL:
 - `http://localhost:8590`
+- After frontend changes, rebuild with:
+  - `docker compose --profile web up -d --build web`
 
 Batch services are profile-gated and started on demand:
 
@@ -63,6 +65,25 @@ docker compose ps
 Open Streamlit:
 - `http://localhost:8585`
 - UI tabs include Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage.
+
+Open Web:
+- `http://localhost:8590`
+- Tabs include Chat, Paper Viewer, Structured Workstream, OpenAlex Metadata, Citation Network, Usage, and Compare.
+- Debug mode toggle (top bar) reveals Workflow Cache and Cache Inspector tabs.
+
+## Frontend tests (React)
+
+Run frontend tests through Docker (no local npm required):
+
+```bash
+docker compose --profile ops run --rm --build frontend-tests
+```
+
+Or use the helper wrapper:
+
+```bash
+python tools/run_frontend_tests.py
+```
 
 ## Run workflow from Docker
 

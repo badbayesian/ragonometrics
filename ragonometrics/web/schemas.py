@@ -13,6 +13,12 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=128)
+    email: str = Field(default="", max_length=256)
+    password: str = Field(min_length=8, max_length=1024)
+
+
 class ChatHistoryItem(BaseModel):
     query: str = ""
     answer: str = ""
@@ -26,6 +32,13 @@ class ChatTurnRequest(BaseModel):
     top_k: Optional[int] = Field(default=None, ge=1, le=30)
     variation_mode: bool = False
     history: List[ChatHistoryItem] = Field(default_factory=list)
+
+
+class ChatProvenanceScoreRequest(BaseModel):
+    paper_id: str = Field(min_length=1, max_length=64)
+    question: str = Field(default="", max_length=4000)
+    answer: str = Field(min_length=1, max_length=16000)
+    citations: List[dict] = Field(default_factory=list)
 
 
 class StructuredGenerateRequest(BaseModel):
@@ -54,6 +67,23 @@ class StructuredExportRequest(BaseModel):
     question_ids: List[str] = Field(default_factory=list)
 
 
+class CompareCreateRequest(BaseModel):
+    seed_paper_id: str = Field(default="", max_length=64)
+    paper_ids: List[str] = Field(default_factory=list)
+    questions: List[str] = Field(default_factory=list)
+    model: Optional[str] = None
+    name: str = Field(default="", max_length=200)
+
+
+class CompareFillMissingRequest(BaseModel):
+    paper_ids: List[str] = Field(default_factory=list)
+    question_ids: List[str] = Field(default_factory=list)
+
+
+class CompareExportRequest(BaseModel):
+    format: str = Field(default="json", max_length=16)
+
+
 class ForgotPasswordRequest(BaseModel):
     identifier: str = Field(min_length=1, max_length=256)
 
@@ -61,6 +91,11 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=1, max_length=512)
     new_password: str = Field(min_length=8, max_length=1024)
+
+
+class OpenAlexManualLinkRequest(BaseModel):
+    paper_id: str = Field(min_length=1, max_length=64)
+    openalex_api_url: str = Field(min_length=1, max_length=1024)
 
 
 class PaperNoteCreateRequest(BaseModel):

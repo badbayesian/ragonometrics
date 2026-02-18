@@ -6,6 +6,14 @@ RUN npm install
 COPY webapp/ ./
 RUN npm run build
 
+FROM node:20-alpine AS web-test
+
+WORKDIR /webapp
+COPY webapp/package*.json ./
+RUN npm install
+COPY webapp/ ./
+RUN npm run test
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1

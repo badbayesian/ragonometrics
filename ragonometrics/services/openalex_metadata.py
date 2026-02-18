@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Dict, List
+
+import requests
+
+from ragonometrics.db.connection import pooled_connection
 
 from ragonometrics.services.papers import PaperRef, load_prepared
 
@@ -26,6 +32,190 @@ def _openalex_work_id(value: Any) -> str:
 def _openalex_work_url(value: Any) -> str:
     work_id = _openalex_work_id(value)
     return f"https://openalex.org/{work_id}" if work_id else ""
+
+
+def _normalize_openalex_api_url(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    clean = text.split("?", 1)[0].rstrip("/")
+    lower = clean.lower()
+    if lower.startswith("https://openalex.org/"):
+        token = clean.rsplit("/", 1)[-1]
+        if token:
+            return f"https://api.openalex.org/works/{token}"
+        return ""
+    if lower.startswith("https://api.openalex.org/works/"):
+        return clean
+    if lower.startswith("https://api.openalex.org/"):
+        token = clean.rsplit("/", 1)[-1]
+        if token:
+            return f"https://api.openalex.org/works/{token}"
+    return ""
+
+
+def _author_names(meta: Dict[str, Any]) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    for authorship in meta.get("authorships") or []:
+        if not isinstance(authorship, dict):
+            continue
+        author_obj = authorship.get("author") or {}
+        name = str(author_obj.get("display_name") or "").strip()
+        if not name:
+            continue
+        key = name.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+    return out
+
+
+def _normalize_path_text(path_text: str) -> str:
+    return str(path_text or "").replace("\\", "/").strip()
+
+
+def _alias_paths_for_paper(*, paper_path: str, existing_paths: List[str]) -> List[str]:
+    filename = Path(str(paper_path or "")).name
+    aliases = set()
+    if paper_path:
+        aliases.add(paper_path)
+        aliases.add(_normalize_path_text(paper_path))
+    if filename:
+        aliases.add(f"/app/papers/{filename}")
+        aliases.add(f"papers\\{filename}")
+    for item in existing_paths:
+        text = str(item or "").strip()
+        if text:
+            aliases.add(text)
+    return sorted(item for item in aliases if str(item).strip())
+
+
+def _upsert_openalex_metadata_rows(
+    *,
+    db_url: str,
+    alias_paths: List[str],
+    openalex_meta: Dict[str, Any],
+) -> int:
+    if not alias_paths:
+        return 0
+    title = str(openalex_meta.get("display_name") or openalex_meta.get("title") or "").strip()
+    authors = _author_names(openalex_meta)
+    authors_text = ", ".join(authors)
+    query_year = openalex_meta.get("publication_year")
+    if not isinstance(query_year, int):
+        query_year = None
+    with pooled_connection(db_url) as conn:
+        cur = conn.cursor()
+        for paper_path in alias_paths:
+            cur.execute(
+                """
+                INSERT INTO enrichment.paper_openalex_metadata (
+                    paper_path,
+                    title,
+                    authors,
+                    query_title,
+                    query_authors,
+                    query_year,
+                    openalex_id,
+                    openalex_doi,
+                    openalex_title,
+                    openalex_publication_year,
+                    openalex_authors_json,
+                    openalex_json,
+                    match_status,
+                    error_text,
+                    created_at,
+                    updated_at
+                )
+                VALUES (
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s::jsonb,'matched',NULL,NOW(),NOW()
+                )
+                ON CONFLICT (paper_path) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    authors = EXCLUDED.authors,
+                    query_title = EXCLUDED.query_title,
+                    query_authors = EXCLUDED.query_authors,
+                    query_year = EXCLUDED.query_year,
+                    openalex_id = EXCLUDED.openalex_id,
+                    openalex_doi = EXCLUDED.openalex_doi,
+                    openalex_title = EXCLUDED.openalex_title,
+                    openalex_publication_year = EXCLUDED.openalex_publication_year,
+                    openalex_authors_json = EXCLUDED.openalex_authors_json,
+                    openalex_json = EXCLUDED.openalex_json,
+                    match_status = 'matched',
+                    error_text = NULL,
+                    updated_at = NOW()
+                """,
+                (
+                    paper_path,
+                    title,
+                    authors_text,
+                    title,
+                    authors_text,
+                    query_year,
+                    str(openalex_meta.get("id") or "") or None,
+                    str(openalex_meta.get("doi") or "") or None,
+                    title or None,
+                    openalex_meta.get("publication_year"),
+                    json.dumps(authors, ensure_ascii=False),
+                    json.dumps(openalex_meta, ensure_ascii=False),
+                ),
+            )
+        conn.commit()
+    return len(alias_paths)
+
+
+def manual_link_openalex_for_paper(
+    *,
+    paper_ref: PaperRef,
+    openalex_api_url: str,
+    db_url: str,
+) -> Dict[str, Any]:
+    """Persist one manual OpenAlex match for the selected paper."""
+    api_url = _normalize_openalex_api_url(openalex_api_url)
+    if not api_url:
+        raise ValueError("Invalid OpenAlex URL. Use https://api.openalex.org/... or https://openalex.org/...")
+    if not str(db_url or "").strip():
+        raise ValueError("DATABASE_URL is required for manual OpenAlex linking.")
+
+    response = requests.get(api_url, timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict) or not payload:
+        raise ValueError("OpenAlex response was empty.")
+
+    filename = Path(str(paper_ref.path or "")).name
+    with pooled_connection(db_url) as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT paper_path
+            FROM enrichment.paper_openalex_metadata
+            WHERE lower(replace(paper_path, '\\', '/')) LIKE %s
+            """,
+            (f"%/{filename.lower()}",),
+        )
+        existing_paths = [str((row or [None])[0] or "") for row in (cur.fetchall() or [])]
+
+    aliases = _alias_paths_for_paper(paper_path=paper_ref.path, existing_paths=existing_paths)
+    updated = _upsert_openalex_metadata_rows(
+        db_url=db_url,
+        alias_paths=aliases,
+        openalex_meta=payload,
+    )
+    openalex_id = str(payload.get("id") or "").strip()
+    return {
+        "paper_id": paper_ref.paper_id,
+        "paper_name": paper_ref.name,
+        "paper_path": paper_ref.path,
+        "openalex_id": openalex_id,
+        "openalex_url": _openalex_work_url(openalex_id),
+        "openalex_title": str(payload.get("display_name") or payload.get("title") or "").strip(),
+        "publication_year": payload.get("publication_year"),
+        "aliases_updated": int(updated),
+    }
 
 
 def _openalex_author_names(meta: Dict[str, Any]) -> List[str]:

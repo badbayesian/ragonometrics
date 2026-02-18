@@ -29,6 +29,24 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inlineLabel {
+  display: grid;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.inlineSelect {
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 8px;
+  min-width: 150px;
+  font-size: 0.85rem;
 }
 
 .userBadge {
@@ -48,6 +66,12 @@
   cursor: pointer;
 }
 
+.topButtonActive {
+  border-color: var(--accent-700);
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent-500), var(--accent-600));
+}
+
 .topHelpButton {
   border: 1px solid var(--accent-600);
   background: #eef7ff;
@@ -64,6 +88,53 @@
   border-radius: 16px;
   padding: 14px;
   box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: 12px;
+}
+
+.selectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.selectorTitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.selectorMeta {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.selectorActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterBadge {
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.clearFiltersButton {
+  border: 1px solid var(--border-3);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .paperSummaryCard {
@@ -81,6 +152,15 @@
   color: var(--text-muted);
 }
 
+.paperMetaLink {
+  color: var(--accent-600);
+  text-decoration: none;
+}
+
+.paperMetaLink:hover {
+  text-decoration: underline;
+}
+
 .paperAbstract {
   margin: 2px 0 0;
   color: var(--text);
@@ -89,14 +169,36 @@
 
 .selectorGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
+}
+
+.finderGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 10px;
+  align-items: end;
+}
+
+.finderLabel {
+  min-width: 0;
+}
+
+.filtersPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  border: 1px solid var(--border-1);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--surface-2);
 }
 
 .label {
   display: grid;
   gap: 6px;
   color: var(--text);
+  min-width: 0;
 }
 
 .input {
@@ -106,6 +208,11 @@
   padding: 8px 10px;
   background: var(--surface-2);
   color: var(--text);
+}
+
+.selectorHint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
 }
 
 .tabs {
@@ -160,6 +267,40 @@
   }
 
   .selectorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .selectorHeader {
+    flex-direction: column;
+  }
+
+  .finderGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 16px;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .selectorGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .selectorHeader {
+    flex-direction: column;
+  }
+
+  .finderGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filtersPanel {
     grid-template-columns: 1fr;
   }
 }

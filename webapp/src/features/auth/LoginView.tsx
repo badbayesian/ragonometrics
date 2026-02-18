@@ -4,16 +4,23 @@ import css from "./LoginView.module.css";
 type Props = {
   loginUser: string;
   loginPass: string;
+  registerUsername: string;
+  registerEmail: string;
+  registerPassword: string;
   forgotIdentifier: string;
   resetToken: string;
   resetPassword: string;
   status: string;
   onChangeUser: (value: string) => void;
   onChangePass: (value: string) => void;
+  onChangeRegisterUsername: (value: string) => void;
+  onChangeRegisterEmail: (value: string) => void;
+  onChangeRegisterPassword: (value: string) => void;
   onChangeForgotIdentifier: (value: string) => void;
   onChangeResetToken: (value: string) => void;
   onChangeResetPassword: (value: string) => void;
   onLogin: (e: FormEvent) => void;
+  onRegister: (e: FormEvent) => void;
   onForgotPassword: (e: FormEvent) => void;
   onResetPassword: (e: FormEvent) => void;
 };
@@ -41,6 +48,40 @@ export function LoginView(props: Props) {
           Login
         </button>
       </form>
+
+      <details className={css.helpPanel}>
+        <summary>Create account</summary>
+        <form className={css.form} onSubmit={props.onRegister}>
+          <label className={css.label}>
+            Username
+            <input
+              className={css.input}
+              value={props.registerUsername}
+              onChange={(e) => props.onChangeRegisterUsername(e.target.value)}
+            />
+          </label>
+          <label className={css.label}>
+            Email
+            <input
+              className={css.input}
+              value={props.registerEmail}
+              onChange={(e) => props.onChangeRegisterEmail(e.target.value)}
+            />
+          </label>
+          <label className={css.label}>
+            Password
+            <input
+              className={css.input}
+              type="password"
+              value={props.registerPassword}
+              onChange={(e) => props.onChangeRegisterPassword(e.target.value)}
+            />
+          </label>
+          <button className={css.button} type="submit">
+            Create Account
+          </button>
+        </form>
+      </details>
 
       <details className={css.helpPanel}>
         <summary>Forgot password?</summary>

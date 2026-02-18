@@ -29,6 +29,7 @@ type OpenAlexPayload = {
 };
 
 type Props = {
+  csrfToken: string;
   paperId: string;
   onStatus: (text: string) => void;
 };
@@ -46,7 +47,9 @@ function linkOrText(value: string, label = "Open") {
 export function OpenAlexTab(props: Props) {
   const [data, setData] = useState<OpenAlexPayload | null>(null);
   const [loading, setLoading] = useState(false);
+  const [linking, setLinking] = useState(false);
   const [error, setError] = useState("");
+  const [manualOpenAlexUrl, setManualOpenAlexUrl] = useState("");
 
   async function load() {
     if (!props.paperId) return;
@@ -62,6 +65,41 @@ export function OpenAlexTab(props: Props) {
     }
     setData(out.data);
     setLoading(false);
+  }
+
+  async function applyManualOpenAlexLink() {
+    const url = String(manualOpenAlexUrl || "").trim();
+    if (!url) {
+      const message = "Enter an OpenAlex API URL first.";
+      setError(message);
+      props.onStatus(message);
+      return;
+    }
+    setLinking(true);
+    setError("");
+    const out = await api<{ openalex_id: string; openalex_title: string; aliases_updated: number }>(
+      "/api/v1/openalex/metadata/manual-link",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          paper_id: props.paperId,
+          openalex_api_url: url,
+        }),
+      },
+      props.csrfToken,
+    );
+    if (!out.ok || !out.data) {
+      const message = out.error?.message || "Manual OpenAlex link failed.";
+      setError(message);
+      props.onStatus(message);
+      setLinking(false);
+      return;
+    }
+    props.onStatus(
+      `Manual OpenAlex link saved (${out.data.openalex_id || "n/a"}; aliases updated=${Number(out.data.aliases_updated || 0)}).`,
+    );
+    await load();
+    setLinking(false);
   }
 
   useEffect(() => {
@@ -88,10 +126,28 @@ export function OpenAlexTab(props: Props) {
           <h2>OpenAlex Metadata</h2>
           <p className={css.caption}>Canonical metadata enrichment for the selected paper.</p>
         </div>
-        <button className={css.button} onClick={() => void load()} disabled={loading}>
+        <button className={css.button} onClick={() => void load()} disabled={loading || linking}>
           {loading ? <Spinner label="Loading" small /> : "Refresh"}
         </button>
       </header>
+
+      <section className={css.manualLinkCard}>
+        <h3>Manual OpenAlex Link</h3>
+        <p className={css.caption}>
+          If auto-match is missing or wrong, paste an OpenAlex API/canonical URL and save it for this paper.
+        </p>
+        <div className={css.manualLinkRow}>
+          <input
+            className={css.manualInput}
+            value={manualOpenAlexUrl}
+            onChange={(e) => setManualOpenAlexUrl(e.target.value)}
+            placeholder="https://api.openalex.org/w2914218338"
+          />
+          <button className={css.button} onClick={() => void applyManualOpenAlexLink()} disabled={loading || linking}>
+            {linking ? <Spinner label="Saving" small /> : "Apply Link"}
+          </button>
+        </div>
+      </section>
 
       {error && <div className={css.error}>{error}</div>}
 

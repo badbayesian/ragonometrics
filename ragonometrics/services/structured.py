@@ -18,7 +18,7 @@ from ragonometrics.integrations.citec import format_citec_context
 from ragonometrics.integrations.openalex import format_openalex_context
 from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.pipeline import call_llm
-from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, make_cache_key, set_cached_answer
+from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, make_cache_key, profile_hash, set_cached_answer_hybrid
 from ragonometrics.services.chat import parse_context_chunks
 from ragonometrics.services.papers import PaperRef, load_prepared, normalize_paper_path
 
@@ -164,6 +164,8 @@ def upsert_workflow_structured_answer(
     answer: str,
     structured_fields: Optional[Dict[str, Any]] = None,
     idempotency_key: str = "",
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
 ) -> Dict[str, str]:
     """Persist one structured answer into workflow ledger."""
     if not is_valid_structured_question_text(question):
@@ -221,19 +223,22 @@ def upsert_workflow_structured_answer(
                 (
                     run_id, record_kind, step, record_key, status,
                     papers_dir, arm, trigger_source,
+                    project_id, persona_id,
                     config_effective_json, report_question_set,
                     started_at, finished_at, created_at, updated_at,
                     payload_json, metadata_json
                 )
                 VALUES (
                     %s, 'run', '', 'main', 'completed',
-                    %s, %s, %s,
+                    %s, %s, %s, %s, %s,
                     %s::jsonb, %s,
                     %s, %s, NOW(), NOW(),
                     %s::jsonb, %s::jsonb
                 )
                 ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
                     status = EXCLUDED.status,
+                    project_id = COALESCE(EXCLUDED.project_id, workflow.run_records.project_id),
+                    persona_id = COALESCE(EXCLUDED.persona_id, workflow.run_records.persona_id),
                     payload_json = workflow.run_records.payload_json || EXCLUDED.payload_json,
                     metadata_json = workflow.run_records.metadata_json || EXCLUDED.metadata_json,
                     updated_at = NOW()
@@ -243,6 +248,8 @@ def upsert_workflow_structured_answer(
                     normalized_path,
                     selected_model,
                     "flask_structured_workstream",
+                    str(project_id or "").strip() or None,
+                    str(persona_id or "").strip() or None,
                     json.dumps({"chat_model": selected_model}, ensure_ascii=False),
                     "structured",
                     created_at,
@@ -257,11 +264,12 @@ def upsert_workflow_structured_answer(
                 (
                     run_id, record_kind, step, record_key, status,
                     question_id, report_question_set, idempotency_key, input_hash,
+                    project_id, persona_id,
                     created_at, updated_at, payload_json, metadata_json
                 )
                 VALUES (
                     %s, 'question', 'agentic', %s, %s,
-                    %s, %s, %s, %s, NOW(), NOW(), %s::jsonb, %s::jsonb
+                    %s, %s, %s, %s, %s, %s, NOW(), NOW(), %s::jsonb, %s::jsonb
                 )
                 ON CONFLICT (run_id, record_kind, step, record_key) DO UPDATE SET
                     status = EXCLUDED.status,
@@ -269,6 +277,8 @@ def upsert_workflow_structured_answer(
                     report_question_set = EXCLUDED.report_question_set,
                     idempotency_key = COALESCE(EXCLUDED.idempotency_key, workflow.run_records.idempotency_key),
                     input_hash = COALESCE(EXCLUDED.input_hash, workflow.run_records.input_hash),
+                    project_id = COALESCE(EXCLUDED.project_id, workflow.run_records.project_id),
+                    persona_id = COALESCE(EXCLUDED.persona_id, workflow.run_records.persona_id),
                     payload_json = EXCLUDED.payload_json,
                     metadata_json = workflow.run_records.metadata_json || EXCLUDED.metadata_json,
                     updated_at = NOW()
@@ -281,6 +291,8 @@ def upsert_workflow_structured_answer(
                     "structured",
                     idem or None,
                     inp_hash,
+                    str(project_id or "").strip() or None,
+                    str(persona_id or "").strip() or None,
                     json.dumps(question_payload, ensure_ascii=False),
                     json.dumps(question_meta, ensure_ascii=False),
                 ),
@@ -291,13 +303,18 @@ def upsert_workflow_structured_answer(
     return {"run_id": run_id, "question_id": question_id_clean, "created_at": created_at}
 
 
-def db_workflow_structured_answers_for_paper(paper_path: str, model: Optional[str] = None) -> Dict[str, Dict[str, str]]:
+def db_workflow_structured_answers_for_paper(
+    paper_path: str,
+    model: Optional[str] = None,
+    project_id: Optional[str] = None,
+) -> Dict[str, Dict[str, str]]:
     """Load latest structured answers for one paper."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         return {}
     normalized_path = normalize_paper_path(paper_path)
     basename_suffix = f"%/{Path(normalized_path).name.lower()}"
+    scoped_project = str(project_id or "").strip()
     out: Dict[str, Dict[str, str]] = {}
     try:
         with pooled_connection(db_url) as conn:
@@ -318,12 +335,13 @@ def db_workflow_structured_answers_for_paper(paper_path: str, model: Optional[st
                  AND r.record_key = 'main'
                 WHERE q.record_kind = 'question'
                   AND COALESCE(q.payload_json->>'question', q.output_json->>'question', '') <> ''
+                  AND (%s = '' OR COALESCE(r.project_id, '') = %s)
                   AND (
                         lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) = lower(%s)
                      OR lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) LIKE %s
                   )
             """
-            params: List[Any] = [normalized_path, basename_suffix]
+            params: List[Any] = [scoped_project, scoped_project, normalized_path, basename_suffix]
             if model:
                 sql += " AND (COALESCE(r.config_effective_json->>'chat_model', '') = %s OR COALESCE(r.arm, '') = %s)"
                 params.extend([model, model])
@@ -346,13 +364,18 @@ def db_workflow_structured_answers_for_paper(paper_path: str, model: Optional[st
     return out
 
 
-def db_workflow_question_records_for_paper(paper_path: str, model: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+def db_workflow_question_records_for_paper(
+    paper_path: str,
+    model: Optional[str] = None,
+    project_id: Optional[str] = None,
+) -> Dict[str, Dict[str, Any]]:
     """Load detailed question records indexed by run/question and global question keys."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         return {}
     normalized_path = normalize_paper_path(paper_path)
     basename_suffix = f"%/{Path(normalized_path).name.lower()}"
+    scoped_project = str(project_id or "").strip()
     out: Dict[str, Dict[str, Any]] = {}
     try:
         with pooled_connection(db_url) as conn:
@@ -372,12 +395,13 @@ def db_workflow_question_records_for_paper(paper_path: str, model: Optional[str]
                  AND r.record_key = 'main'
                 WHERE q.record_kind = 'question'
                   AND COALESCE(q.payload_json->>'question', q.output_json->>'question', '') <> ''
+                  AND (%s = '' OR COALESCE(r.project_id, '') = %s)
                   AND (
                         lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) = lower(%s)
                      OR lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) LIKE %s
                   )
             """
-            params: List[Any] = [normalized_path, basename_suffix]
+            params: List[Any] = [scoped_project, scoped_project, normalized_path, basename_suffix]
             if model:
                 sql += " AND (COALESCE(r.config_effective_json->>'chat_model', '') = %s OR COALESCE(r.arm, '') = %s)"
                 params.extend([model, model])
@@ -450,6 +474,11 @@ def generate_and_cache_structured_answer(
     session_id: Optional[str] = None,
     top_k: Optional[int] = None,
     idempotency_key: str = "",
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
+    allow_cross_project_answer_reuse: bool = True,
+    allow_custom_question_sharing: bool = False,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate one structured answer and persist to cache + run records."""
     if not is_valid_structured_question_text(question):
@@ -488,13 +517,14 @@ def generate_and_cache_structured_answer(
         max_output_tokens=None,
         temperature=None,
         usage_context="structured_workstream_answer",
+        meta={"project_id": project_id, "persona_id": persona_id},
         session_id=session_id,
         request_id=request_id,
         step="structured_workstream_answer",
         question_id=str(question_id or ""),
     ).strip()
     cache_key = make_cache_key(question, paper_ref.path, model, context)
-    set_cached_answer(
+    set_cached_answer_hybrid(
         DEFAULT_CACHE_PATH,
         cache_key=cache_key,
         query=question,
@@ -502,6 +532,13 @@ def generate_and_cache_structured_answer(
         model=model,
         context=context,
         answer=answer,
+        project_id=project_id,
+        user_id=user_id,
+        source_project_id=project_id,
+        prompt_profile_hash=profile_hash(RESEARCHER_QA_PROMPT),
+        retrieval_profile_hash=profile_hash(f"top_k={int(retrieval_settings.top_k)}"),
+        persona_profile_hash=profile_hash(str(persona_id or "default")),
+        allow_custom_question_sharing=bool(allow_custom_question_sharing),
     )
     persisted = upsert_workflow_structured_answer(
         paper_path=paper_ref.path,
@@ -518,6 +555,8 @@ def generate_and_cache_structured_answer(
             top_k=int(retrieval_settings.top_k),
         ),
         idempotency_key=idempotency_key,
+        project_id=project_id,
+        persona_id=persona_id,
     )
     return {
         "answer": answer,
@@ -536,6 +575,11 @@ def generate_missing_structured_answers(
     session_id: Optional[str] = None,
     top_k: Optional[int] = None,
     question_ids: Optional[List[str]] = None,
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
+    allow_cross_project_answer_reuse: bool = True,
+    allow_custom_question_sharing: bool = False,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate structured answers for missing questions."""
     model = str(selected_model or "")
@@ -543,7 +587,11 @@ def generate_missing_structured_answers(
     if question_ids:
         wanted = {str(qid or "").strip() for qid in question_ids if str(qid or "").strip()}
         questions = [q for q in questions if str(q.get("id") or "").strip() in wanted]
-    cached_map = db_workflow_structured_answers_for_paper(paper_ref.path, model=model or None)
+    cached_map = db_workflow_structured_answers_for_paper(
+        paper_ref.path,
+        model=model or None,
+        project_id=project_id,
+    )
     generated: List[Dict[str, Any]] = []
     skipped = 0
     for item in questions:
@@ -561,6 +609,11 @@ def generate_missing_structured_answers(
             session_id=session_id,
             top_k=top_k,
             idempotency_key=f"generate-missing::{paper_ref.paper_id}::{item.get('id')}",
+            project_id=project_id,
+            persona_id=persona_id,
+            allow_cross_project_answer_reuse=allow_cross_project_answer_reuse,
+            allow_custom_question_sharing=allow_custom_question_sharing,
+            user_id=user_id,
         )
         generated.append({"id": item.get("id"), "answer_length": len(str(out.get("answer") or "")), "run_id": out.get("run_id")})
     return {"generated_count": len(generated), "skipped_cached_count": skipped, "generated": generated}
@@ -815,6 +868,7 @@ def export_bundle_for_paper(
     cache_scope: str,
     export_format: str,
     question_ids: Optional[List[str]] = None,
+    project_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build export bundle for one paper and optional question-id subset."""
     questions = structured_report_questions()
@@ -822,8 +876,20 @@ def export_bundle_for_paper(
         wanted = {str(q or "").strip() for q in question_ids}
         questions = [q for q in questions if str(q.get("id") or "").strip() in wanted]
     model_filter = selected_model if cache_scope == "Selected model only" else None
-    cached_map = db_workflow_structured_answers_for_paper(paper_ref.path, model=model_filter)
-    records = db_workflow_question_records_for_paper(paper_ref.path, model=model_filter) if export_format.lower() == "full" else {}
+    cached_map = db_workflow_structured_answers_for_paper(
+        paper_ref.path,
+        model=model_filter,
+        project_id=project_id,
+    )
+    records = (
+        db_workflow_question_records_for_paper(
+            paper_ref.path,
+            model=model_filter,
+            project_id=project_id,
+        )
+        if export_format.lower() == "full"
+        else {}
+    )
     return structured_workstream_export_bundle(
         paper_ref=paper_ref,
         questions=questions,

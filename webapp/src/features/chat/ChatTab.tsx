@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../shared/api";
-import { ChatHistoryItem, ChatSuggestionPayload, CitationChunk } from "../../shared/types";
+import { ChatHistoryItem, ChatSuggestionPayload, CitationChunk, ProvenanceScore } from "../../shared/types";
 import { Spinner } from "../../shared/Spinner";
 import robotAvatar from "../../assets/robot-avatar.svg";
 import css from "./ChatTab.module.css";
@@ -25,6 +25,7 @@ type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   createdAt: string;
+  prompt?: string;
   citations?: CitationChunk[];
   retrievalStats?: Record<string, unknown>;
   cacheHit?: boolean | null;
@@ -32,6 +33,14 @@ type ChatMessage = {
   cacheMissReason?: string;
   model?: string;
   isStreaming?: boolean;
+  provenance?: ProvenanceScore | null;
+};
+
+type QueuedPrompt = {
+  id: string;
+  prompt: string;
+  stream: boolean;
+  addedAt: string;
 };
 
 type Props = {
@@ -43,7 +52,13 @@ type Props = {
   queuedQuestion: string;
   onQuestionConsumed: () => void;
   onStatus: (text: string) => void;
-  onOpenViewer: (payload: { page?: number | null; terms?: string[]; excerpt?: string }) => void;
+  onOpenViewer: (payload: {
+    page?: number | null;
+    terms?: string[];
+    excerpt?: string;
+    startWord?: number | null;
+    endWord?: number | null;
+  }) => void;
 };
 
 function nowIso(): string {
@@ -72,6 +87,7 @@ function historyToMessages(rows: ChatHistoryItem[]): ChatMessage[] {
       id: `a-${key}-${idx}`,
       role: "assistant",
       text: String(row.answer || ""),
+      prompt: String(row.query || ""),
       createdAt: created,
       citations: Array.isArray(row.citations) ? row.citations : [],
       retrievalStats: (row.retrieval_stats as Record<string, unknown>) || {},
@@ -100,11 +116,13 @@ function messagesToHistory(messages: ChatMessage[], paperPath: string): ChatHist
 export function ChatTab(props: Props) {
   const [variationMode, setVariationMode] = useState(false);
   const [question, setQuestion] = useState("");
+  const [queuedPrompts, setQueuedPrompts] = useState<QueuedPrompt[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isAsking, setIsAsking] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const scoredMessageIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === "function") {
@@ -112,16 +130,42 @@ export function ChatTab(props: Props) {
     }
   }, [messages]);
 
+  function enqueuePrompt(prompt: string, stream: boolean) {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    const queued: QueuedPrompt = {
+      id: `q-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      prompt: trimmed,
+      stream,
+      addedAt: nowIso(),
+    };
+    setQueuedPrompts((prev) => [...prev, queued]);
+    props.onStatus(`Question queued (${stream ? "stream" : "ask"}).`);
+  }
+
+  function removeQueuedPrompt(id: string) {
+    setQueuedPrompts((prev) => prev.filter((item) => item.id !== id));
+  }
+
   useEffect(() => {
     if (!props.queuedQuestion) return;
-    setQuestion(props.queuedQuestion);
+    const incoming = props.queuedQuestion.trim();
+    if (incoming) {
+      if (isAsking) {
+        enqueuePrompt(incoming, false);
+      } else {
+        setQuestion(incoming);
+      }
+    }
     props.onQuestionConsumed();
-  }, [props.queuedQuestion, props.onQuestionConsumed]);
+  }, [props.queuedQuestion, props.onQuestionConsumed, isAsking]);
 
   useEffect(() => {
     async function bootstrap() {
       if (!props.paperId) return;
       setError("");
+      setQuestion("");
+      setQueuedPrompts([]);
       const [historyOut, suggestionsOut] = await Promise.all([
         api<ChatHistoryResponse>(`/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}&limit=80`),
         api<ChatSuggestionPayload>(`/api/v1/chat/suggestions?paper_id=${encodeURIComponent(props.paperId)}`),
@@ -156,6 +200,7 @@ export function ChatTab(props: Props) {
       id: assistantId,
       role: "assistant",
       text: "",
+      prompt: userText,
       createdAt,
       isStreaming: true,
       citations: [],
@@ -184,18 +229,65 @@ export function ChatTab(props: Props) {
       .slice(0, 6);
   }
 
-  async function askChat(stream: boolean) {
-    const prompt = question.trim();
-    if (!props.paperId || !prompt || isAsking) return;
-    setQuestion("");
+  async function scoreProvenanceForMessage(message: ChatMessage) {
+    if (!props.paperId || message.role !== "assistant") return;
+    if (!message.text.trim()) return;
+    const out = await api<ProvenanceScore>(
+      "/api/v1/chat/provenance-score",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          paper_id: props.paperId,
+          question: String(message.prompt || ""),
+          answer: message.text,
+          citations: Array.isArray(message.citations) ? message.citations : [],
+        }),
+      },
+      props.csrfToken
+    );
+    if (!out.ok || !out.data) {
+      updateAssistantMessage(message.id, {
+        provenance: {
+          paper_id: props.paperId,
+          question: String(message.prompt || ""),
+          score: 0,
+          status: "low",
+          warnings: [{ code: "provenance_request_failed", message: out.error?.message || "Provenance scoring failed." }],
+        },
+      });
+      return;
+    }
+    updateAssistantMessage(message.id, { provenance: out.data });
+  }
+
+  useEffect(() => {
+    async function scorePendingMessages() {
+      const pending = messages.filter(
+        (item) =>
+          item.role === "assistant" &&
+          !item.isStreaming &&
+          Boolean(item.text.trim()) &&
+          !scoredMessageIdsRef.current.has(item.id)
+      );
+      for (const item of pending) {
+        scoredMessageIdsRef.current.add(item.id);
+        await scoreProvenanceForMessage(item);
+      }
+    }
+    void scorePendingMessages();
+  }, [messages, props.paperId]);
+
+  async function runPrompt(prompt: string, stream: boolean) {
+    const trimmedPrompt = prompt.trim();
+    if (!props.paperId || !trimmedPrompt || isAsking) return;
     setIsAsking(true);
     setError("");
     props.onStatus(stream ? "Streaming answer..." : "Fetching answer...");
 
-    const { assistantId } = addPendingTurn(prompt);
+    const { assistantId } = addPendingTurn(trimmedPrompt);
     const payload = {
       paper_id: props.paperId,
-      question: prompt,
+      question: trimmedPrompt,
       model: props.model || undefined,
       history: historyPayload,
       variation_mode: variationMode,
@@ -308,8 +400,26 @@ export function ChatTab(props: Props) {
     setIsAsking(false);
   }
 
+  function submitPrompt(stream: boolean) {
+    const prompt = question.trim();
+    if (!props.paperId || !prompt) return;
+    setQuestion("");
+    if (isAsking || queuedPrompts.length > 0) {
+      enqueuePrompt(prompt, stream);
+      return;
+    }
+    void runPrompt(prompt, stream);
+  }
+
+  useEffect(() => {
+    if (!props.paperId || isAsking || queuedPrompts.length < 1) return;
+    const [next, ...rest] = queuedPrompts;
+    setQueuedPrompts(rest);
+    void runPrompt(next.prompt, next.stream);
+  }, [queuedPrompts, isAsking, props.paperId]);
+
   async function clearHistory() {
-    if (!props.paperId || isAsking) return;
+    if (!props.paperId || isAsking || queuedPrompts.length > 0) return;
     setError("");
     const out = await api<{ deleted_count: number }>(
       `/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}`,
@@ -338,7 +448,11 @@ export function ChatTab(props: Props) {
             <input type="checkbox" checked={variationMode} onChange={(e) => setVariationMode(e.target.checked)} />
             Variation mode
           </label>
-          <button className={css.secondaryButton} onClick={() => void clearHistory()} disabled={isAsking}>
+          <button
+            className={css.secondaryButton}
+            onClick={() => void clearHistory()}
+            disabled={isAsking || queuedPrompts.length > 0}
+          >
             Clear History
           </button>
         </div>
@@ -347,7 +461,7 @@ export function ChatTab(props: Props) {
       {suggestions.length > 0 && (
         <div className={css.suggestions}>
           {suggestions.map((item) => (
-            <button key={item} className={css.suggestionChip} onClick={() => setQuestion(item)} disabled={isAsking}>
+            <button key={item} className={css.suggestionChip} onClick={() => setQuestion(item)}>
               {item}
             </button>
           ))}
@@ -355,6 +469,30 @@ export function ChatTab(props: Props) {
       )}
 
       {error && <div className={css.errorBanner}>{error}</div>}
+
+      {queuedPrompts.length > 0 && (
+        <section className={css.queuePanel}>
+          <div className={css.queueHeader}>
+            <strong>Queued questions ({queuedPrompts.length})</strong>
+            <button className={css.secondaryButton} onClick={() => setQueuedPrompts([])}>
+              Clear Queue
+            </button>
+          </div>
+          <ul className={css.queueList}>
+            {queuedPrompts.map((item, idx) => (
+              <li key={item.id} className={css.queueItem}>
+                <span className={css.queueIndex}>#{idx + 1}</span>
+                <span className={css.queueMode}>{item.stream ? "Stream" : "Ask"}</span>
+                <span className={css.queueText}>{item.prompt}</span>
+                <span className={css.queueTime}>{shortTime(item.addedAt)}</span>
+                <button className={css.queueRemove} onClick={() => removeQueuedPrompt(item.id)}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={css.timeline}>
         {messages.length === 0 ? (
@@ -378,6 +516,14 @@ export function ChatTab(props: Props) {
                     )}
                     {message.cacheHitLayer && <span className={css.metaBadge}>layer={message.cacheHitLayer}</span>}
                     {message.model && <span className={css.metaBadge}>{message.model}</span>}
+                    {message.provenance && (
+                      <span className={css.metaBadge}>
+                        Prov {Math.round((Number(message.provenance.score || 0) * 1000) / 10)}% ({message.provenance.status})
+                      </span>
+                    )}
+                    {message.provenance && Array.isArray(message.provenance.warnings) && message.provenance.warnings.length > 0 && (
+                      <span className={css.metaWarning}>{message.provenance.warnings.length} warning(s)</span>
+                    )}
                     {message.isStreaming && <span className={css.streaming}>Streaming...</span>}
                   </div>
                 )}
@@ -400,6 +546,8 @@ export function ChatTab(props: Props) {
                                   page: c.page,
                                   terms: citationTerms(c),
                                   excerpt: String(c.text || ""),
+                                  startWord: typeof c.start_word === "number" ? c.start_word : null,
+                                  endWord: typeof c.end_word === "number" ? c.end_word : null,
                                 })
                               }
                             >
@@ -410,6 +558,21 @@ export function ChatTab(props: Props) {
                       </ul>
                     ) : (
                       <span>No citation chunks returned.</span>
+                    )}
+                    {message.provenance && (
+                      <div className={css.provenanceBlock}>
+                        <strong>Provenance score:</strong>{" "}
+                        {Math.round((Number(message.provenance.score || 0) * 1000) / 10)}% ({message.provenance.status})
+                        {Array.isArray(message.provenance.warnings) && message.provenance.warnings.length > 0 && (
+                          <ul className={css.warningList}>
+                            {message.provenance.warnings.map((warn, idx) => (
+                              <li key={`${message.id}-warn-${idx}`}>
+                                <code>{warn.code}</code>: {warn.message}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     )}
                     <pre className={css.stats}>{JSON.stringify(message.retrievalStats || {}, null, 2)}</pre>
                   </details>
@@ -428,19 +591,19 @@ export function ChatTab(props: Props) {
           onChange={(e) => setQuestion(e.target.value)}
           rows={4}
           placeholder="Ask a question about this paper"
-          disabled={isAsking}
         />
         <div className={css.composerActions}>
           <button
             className={css.primaryButton}
-            onClick={() => void askChat(false)}
-            disabled={isAsking || !question.trim()}
+            onClick={() => submitPrompt(false)}
+            disabled={!question.trim()}
           >
-            {isAsking ? <Spinner label="Asking..." small /> : "Ask"}
+            {isAsking ? "Queue Ask" : "Ask"}
           </button>
-          <button className={css.secondaryButton} onClick={() => void askChat(true)} disabled={isAsking || !question.trim()}>
-            {isAsking ? <Spinner label="Streaming..." small /> : "Ask (Stream)"}
+          <button className={css.secondaryButton} onClick={() => submitPrompt(true)} disabled={!question.trim()}>
+            {isAsking ? "Queue Stream" : "Ask (Stream)"}
           </button>
+          {isAsking && <Spinner label="Running..." small />}
         </div>
       </div>
     </section>

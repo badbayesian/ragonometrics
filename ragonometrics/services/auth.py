@@ -203,6 +203,74 @@ def verify_db_login(db_url: str, *, username: str, password: str) -> Tuple[bool,
         return False, {}
 
 
+def register_db_user(
+    db_url: str,
+    *,
+    username: str,
+    email: Optional[str],
+    password: str,
+) -> Tuple[bool, Dict[str, Any]]:
+    """Create one active DB-backed auth user."""
+    user_name = str(username or "").strip()
+    user_email = str(email or "").strip() or None
+    raw_password = str(password or "")
+    if not db_url:
+        return False, {"code": "auth_unavailable", "message": "Database auth is unavailable."}
+    if len(user_name) < 3:
+        return False, {"code": "validation_error", "message": "Username must be at least 3 characters."}
+    if len(raw_password) < 8:
+        return False, {"code": "validation_error", "message": "Password must be at least 8 characters."}
+
+    if not auth_tables_ready(db_url):
+        return False, {"code": "auth_unavailable", "message": "Auth tables are not ready."}
+
+    password_hash_value = password_hash(raw_password)
+    if not password_hash_value:
+        return False, {"code": "validation_error", "message": "Password is required."}
+
+    try:
+        with pooled_connection(db_url) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id
+                FROM auth.streamlit_users
+                WHERE lower(username) = lower(%s)
+                LIMIT 1
+                """,
+                (user_name,),
+            )
+            if cur.fetchone():
+                return False, {"code": "username_taken", "message": "Username is already in use."}
+            if user_email:
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM auth.streamlit_users
+                    WHERE lower(COALESCE(email, '')) = lower(%s)
+                    LIMIT 1
+                    """,
+                    (user_email,),
+                )
+                if cur.fetchone():
+                    return False, {"code": "email_taken", "message": "Email is already in use."}
+
+            cur.execute(
+                """
+                INSERT INTO auth.streamlit_users
+                    (username, email, password_hash, is_active, created_at, updated_at)
+                VALUES
+                    (%s, %s, %s, TRUE, NOW(), NOW())
+                """,
+                (user_name, user_email, password_hash_value),
+            )
+            conn.commit()
+    except Exception:
+        return False, {"code": "register_failed", "message": "Could not create account."}
+
+    return True, {"username": user_name, "email": user_email}
+
+
 def _lookup_active_user_by_identifier(db_url: str, *, identifier: str) -> Dict[str, Any]:
     """Return one active user row by username/email identifier."""
     ident = str(identifier or "").strip()
@@ -352,6 +420,8 @@ def persist_session(
     username: str,
     source: str = "flask_ui",
     session_id: str | None = None,
+    current_project_id: str | None = None,
+    current_persona_id: str | None = None,
 ) -> str:
     """Insert or refresh one auth session row and return session id."""
     if not db_url:
@@ -363,19 +433,32 @@ def persist_session(
             cur.execute(
                 """
                 INSERT INTO auth.streamlit_sessions
-                    (session_id, user_id, username, source, authenticated_at, revoked_at, updated_at)
+                    (
+                        session_id, user_id, username, source,
+                        current_project_id, current_persona_id,
+                        authenticated_at, revoked_at, updated_at
+                    )
                 VALUES
-                    (%s, %s, %s, %s, NOW(), NULL, NOW())
+                    (%s, %s, %s, %s, %s, %s, NOW(), NULL, NOW())
                 ON CONFLICT (session_id)
                 DO UPDATE SET
                     user_id = EXCLUDED.user_id,
                     username = EXCLUDED.username,
                     source = EXCLUDED.source,
+                    current_project_id = COALESCE(EXCLUDED.current_project_id, auth.streamlit_sessions.current_project_id),
+                    current_persona_id = COALESCE(EXCLUDED.current_persona_id, auth.streamlit_sessions.current_persona_id),
                     authenticated_at = EXCLUDED.authenticated_at,
                     revoked_at = NULL,
                     updated_at = NOW()
                 """,
-                (sid, user_id, str(username or "").strip(), source),
+                (
+                    sid,
+                    user_id,
+                    str(username or "").strip(),
+                    source,
+                    str(current_project_id or "").strip() or None,
+                    str(current_persona_id or "").strip() or None,
+                ),
             )
             conn.commit()
     except Exception:
@@ -412,26 +495,53 @@ def get_session_user(db_url: str, *, session_id: str) -> Optional[Dict[str, Any]
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT s.session_id, s.username, s.user_id, s.authenticated_at
-                FROM auth.streamlit_sessions s
-                LEFT JOIN auth.streamlit_users u ON u.id = s.user_id
-                WHERE s.session_id = %s
-                  AND s.revoked_at IS NULL
-                  AND (s.user_id IS NULL OR COALESCE(u.is_active, TRUE) = TRUE)
-                LIMIT 1
-                """,
-                (sid,),
-            )
+            try:
+                cur.execute(
+                    """
+                    SELECT
+                        s.session_id,
+                        s.username,
+                        s.user_id,
+                        s.authenticated_at,
+                        COALESCE(s.current_project_id, ''),
+                        COALESCE(s.current_persona_id, '')
+                    FROM auth.streamlit_sessions s
+                    LEFT JOIN auth.streamlit_users u ON u.id = s.user_id
+                    WHERE s.session_id = %s
+                      AND s.revoked_at IS NULL
+                      AND (s.user_id IS NULL OR COALESCE(u.is_active, TRUE) = TRUE)
+                    LIMIT 1
+                    """,
+                    (sid,),
+                )
+            except Exception:
+                cur.execute(
+                    """
+                    SELECT s.session_id, s.username, s.user_id, s.authenticated_at
+                    FROM auth.streamlit_sessions s
+                    LEFT JOIN auth.streamlit_users u ON u.id = s.user_id
+                    WHERE s.session_id = %s
+                      AND s.revoked_at IS NULL
+                      AND (s.user_id IS NULL OR COALESCE(u.is_active, TRUE) = TRUE)
+                    LIMIT 1
+                    """,
+                    (sid,),
+                )
             row = cur.fetchone()
             if not row:
                 return None
+            project_id = ""
+            persona_id = ""
+            if len(row) >= 6:
+                project_id = str(row[4] or "")
+                persona_id = str(row[5] or "")
             return {
                 "session_id": str(row[0] or ""),
                 "username": str(row[1] or ""),
                 "user_id": int(row[2]) if row[2] is not None else None,
                 "authenticated_at": row[3].isoformat() if hasattr(row[3], "isoformat") else str(row[3] or ""),
+                "current_project_id": project_id,
+                "current_persona_id": persona_id,
             }
     except Exception:
         return None

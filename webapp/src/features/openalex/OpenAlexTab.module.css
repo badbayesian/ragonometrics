@@ -29,6 +29,33 @@
   cursor: pointer;
 }
 
+.manualLinkCard {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+.manualLinkCard h3 {
+  margin: 0 0 6px;
+}
+
+.manualLinkRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.manualInput {
+  width: 100%;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface-1);
+  color: var(--text);
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(5, minmax(140px, 1fr));
@@ -142,6 +169,10 @@
 }
 
 @media (max-width: 1100px) {
+  .manualLinkRow {
+    grid-template-columns: 1fr;
+  }
+
   .metrics {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }

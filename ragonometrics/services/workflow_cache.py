@@ -147,13 +147,14 @@ def _run_row_payload(row: Any, *, paper_path: str) -> Dict[str, Any]:
     }
 
 
-def list_runs_for_paper(paper_path: str, limit: int = 50) -> List[Dict[str, Any]]:
+def list_runs_for_paper(paper_path: str, limit: int = 50, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return paper-scoped workflow runs ordered by recency."""
     db_url = _db_url()
     if not db_url:
         return []
     predicates = paper_match_predicates(paper_path)
     bounded_limit = max(1, min(200, int(limit or 50)))
+    scoped_project = str(project_id or "").strip()
     out: List[Dict[str, Any]] = []
     try:
         with pooled_connection(db_url) as conn:
@@ -179,6 +180,11 @@ def list_runs_for_paper(paper_path: str, limit: int = 50) -> List[Dict[str, Any]
                   AND r.step = ''
                   AND r.record_key = 'main'
                   AND (
+                        %s = ''
+                     OR COALESCE(r.project_id, '') = %s
+                     OR (%s = 'default-shared' AND COALESCE(r.project_id, '') = '')
+                  )
+                  AND (
                         lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) = %s
                      OR lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) = %s
                      OR lower(replace(COALESCE(r.papers_dir, ''), '\\', '/')) LIKE %s
@@ -187,6 +193,9 @@ def list_runs_for_paper(paper_path: str, limit: int = 50) -> List[Dict[str, Any]
                 LIMIT %s
                 """,
                 (
+                    scoped_project,
+                    scoped_project,
+                    scoped_project,
                     predicates["paper_path"],
                     predicates["paper_dir"],
                     predicates["basename_like"],
@@ -202,10 +211,11 @@ def list_runs_for_paper(paper_path: str, limit: int = 50) -> List[Dict[str, Any]
     return out
 
 
-def get_run_record(run_id: str) -> Optional[Dict[str, Any]]:
+def get_run_record(run_id: str, project_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Load one workflow run record by id."""
     db_url = _db_url()
     wanted = str(run_id or "").strip()
+    scoped_project = str(project_id or "").strip()
     if not db_url or not wanted:
         return None
     try:
@@ -231,10 +241,15 @@ def get_run_record(run_id: str) -> Optional[Dict[str, Any]]:
                 WHERE r.record_kind = 'run'
                   AND r.step = ''
                   AND r.record_key = 'main'
+                  AND (
+                        %s = ''
+                     OR COALESCE(r.project_id, '') = %s
+                     OR (%s = 'default-shared' AND COALESCE(r.project_id, '') = '')
+                  )
                   AND r.run_id = %s
                 LIMIT 1
                 """,
-                (wanted,),
+                (scoped_project, scoped_project, scoped_project, wanted),
             )
             row = cur.fetchone()
             if not row:
@@ -244,10 +259,11 @@ def get_run_record(run_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def list_steps_for_run(run_id: str) -> List[Dict[str, Any]]:
+def list_steps_for_run(run_id: str, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return top-level workflow step rows for one run."""
     db_url = _db_url()
     wanted = str(run_id or "").strip()
+    scoped_project = str(project_id or "").strip()
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -271,10 +287,15 @@ def list_steps_for_run(run_id: str) -> List[Dict[str, Any]]:
                     reuse_source_record_key
                 FROM workflow.run_records
                 WHERE run_id = %s
+                  AND (
+                        %s = ''
+                     OR COALESCE(project_id, '') = %s
+                     OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                  )
                   AND record_kind = 'step'
                 ORDER BY COALESCE(started_at, created_at) ASC, step ASC
                 """,
-                (wanted,),
+                (wanted, scoped_project, scoped_project, scoped_project),
             )
             for row in cur.fetchall():
                 step_name = str(row[0] or "")
@@ -306,10 +327,11 @@ def list_steps_for_run(run_id: str) -> List[Dict[str, Any]]:
     return sorted(out, key=_sort_key)
 
 
-def list_question_rows_for_run(run_id: str) -> List[Dict[str, Any]]:
+def list_question_rows_for_run(run_id: str, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return cached question rows for one run."""
     db_url = _db_url()
     wanted = str(run_id or "").strip()
+    scoped_project = str(project_id or "").strip()
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -331,10 +353,15 @@ def list_question_rows_for_run(run_id: str) -> List[Dict[str, Any]]:
                     metadata_json
                 FROM workflow.run_records
                 WHERE run_id = %s
+                  AND (
+                        %s = ''
+                     OR COALESCE(project_id, '') = %s
+                     OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                  )
                   AND record_kind = 'question'
                 ORDER BY COALESCE(created_at, updated_at) DESC, question_id ASC
                 """,
-                (wanted,),
+                (wanted, scoped_project, scoped_project, scoped_project),
             )
             for row in cur.fetchall():
                 out.append(
@@ -356,10 +383,11 @@ def list_question_rows_for_run(run_id: str) -> List[Dict[str, Any]]:
     return out
 
 
-def usage_rollup_for_run(run_id: str) -> List[Dict[str, Any]]:
+def usage_rollup_for_run(run_id: str, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return usage rollup rows keyed to one run."""
     db_url = _db_url()
     wanted = str(run_id or "").strip()
+    scoped_project = str(project_id or "").strip()
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -380,9 +408,14 @@ def usage_rollup_for_run(run_id: str) -> List[Dict[str, Any]]:
                         cost_usd_total
                     FROM observability.token_usage_rollup
                     WHERE run_id = %s
+                      AND (
+                            %s = ''
+                         OR COALESCE(project_id, '') = %s
+                         OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                      )
                     ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
                     """,
-                    (wanted,),
+                    (wanted, scoped_project, scoped_project, scoped_project),
                 )
                 rows = cur.fetchall()
                 out = [
@@ -413,10 +446,15 @@ def usage_rollup_for_run(run_id: str) -> List[Dict[str, Any]]:
                         COALESCE(SUM(cost_usd_total), 0) AS cost_usd_total
                     FROM observability.token_usage
                     WHERE run_id = %s
+                      AND (
+                            %s = ''
+                         OR COALESCE(project_id, '') = %s
+                         OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                      )
                     GROUP BY COALESCE(step, ''), COALESCE(model, ''), COALESCE(question_id, '')
                     ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
                     """,
-                    (wanted,),
+                    (wanted, scoped_project, scoped_project, scoped_project),
                 )
                 rows = cur.fetchall()
                 out = [

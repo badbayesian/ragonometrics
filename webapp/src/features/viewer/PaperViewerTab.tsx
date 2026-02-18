@@ -8,6 +8,8 @@ type HighlightRequest = {
   page?: number | null;
   terms?: string[];
   excerpt?: string;
+  startWord?: number | null;
+  endWord?: number | null;
 };
 
 type Props = {
@@ -26,6 +28,17 @@ function cleanTerms(value: string): string[] {
     .slice(0, 12);
 }
 
+function normalizeSearchPhrase(value: string): string {
+  const cleaned = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return "";
+  if (cleaned.length <= 160) return cleaned;
+  const window = cleaned.slice(0, 160);
+  const cut = window.lastIndexOf(" ");
+  return (cut > 40 ? window.slice(0, cut) : window).trim();
+}
+
 export function PaperViewerTab(props: Props) {
   const [page, setPage] = useState(1);
   const [notes, setNotes] = useState<PaperNote[]>([]);
@@ -34,11 +47,14 @@ export function PaperViewerTab(props: Props) {
   const [noteText, setNoteText] = useState("");
   const [highlightText, setHighlightText] = useState("");
   const [highlightTermsInput, setHighlightTermsInput] = useState("");
+  const [viewerSearchText, setViewerSearchText] = useState("");
+  const [evidenceStartWord, setEvidenceStartWord] = useState<number | null>(null);
+  const [evidenceEndWord, setEvidenceEndWord] = useState<number | null>(null);
   const [color, setColor] = useState("#ffe58a");
   const [error, setError] = useState("");
 
   const highlightTerms = useMemo(() => cleanTerms(highlightTermsInput), [highlightTermsInput]);
-  const searchHint = highlightTerms[0] ? `&search=${encodeURIComponent(highlightTerms[0])}` : "";
+  const searchHint = viewerSearchText ? `&search=${encodeURIComponent(viewerSearchText)}` : "";
   const pdfUrl = `/api/v1/papers/${encodeURIComponent(props.paperId)}/content#page=${encodeURIComponent(String(page))}${searchHint}`;
 
   async function loadNotes() {
@@ -65,6 +81,9 @@ export function PaperViewerTab(props: Props) {
     setNoteText("");
     setHighlightText("");
     setHighlightTermsInput("");
+    setViewerSearchText("");
+    setEvidenceStartWord(null);
+    setEvidenceEndWord(null);
     void loadNotes();
   }, [props.paperId]);
 
@@ -84,6 +103,22 @@ export function PaperViewerTab(props: Props) {
     if (props.highlightRequest.excerpt) {
       setHighlightText(String(props.highlightRequest.excerpt));
     }
+    const requestSearch = normalizeSearchPhrase(
+      String(props.highlightRequest.excerpt || reqTerms[0] || "")
+    );
+    if (requestSearch) {
+      setViewerSearchText(requestSearch);
+    }
+    setEvidenceStartWord(
+      typeof props.highlightRequest.startWord === "number" && Number.isFinite(props.highlightRequest.startWord)
+        ? props.highlightRequest.startWord
+        : null
+    );
+    setEvidenceEndWord(
+      typeof props.highlightRequest.endWord === "number" && Number.isFinite(props.highlightRequest.endWord)
+        ? props.highlightRequest.endWord
+        : null
+    );
   }, [props.highlightRequest]);
 
   async function addNote() {
@@ -153,6 +188,15 @@ export function PaperViewerTab(props: Props) {
               onChange={(event) => setPage(Math.max(1, Number(event.target.value || 1)))}
             />
           </label>
+          <label>
+            Viewer search
+            <input
+              className={css.input}
+              value={viewerSearchText}
+              onChange={(event) => setViewerSearchText(normalizeSearchPhrase(event.target.value))}
+              placeholder="evidence phrase"
+            />
+          </label>
           <button className={css.button} onClick={() => void loadNotes()} disabled={loadingNotes}>
             {loadingNotes ? <Spinner label="Loading" small /> : "Reload Notes"}
           </button>
@@ -160,6 +204,13 @@ export function PaperViewerTab(props: Props) {
       </header>
 
       <p className={css.paper}>{props.paperTitle || "Selected paper"}</p>
+      {(viewerSearchText || evidenceStartWord !== null || evidenceEndWord !== null) && (
+        <p className={css.evidenceHint}>
+          Evidence focus: page {page}
+          {evidenceStartWord !== null && evidenceEndWord !== null ? `, words ${evidenceStartWord}-${evidenceEndWord}` : ""}
+          {viewerSearchText ? `, search: "${viewerSearchText}"` : ""}
+        </p>
+      )}
       {error && <div className={css.error}>{error}</div>}
 
       <div className={css.viewerWrap}>

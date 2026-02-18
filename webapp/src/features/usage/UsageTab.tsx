@@ -90,11 +90,11 @@ export function UsageTab(props: Props) {
       <header className={css.header}>
         <div>
           <h2>Usage</h2>
-          <p className={css.caption}>Aggregates are computed from observability token usage records.</p>
+          <p className={css.caption}>Aggregates are scoped to your account across sessions by default.</p>
         </div>
         <div className={css.controls}>
           <label>
-            <input type="checkbox" checked={sessionOnly} onChange={(e) => setSessionOnly(e.target.checked)} /> Session only
+            <input type="checkbox" checked={sessionOnly} onChange={(e) => setSessionOnly(e.target.checked)} /> Current session only
           </label>
           <label>
             Recent limit{" "}

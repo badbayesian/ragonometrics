@@ -54,6 +54,37 @@ def _openalex_author_names(meta: Dict[str, Any]) -> List[str]:
     return names
 
 
+def _openalex_author_items(meta: Dict[str, Any]) -> List[Dict[str, str]]:
+    items: List[Dict[str, str]] = []
+    seen = set()
+    for authorship in meta.get("authorships") or []:
+        if not isinstance(authorship, dict):
+            continue
+        author_obj = authorship.get("author") or {}
+        name = str(author_obj.get("display_name") or "").strip()
+        raw_id = str(author_obj.get("id") or "").strip()
+        if not name:
+            continue
+        clean_id = raw_id.split("?", 1)[0].rstrip("/")
+        if clean_id.startswith("https://api.openalex.org/"):
+            clean_id = clean_id.rsplit("/", 1)[-1]
+        elif clean_id.startswith("https://openalex.org/"):
+            clean_id = clean_id.rsplit("/", 1)[-1]
+        openalex_url = f"https://openalex.org/{clean_id}" if clean_id else ""
+        dedupe_key = f"{name.lower()}::{openalex_url.lower()}"
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        items.append(
+            {
+                "name": name,
+                "id": raw_id,
+                "openalex_url": openalex_url,
+            }
+        )
+    return items
+
+
 def _abstract_from_inverted_index(inv: Any) -> str:
     if not isinstance(inv, dict):
         return ""
@@ -121,6 +152,7 @@ def paper_overview(ref: PaperRef) -> Dict[str, Any]:
     if isinstance(meta, dict) and meta:
         title = str(meta.get("display_name") or meta.get("title") or "").strip() or fallback_title
         authors = _openalex_author_names(meta)
+        author_items = _openalex_author_items(meta)
         abstract = _abstract_from_inverted_index(meta.get("abstract_inverted_index"))
         if len(abstract) > 1200:
             abstract = abstract[:1197].rstrip() + "..."
@@ -134,6 +166,7 @@ def paper_overview(ref: PaperRef) -> Dict[str, Any]:
             "display_title": title,
             "title_source": "openalex",
             "authors": authors,
+            "author_items": author_items,
             "display_authors": ", ".join(authors),
             "abstract": abstract,
             "display_abstract": abstract,
@@ -151,6 +184,7 @@ def paper_overview(ref: PaperRef) -> Dict[str, Any]:
         "display_title": fallback_title,
         "title_source": "filename",
         "authors": [],
+        "author_items": [],
         "display_authors": "",
         "abstract": "",
         "display_abstract": "",

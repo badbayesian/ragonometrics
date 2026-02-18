@@ -29,11 +29,13 @@ def list_turns(
     *,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
     paper_id: str,
     limit: int = 50,
 ) -> List[Dict[str, Any]]:
     """Return recent chat turns for one user+paper scope."""
     clean_username = _clean_username(username)
+    clean_project_id = str(project_id or "").strip()
     clean_paper_id = str(paper_id or "").strip()
     if not db_url or not clean_username or not clean_paper_id:
         return []
@@ -59,11 +61,12 @@ def list_turns(
                     created_at
                 FROM retrieval.chat_history_turns
                 WHERE paper_id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 ORDER BY created_at DESC
                 LIMIT %s
                 """,
-                [clean_paper_id, *scope_params, row_limit],
+                [clean_paper_id, clean_project_id, clean_project_id, *scope_params, row_limit],
             )
             rows = cur.fetchall()
     except Exception:
@@ -107,6 +110,8 @@ def append_turn(
     *,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
     session_id: Optional[str],
     paper_id: str,
     paper_path: str,
@@ -121,6 +126,8 @@ def append_turn(
 ) -> None:
     """Persist one chat turn for the authenticated user and selected paper."""
     clean_username = _clean_username(username)
+    clean_project_id = str(project_id or "").strip()
+    clean_persona_id = str(persona_id or "").strip()
     clean_paper_id = str(paper_id or "").strip()
     clean_query = str(query or "").strip()
     clean_answer = str(answer or "").strip()
@@ -137,6 +144,8 @@ def append_turn(
                 INSERT INTO retrieval.chat_history_turns (
                     user_id,
                     username,
+                    project_id,
+                    persona_id,
                     session_id,
                     paper_id,
                     paper_path,
@@ -151,12 +160,15 @@ def append_turn(
                     created_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s,
                     %s::jsonb, %s::jsonb, %s, %s, NOW()
                 )
                 """,
                 (
                     int(user_id) if user_id is not None else None,
                     clean_username,
+                    clean_project_id or None,
+                    clean_persona_id or None,
                     str(session_id or "") or None,
                     clean_paper_id,
                     str(paper_path or ""),
@@ -180,10 +192,12 @@ def clear_turns(
     *,
     user_id: Optional[int],
     username: str,
+    project_id: Optional[str] = None,
     paper_id: str,
 ) -> int:
     """Delete chat history rows for one user+paper scope."""
     clean_username = _clean_username(username)
+    clean_project_id = str(project_id or "").strip()
     clean_paper_id = str(paper_id or "").strip()
     if not db_url or not clean_username or not clean_paper_id:
         return 0
@@ -197,27 +211,30 @@ def clear_turns(
                 SELECT COUNT(*)
                 FROM retrieval.chat_history_turns
                 WHERE paper_id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 """,
-                [clean_paper_id, *scope_params],
+                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
             )
             before = int((cur.fetchone() or [0])[0] or 0)
             cur.execute(
                 f"""
                 DELETE FROM retrieval.chat_history_turns
                 WHERE paper_id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 """,
-                [clean_paper_id, *scope_params],
+                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
             )
             cur.execute(
                 f"""
                 SELECT COUNT(*)
                 FROM retrieval.chat_history_turns
                 WHERE paper_id = %s
+                  AND (%s = '' OR COALESCE(project_id, '') = %s)
                   AND {scope_sql}
                 """,
-                [clean_paper_id, *scope_params],
+                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
             )
             after = int((cur.fetchone() or [0])[0] or 0)
             conn.commit()

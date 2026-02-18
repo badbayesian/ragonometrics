@@ -61,6 +61,69 @@
   padding: 10px 12px;
 }
 
+.queuePanel {
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  background: var(--surface-2);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.queueHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.queueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.queueItem {
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: var(--surface-1);
+  display: grid;
+  grid-template-columns: auto auto 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+}
+
+.queueIndex,
+.queueMode,
+.queueTime {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.queueText {
+  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queueRemove {
+  border: 1px solid var(--border-3);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.queueRemove:hover {
+  border-color: var(--danger-300);
+}
+
 .timeline {
   min-height: 340px;
   max-height: 62vh;
@@ -154,6 +217,15 @@
   font-size: 0.78rem;
 }
 
+.metaWarning {
+  color: var(--warning-700);
+  background: var(--warning-100);
+  border: 1px solid var(--warning-300);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+
 .details {
   border-top: 1px dashed var(--border-2);
   padding-top: 8px;
@@ -188,6 +260,21 @@
   padding: 8px;
   font-size: 0.75rem;
   overflow: auto;
+}
+
+.provenanceBlock {
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 8px;
+  font-size: 0.82rem;
+}
+
+.warningList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
 }
 
 .composer {

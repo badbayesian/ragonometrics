@@ -67,7 +67,7 @@ class SQLiteConnWrapper:
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num TEXT PRIMARY KEY)")
         cur.execute("DELETE FROM alembic_version")
-        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0009')")
+        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0014')")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS run_records (
@@ -83,6 +83,8 @@ class SQLiteConnWrapper:
                 arm TEXT,
                 parent_run_id TEXT,
                 trigger_source TEXT,
+                project_id TEXT,
+                persona_id TEXT,
                 git_sha TEXT,
                 git_branch TEXT,
                 config_effective_json TEXT DEFAULT '{}',
@@ -125,6 +127,14 @@ class SQLiteConnWrapper:
                 model TEXT,
                 context_hash TEXT,
                 answer TEXT,
+                paper_fingerprint TEXT,
+                prompt_profile_hash TEXT,
+                retrieval_profile_hash TEXT,
+                persona_profile_hash TEXT,
+                share_eligible INTEGER NOT NULL DEFAULT 1,
+                source_project_id TEXT,
+                source_user_id INTEGER,
+                safety_flags_json TEXT DEFAULT '{}',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -150,7 +160,31 @@ class SQLiteConnWrapper:
                 cost_usd_output REAL,
                 cost_usd_total REAL,
                 run_id TEXT,
+                project_id TEXT,
+                persona_id TEXT,
                 meta TEXT DEFAULT '{}'
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_query_cache (
+                project_cache_key TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                cache_key TEXT NOT NULL,
+                query TEXT,
+                query_normalized TEXT,
+                paper_path TEXT,
+                model TEXT,
+                context_hash TEXT,
+                answer TEXT,
+                paper_fingerprint TEXT,
+                prompt_profile_hash TEXT,
+                retrieval_profile_hash TEXT,
+                persona_profile_hash TEXT,
+                persona_hash TEXT,
+                safety_flags_json TEXT DEFAULT '{}',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
@@ -349,6 +383,8 @@ class SQLiteConnWrapper:
                 user_id INTEGER,
                 username TEXT NOT NULL,
                 source TEXT DEFAULT 'streamlit_ui',
+                current_project_id TEXT,
+                current_persona_id TEXT,
                 authenticated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 revoked_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -368,6 +404,92 @@ class SQLiteConnWrapper:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS projects (
+                project_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                slug TEXT NOT NULL UNIQUE,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_by_user_id INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_memberships (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                role TEXT NOT NULL DEFAULT 'viewer',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(project_id, user_id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_papers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                paper_id TEXT NOT NULL,
+                paper_path TEXT NOT NULL,
+                added_by_user_id INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(project_id, paper_id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_personas (
+                persona_id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                slug TEXT NOT NULL,
+                name TEXT NOT NULL,
+                system_prompt_suffix TEXT DEFAULT '',
+                default_model TEXT DEFAULT '',
+                retrieval_profile_json TEXT DEFAULT '{}',
+                is_default INTEGER NOT NULL DEFAULT 0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS project_settings (
+                project_id TEXT PRIMARY KEY,
+                allow_cross_project_answer_reuse INTEGER NOT NULL DEFAULT 1,
+                allow_custom_question_sharing INTEGER NOT NULL DEFAULT 0,
+                default_persona_id TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO projects(project_id, name, slug, is_active)
+            VALUES ('default-shared', 'Default Shared Project', 'default-shared', 1)
+            """
+        )
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO project_personas(persona_id, project_id, slug, name, is_default, is_active)
+            VALUES ('default-shared-persona', 'default-shared', 'default', 'Default Persona', 1, 1)
+            """
+        )
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO project_settings(project_id, allow_cross_project_answer_reuse, allow_custom_question_sharing, default_persona_id)
+            VALUES ('default-shared', 1, 0, 'default-shared-persona')
             """
         )
         cur.execute(
@@ -398,6 +520,8 @@ class SQLiteConnWrapper:
                 user_id INTEGER,
                 username TEXT NOT NULL,
                 session_id TEXT,
+                project_id TEXT,
+                persona_id TEXT,
                 paper_id TEXT NOT NULL,
                 paper_path TEXT,
                 model TEXT,
@@ -430,6 +554,7 @@ class SQLiteConnWrapper:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
                 username TEXT NOT NULL,
+                project_id TEXT,
                 paper_id TEXT NOT NULL,
                 page_number INTEGER,
                 highlight_text TEXT,
@@ -451,6 +576,78 @@ class SQLiteConnWrapper:
             """
             CREATE INDEX IF NOT EXISTS paper_notes_username_paper_page_idx
             ON paper_notes (username COLLATE NOCASE, paper_id, page_number, created_at DESC)
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS paper_comparison_runs (
+                comparison_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_by_user_id INTEGER,
+                created_by_username TEXT NOT NULL,
+                model TEXT NOT NULL,
+                project_id TEXT,
+                persona_id TEXT,
+                compute_mode TEXT NOT NULL DEFAULT 'cache_only',
+                visibility TEXT NOT NULL DEFAULT 'shared',
+                status TEXT NOT NULL DEFAULT 'ready',
+                paper_ids_json TEXT DEFAULT '[]',
+                paper_paths_json TEXT DEFAULT '[]',
+                questions_json TEXT DEFAULT '[]',
+                summary_json TEXT DEFAULT '{}',
+                seed_paper_id TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS paper_comparison_cells (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                comparison_id TEXT NOT NULL,
+                paper_id TEXT NOT NULL,
+                paper_path TEXT NOT NULL,
+                project_id TEXT,
+                question_id TEXT NOT NULL,
+                question_text TEXT NOT NULL,
+                question_normalized TEXT NOT NULL,
+                model TEXT NOT NULL,
+                cell_status TEXT NOT NULL,
+                answer TEXT,
+                answer_source TEXT,
+                cache_hit_layer TEXT,
+                cache_key TEXT,
+                context_hash TEXT,
+                structured_fields_json TEXT DEFAULT '{}',
+                error_text TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(comparison_id, paper_id, question_id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS openalex_citation_graph_cache (
+                cache_key TEXT PRIMARY KEY,
+                center_work_id TEXT NOT NULL,
+                n_hops INTEGER NOT NULL,
+                max_references INTEGER NOT NULL,
+                max_citing INTEGER NOT NULL,
+                max_nodes INTEGER NOT NULL,
+                algo_version TEXT NOT NULL,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                summary_json TEXT NOT NULL DEFAULT '{}',
+                generated_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                stale_until TEXT NOT NULL,
+                last_accessed_at TEXT NOT NULL,
+                refresh_job_id TEXT,
+                refresh_failures INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
             """
         )
         self._conn.commit()

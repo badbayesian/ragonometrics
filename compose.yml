@@ -25,6 +25,10 @@ x-app-env: &app_env
   WEB_GUNICORN_TIMEOUT: ${WEB_GUNICORN_TIMEOUT:-180}
   WEB_GUNICORN_GRACEFUL_TIMEOUT: ${WEB_GUNICORN_GRACEFUL_TIMEOUT:-30}
   WEB_GUNICORN_KEEPALIVE: ${WEB_GUNICORN_KEEPALIVE:-5}
+  OPENALEX_NETWORK_GRAPH_CACHE_TTL_SECONDS: ${OPENALEX_NETWORK_GRAPH_CACHE_TTL_SECONDS:-86400}
+  OPENALEX_NETWORK_GRAPH_CACHE_STALE_SECONDS: ${OPENALEX_NETWORK_GRAPH_CACHE_STALE_SECONDS:-604800}
+  OPENALEX_NETWORK_GRAPH_CACHE_ALGO_VERSION: ${OPENALEX_NETWORK_GRAPH_CACHE_ALGO_VERSION:-v1}
+  OPENALEX_NETWORK_GRAPH_CACHE_DISABLE: ${OPENALEX_NETWORK_GRAPH_CACHE_DISABLE:-0}
 
 services:
   web:
@@ -48,6 +52,14 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+
+  frontend-tests:
+    build:
+      context: .
+      target: web-test
+    profiles: ["ops"]
+    command: >
+      sh -lc "echo frontend tests passed"
 
   streamlit:
     build: .

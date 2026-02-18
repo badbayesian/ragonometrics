@@ -50,7 +50,9 @@ export function HowToModal(props: Props) {
             <h3>Quick Start</h3>
             <ol>
               <li>Log in with your account.</li>
-              <li>Select a paper from the Paper dropdown.</li>
+              <li>Use Find paper to pick a paper title (falls back to file name when title is unavailable).</li>
+              <li>Use Author, Venue, and Year filter boxes to narrow the paper title dropdown.</li>
+              <li>Double-click inside Find paper to open the dropdown for the current filtered set.</li>
               <li>Ask a question in Chat, or use Ask (Stream) for incremental output.</li>
               <li>Use other tabs to extract structured answers, inspect metadata, and review usage.</li>
             </ol>
@@ -60,8 +62,10 @@ export function HowToModal(props: Props) {
             <h3>Tab Guide</h3>
             <ul>
               <li>Chat: Ask, stream, clear history, and use suggested prompts.</li>
+              <li>Paper Viewer: View pages, highlights, and notes tied to evidence.</li>
               <li>Structured Workstream: Refresh cache, generate missing answers, and export JSON/PDF.</li>
-              <li>OpenAlex Metadata: Refresh metadata and inspect linked entities.</li>
+              <li>Compare: Select up to 10 papers, build a cache-first matrix, then fill missing cells.</li>
+              <li>OpenAlex Metadata: Refresh metadata, inspect linked entities, and use Manual OpenAlex Link when auto-match fails.</li>
               <li>Citation Network: Adjust limits, reload graph, and click nodes for OpenAlex pages.</li>
               <li>Usage: Toggle session scope and refresh summary, model, and recent rows.</li>
             </ul>
@@ -71,6 +75,7 @@ export function HowToModal(props: Props) {
             <h3>Tips</h3>
             <ul>
               <li>Keep one selected paper at a time to avoid scope confusion.</li>
+              <li>If a paper is missing from the picker, clear Author/Venue/Year filters first.</li>
               <li>Use stream mode for long responses.</li>
               <li>Check the status bar for success and error messages after actions.</li>
             </ul>

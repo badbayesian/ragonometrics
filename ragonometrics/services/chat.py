@@ -16,10 +16,30 @@ from ragonometrics.integrations.citec import format_citec_context
 from ragonometrics.integrations.openalex import format_openalex_context
 from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.pipeline import call_llm
-from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
-from ragonometrics.pipeline.query_cache import get_cached_answer_by_normalized_query
+from ragonometrics.pipeline.query_cache import (
+    DEFAULT_CACHE_PATH,
+    get_cached_answer,
+    get_cached_answer_by_normalized_query,
+    get_cached_answer_hybrid,
+    make_cache_key,
+    profile_hash,
+    set_cached_answer,
+    set_cached_answer_hybrid,
+)
 from ragonometrics.pipeline.token_usage import record_usage
 from ragonometrics.services.papers import PaperRef, load_prepared
+
+_INVALID_CHAT_ANSWER_PATTERNS = (
+    re.compile(r"^\s*ResponseTextConfig\(", re.IGNORECASE),
+    re.compile(r"^\s*ResponseFormatText\(", re.IGNORECASE),
+)
+
+
+def _is_valid_chat_answer(value: Any) -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return False
+    return not any(pattern.search(text) for pattern in _INVALID_CHAT_ANSWER_PATTERNS)
 
 
 def parse_context_chunks(context: str) -> List[dict]:
@@ -128,6 +148,8 @@ def stream_llm_answer(
     usage_context: str,
     session_id: Optional[str],
     request_id: Optional[str],
+    project_id: Optional[str],
+    persona_id: Optional[str],
     on_delta: Callable[[str], None],
 ) -> str:
     """Provider-routed streaming answer with non-stream fallback."""
@@ -155,6 +177,8 @@ def stream_llm_answer(
                 input_tokens=int(getattr(response, "input_tokens", 0) or 0),
                 output_tokens=int(getattr(response, "output_tokens", 0) or 0),
                 total_tokens=int(getattr(response, "total_tokens", 0) or 0),
+                project_id=project_id,
+                persona_id=persona_id,
                 session_id=session_id,
                 request_id=request_id,
                 provider_request_id=getattr(response, "provider_request_id", None),
@@ -171,6 +195,7 @@ def stream_llm_answer(
         max_output_tokens=None,
         temperature=temperature,
         usage_context=usage_context,
+        meta={"project_id": project_id, "persona_id": persona_id},
         session_id=session_id,
         request_id=request_id,
     )
@@ -216,6 +241,11 @@ def chat_turn(
     request_id: Optional[str] = None,
     history: Optional[List[dict]] = None,
     variation_mode: bool = False,
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
+    allow_cross_project_answer_reuse: bool = True,
+    allow_custom_question_sharing: bool = False,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Execute one paper-scoped chat turn and return payload."""
     paper, chunks, chunk_embeddings, settings = load_prepared(paper_ref)
@@ -260,33 +290,64 @@ def chat_turn(
             temperature = 0.7
     cache_context = context if not history_context else f"Conversation History:\n{history_context}\n\n{context}"
     cache_key = make_cache_key(str(query or ""), paper_ref.path, selected_model, cache_context)
-    cache_hit_layer = "none"
-    cache_miss_reason = ""
-    cached = get_cached_answer(DEFAULT_CACHE_PATH, cache_key) if cache_allowed else None
-    if cached is not None:
-        answer = str(cached)
-        cache_hit = True
-        cache_hit_layer = "strict"
+    prompt_profile = profile_hash(RESEARCHER_QA_PROMPT)
+    retrieval_profile = profile_hash(f"top_k={int(retrieval_settings.top_k)}")
+    persona_profile = profile_hash(str(persona_id or "default"))
+    if str(project_id or "").strip():
+        hybrid = get_cached_answer_hybrid(
+            DEFAULT_CACHE_PATH,
+            cache_key=cache_key,
+            query=str(query or ""),
+            paper_path=paper_ref.path,
+            model=selected_model,
+            project_id=project_id,
+            prompt_profile_hash=prompt_profile,
+            retrieval_profile_hash=retrieval_profile,
+            persona_profile_hash=persona_profile,
+            allow_cross_project_answer_reuse=bool(allow_cross_project_answer_reuse),
+            variation_mode=bool(variation_mode),
+            has_history=bool(history_context),
+            validate_answer=_is_valid_chat_answer,
+        )
+        answer = str(hybrid.get("answer") or "").strip()
+        cache_hit = bool(hybrid.get("cache_hit"))
+        cache_hit_layer = str(hybrid.get("cache_hit_layer") or "none")
+        cache_scope = str(hybrid.get("cache_scope") or "fresh")
+        cache_miss_reason = str(hybrid.get("cache_miss_reason") or "")
     else:
-        if cache_allowed:
-            fallback_cached = get_cached_answer_by_normalized_query(
-                DEFAULT_CACHE_PATH,
-                query=str(query or ""),
-                paper_path=paper_ref.path,
-                model=selected_model,
-            )
-            if fallback_cached is not None:
-                answer = str(fallback_cached)
-                cache_hit = True
-                cache_hit_layer = "fallback"
+        cache_scope = "shared"
+        cache_hit_layer = "none"
+        cache_miss_reason = ""
+        cached = get_cached_answer(DEFAULT_CACHE_PATH, cache_key) if cache_allowed else None
+        if cached is not None and _is_valid_chat_answer(cached):
+            answer = str(cached).strip()
+            cache_hit = True
+            cache_hit_layer = "strict"
+        else:
+            if cache_allowed:
+                fallback_cached = get_cached_answer_by_normalized_query(
+                    DEFAULT_CACHE_PATH,
+                    query=str(query or ""),
+                    paper_path=paper_ref.path,
+                    model=selected_model,
+                )
+                if fallback_cached is not None and _is_valid_chat_answer(fallback_cached):
+                    answer = str(fallback_cached).strip()
+                    cache_hit = True
+                    cache_hit_layer = "fallback"
+                else:
+                    answer = ""
+                    cache_hit = False
+                    if cached is not None and not _is_valid_chat_answer(cached):
+                        cache_miss_reason = "invalid_strict_cached_answer"
+                    elif fallback_cached is not None and not _is_valid_chat_answer(fallback_cached):
+                        cache_miss_reason = "invalid_normalized_cached_answer"
+                    else:
+                        cache_miss_reason = "strict_and_normalized_miss"
             else:
                 answer = ""
                 cache_hit = False
-                cache_miss_reason = "strict_and_normalized_miss"
-        else:
-            answer = ""
-            cache_hit = False
-            cache_miss_reason = "variation_mode_bypass"
+                cache_miss_reason = "variation_mode_bypass"
     if not cache_hit:
         answer = call_llm(
             runtime,
@@ -296,26 +357,47 @@ def chat_turn(
             max_output_tokens=None,
             temperature=temperature,
             usage_context="answer",
+            meta={"project_id": project_id, "persona_id": persona_id},
             session_id=session_id,
             request_id=req_id,
         ).strip()
         cache_hit = False
-        if cache_allowed:
-            set_cached_answer(
-                DEFAULT_CACHE_PATH,
-                cache_key=cache_key,
-                query=str(query or ""),
-                paper_path=paper_ref.path,
-                model=selected_model,
-                context=cache_context,
-                answer=answer,
-            )
+        cache_scope = "fresh"
+        if cache_allowed and _is_valid_chat_answer(answer):
+            if str(project_id or "").strip():
+                set_cached_answer_hybrid(
+                    DEFAULT_CACHE_PATH,
+                    cache_key=cache_key,
+                    query=str(query or ""),
+                    paper_path=paper_ref.path,
+                    model=selected_model,
+                    context=cache_context,
+                    answer=answer,
+                    project_id=project_id,
+                    user_id=user_id,
+                    source_project_id=project_id,
+                    prompt_profile_hash=prompt_profile,
+                    retrieval_profile_hash=retrieval_profile,
+                    persona_profile_hash=persona_profile,
+                    allow_custom_question_sharing=bool(allow_custom_question_sharing),
+                )
+            else:
+                set_cached_answer(
+                    DEFAULT_CACHE_PATH,
+                    cache_key=cache_key,
+                    query=str(query or ""),
+                    paper_path=paper_ref.path,
+                    model=selected_model,
+                    context=cache_context,
+                    answer=answer,
+                )
     return {
         "answer": answer,
         "context": context,
         "citations": parse_context_chunks(context),
         "cache_hit": cache_hit,
         "cache_hit_layer": cache_hit_layer,
+        "cache_scope": cache_scope,
         "cache_miss_reason": cache_miss_reason,
         "request_id": req_id,
         "model": selected_model,
@@ -334,6 +416,11 @@ def stream_chat_turn(
     request_id: Optional[str] = None,
     history: Optional[List[dict]] = None,
     variation_mode: bool = False,
+    project_id: Optional[str] = None,
+    persona_id: Optional[str] = None,
+    allow_cross_project_answer_reuse: bool = True,
+    allow_custom_question_sharing: bool = False,
+    user_id: Optional[int] = None,
 ) -> Iterable[str]:
     """Yield NDJSON records for one streamed chat turn."""
     paper, chunks, chunk_embeddings, settings = load_prepared(paper_ref)
@@ -376,16 +463,66 @@ def stream_chat_turn(
             temperature = 0.7
     cache_context = context if not history_context else f"Conversation History:\n{history_context}\n\n{context}"
     cache_key = make_cache_key(str(query or ""), paper_ref.path, selected_model, cache_context)
-    cached = get_cached_answer(DEFAULT_CACHE_PATH, cache_key) if cache_allowed else None
-    if cached is not None:
-        answer = str(cached)
+    prompt_profile = profile_hash(RESEARCHER_QA_PROMPT)
+    retrieval_profile = profile_hash(f"top_k={int(retrieval_settings.top_k)}")
+    persona_profile = profile_hash(str(persona_id or "default"))
+    if str(project_id or "").strip():
+        hybrid = get_cached_answer_hybrid(
+            DEFAULT_CACHE_PATH,
+            cache_key=cache_key,
+            query=str(query or ""),
+            paper_path=paper_ref.path,
+            model=selected_model,
+            project_id=project_id,
+            prompt_profile_hash=prompt_profile,
+            retrieval_profile_hash=retrieval_profile,
+            persona_profile_hash=persona_profile,
+            allow_cross_project_answer_reuse=bool(allow_cross_project_answer_reuse),
+            variation_mode=bool(variation_mode),
+            has_history=bool(history_context),
+            validate_answer=_is_valid_chat_answer,
+        )
+    else:
+        hybrid = {"cache_hit": False, "cache_scope": "shared", "cache_hit_layer": "none", "cache_miss_reason": ""}
+        cached = get_cached_answer(DEFAULT_CACHE_PATH, cache_key) if cache_allowed else None
+        if cached is not None and _is_valid_chat_answer(cached):
+            hybrid = {
+                "cache_hit": True,
+                "answer": str(cached).strip(),
+                "cache_scope": "shared",
+                "cache_hit_layer": "strict",
+                "cache_miss_reason": "",
+            }
+        elif cache_allowed:
+            fallback_cached = get_cached_answer_by_normalized_query(
+                DEFAULT_CACHE_PATH,
+                query=str(query or ""),
+                paper_path=paper_ref.path,
+                model=selected_model,
+            )
+            if fallback_cached is not None and _is_valid_chat_answer(fallback_cached):
+                hybrid = {
+                    "cache_hit": True,
+                    "answer": str(fallback_cached).strip(),
+                    "cache_scope": "shared",
+                    "cache_hit_layer": "fallback",
+                    "cache_miss_reason": "",
+                }
+            else:
+                hybrid["cache_miss_reason"] = "strict_and_normalized_miss"
+        else:
+            hybrid["cache_miss_reason"] = "variation_mode_bypass"
+
+    if bool(hybrid.get("cache_hit")):
+        answer = str(hybrid.get("answer") or "").strip()
         yield json.dumps({"event": "delta", "text": answer}, ensure_ascii=False) + "\n"
         payload = {
             "event": "done",
             "answer": answer,
             "cache_hit": True,
-            "cache_hit_layer": "strict",
-            "cache_miss_reason": "",
+            "cache_scope": str(hybrid.get("cache_scope") or "project"),
+            "cache_hit_layer": str(hybrid.get("cache_hit_layer") or "strict"),
+            "cache_miss_reason": str(hybrid.get("cache_miss_reason") or ""),
             "request_id": req_id,
             "model": selected_model,
             "citations": parse_context_chunks(context),
@@ -393,29 +530,6 @@ def stream_chat_turn(
         }
         yield json.dumps(payload, ensure_ascii=False) + "\n"
         return
-    if cache_allowed:
-        fallback_cached = get_cached_answer_by_normalized_query(
-            DEFAULT_CACHE_PATH,
-            query=str(query or ""),
-            paper_path=paper_ref.path,
-            model=selected_model,
-        )
-        if fallback_cached is not None:
-            answer = str(fallback_cached)
-            yield json.dumps({"event": "delta", "text": answer}, ensure_ascii=False) + "\n"
-            payload = {
-                "event": "done",
-                "answer": answer,
-                "cache_hit": True,
-                "cache_hit_layer": "fallback",
-                "cache_miss_reason": "",
-                "request_id": req_id,
-                "model": selected_model,
-                "citations": parse_context_chunks(context),
-                "retrieval_stats": retrieval_stats if isinstance(retrieval_stats, dict) else {},
-            }
-            yield json.dumps(payload, ensure_ascii=False) + "\n"
-            return
 
     latest_text = ""
     stream_done = object()
@@ -436,6 +550,8 @@ def stream_chat_turn(
                 usage_context="answer",
                 session_id=session_id,
                 request_id=req_id,
+                project_id=project_id,
+                persona_id=persona_id,
                 on_delta=_on_delta,
             )
         except Exception as exc:
@@ -468,22 +584,51 @@ def stream_chat_turn(
         return
 
     answer = str(stream_result.get("answer") or latest_text or "").strip()
-    if cache_allowed:
-        set_cached_answer(
-            DEFAULT_CACHE_PATH,
-            cache_key=cache_key,
-            query=str(query or ""),
-            paper_path=paper_ref.path,
-            model=selected_model,
-            context=cache_context,
-            answer=answer,
-        )
+    if not _is_valid_chat_answer(answer):
+        payload = {
+            "event": "error",
+            "code": "chat_invalid_output",
+            "message": "Model returned an invalid text payload. Please retry.",
+            "request_id": req_id,
+            "model": selected_model,
+        }
+        yield json.dumps(payload, ensure_ascii=False) + "\n"
+        return
+    if cache_allowed and _is_valid_chat_answer(answer):
+        if str(project_id or "").strip():
+            set_cached_answer_hybrid(
+                DEFAULT_CACHE_PATH,
+                cache_key=cache_key,
+                query=str(query or ""),
+                paper_path=paper_ref.path,
+                model=selected_model,
+                context=cache_context,
+                answer=answer,
+                project_id=project_id,
+                user_id=user_id,
+                source_project_id=project_id,
+                prompt_profile_hash=prompt_profile,
+                retrieval_profile_hash=retrieval_profile,
+                persona_profile_hash=persona_profile,
+                allow_custom_question_sharing=bool(allow_custom_question_sharing),
+            )
+        else:
+            set_cached_answer(
+                DEFAULT_CACHE_PATH,
+                cache_key=cache_key,
+                query=str(query or ""),
+                paper_path=paper_ref.path,
+                model=selected_model,
+                context=cache_context,
+                answer=answer,
+            )
     payload = {
         "event": "done",
         "answer": answer,
         "cache_hit": False,
+        "cache_scope": "fresh",
         "cache_hit_layer": "none",
-        "cache_miss_reason": "variation_mode_bypass" if variation_mode else "strict_and_normalized_miss",
+        "cache_miss_reason": str(hybrid.get("cache_miss_reason") or ("variation_mode_bypass" if variation_mode else "guardrail_miss")),
         "request_id": req_id,
         "model": selected_model,
         "citations": parse_context_chunks(context),
