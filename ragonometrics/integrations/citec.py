@@ -21,10 +21,10 @@ def _database_url() -> str:
     """Database url.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
@@ -36,10 +36,10 @@ def _connect(_db_path: Path):
     """Connect.
 
     Args:
-        _db_path (Path): Description.
+        _db_path (Path): Path to the local SQLite state database.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     return connect(_database_url(), require_migrated=True)
 
@@ -48,7 +48,7 @@ def _cache_ttl_seconds() -> int:
     """Cache ttl seconds.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     try:
         days = int(os.environ.get("CITEC_CACHE_TTL_DAYS", "30"))
@@ -61,10 +61,10 @@ def make_cache_key(repec_handle: str) -> str:
     """Make cache key.
 
     Args:
-        repec_handle (str): Description.
+        repec_handle (str): RePEc handle value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return hashlib.sha256(repec_handle.encode("utf-8")).hexdigest()
 
@@ -73,11 +73,11 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
     """Get cached metadata.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     conn = _connect(db_path)
     try:
@@ -107,10 +107,10 @@ def set_cached_metadata(db_path: Path, *, cache_key: str, repec_handle: str, res
     """Set cached metadata.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
-        repec_handle (str): Description.
-        response (Dict[str, Any]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
+        repec_handle (str): RePEc handle value.
+        response (Dict[str, Any]): Response payload returned by the upstream call.
     """
     conn = _connect(db_path)
     try:
@@ -140,14 +140,14 @@ def _request_text(url: str, timeout: int = 10) -> Optional[str]:
     """Request text.
 
     Args:
-        url (str): Description.
-        timeout (int): Description.
+        url (str): Input value for url.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[str]: Description.
+        Optional[str]: Computed result, or `None` when unavailable.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     max_retries = int(os.environ.get("CITEC_MAX_RETRIES", "2"))
     for attempt in range(max_retries + 1):
@@ -173,10 +173,10 @@ def parse_citec_plain(xml_text: str) -> Optional[Dict[str, Any]]:
     """Parse citec plain.
 
     Args:
-        xml_text (str): Description.
+        xml_text (str): Input value for xml text.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     try:
         root = ET.fromstring(xml_text)
@@ -194,10 +194,10 @@ def parse_citec_plain(xml_text: str) -> Optional[Dict[str, Any]]:
         """Get text.
 
         Args:
-            tag (str): Description.
+            tag (str): Input value for tag.
 
         Returns:
-            Optional[str]: Description.
+            Optional[str]: Computed result, or `None` when unavailable.
         """
         node = data.find(tag)
         if node is None or node.text is None:
@@ -230,12 +230,12 @@ def fetch_citec_plain(
     """Fetch citec plain.
 
     Args:
-        repec_handle (str): Description.
-        cache_path (Path): Description.
-        timeout (int): Description.
+        repec_handle (str): RePEc handle value.
+        cache_path (Path): Path to the cache file.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     if not repec_handle:
         return None
@@ -261,10 +261,10 @@ def format_citec_context(meta: Optional[Dict[str, Any]]) -> str:
     """Format citec context.
 
     Args:
-        meta (Optional[Dict[str, Any]]): Description.
+        meta (Optional[Dict[str, Any]]): Additional metadata dictionary.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not meta:
         return ""

@@ -14,7 +14,7 @@ class SQLiteCursorWrapper:
     def _rewrite_sql(sql: str) -> str:
         out = sql
         # Drop schema qualifiers for sqlite-backed tests.
-        out = re.sub(r"\b(?:ingestion|indexing|workflow|retrieval|observability|enrichment)\.", "", out)
+        out = re.sub(r"\b(?:ingestion|indexing|workflow|retrieval|observability|enrichment|auth)\.", "", out)
         # Remove Postgres casts.
         out = re.sub(r"::[A-Za-z_][A-Za-z0-9_]*", "", out)
         # sqlite compatibility for NOW()/booleans/null ordering.
@@ -67,7 +67,7 @@ class SQLiteConnWrapper:
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num TEXT PRIMARY KEY)")
         cur.execute("DELETE FROM alembic_version")
-        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0005')")
+        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0006')")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS run_records (
@@ -307,6 +307,41 @@ class SQLiteConnWrapper:
                 worker_id TEXT,
                 started_at TEXT,
                 finished_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS streamlit_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                display_name TEXT,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                last_login_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS streamlit_users_username_ci_idx
+            ON streamlit_users (username COLLATE NOCASE)
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS streamlit_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL UNIQUE,
+                user_id INTEGER,
+                username TEXT NOT NULL,
+                source TEXT DEFAULT 'streamlit_ui',
+                authenticated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                revoked_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             )

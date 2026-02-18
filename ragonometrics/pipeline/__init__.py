@@ -3,6 +3,7 @@
 from .pipeline import (
     DEFAULT_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
+    call_llm,
     call_openai,
     extract_citations,
     extract_json,
@@ -14,6 +15,7 @@ from .token_usage import DEFAULT_USAGE_DB, get_recent_usage, get_usage_by_model,
 __all__ = [
     "DEFAULT_MODEL",
     "DEFAULT_MAX_OUTPUT_TOKENS",
+    "call_llm",
     "call_openai",
     "extract_citations",
     "extract_json",

@@ -52,3 +52,60 @@ def test_top_k_context_uses_hybrid(monkeypatch):
 
     ctx = top_k_context(chunks, embeddings, "hello", client=fake_client, settings=settings)
     assert "hello world" in ctx
+
+
+def test_top_k_context_scopes_hybrid_rows_to_selected_paper(monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "dummy")
+
+    conn = psycopg2.connect()
+    cur = conn.cursor()
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS vectors (id INTEGER PRIMARY KEY, text TEXT, page INTEGER, start_word INTEGER, end_word INTEGER, doc_id TEXT, paper_path TEXT, pipeline_run_id INTEGER, created_at TEXT)"
+    )
+    cur.execute("DELETE FROM vectors")
+    cur.execute(
+        "INSERT INTO vectors (id, text, page, start_word, end_word, doc_id, paper_path, pipeline_run_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+        (0, "other paper chunk", 1, 0, 5, "d_other", "/app/papers/other.pdf", 1),
+    )
+    conn.commit()
+
+    import importlib.util
+    from pathlib import Path
+    import sys
+    import ragonometrics.indexing.retriever as retriever
+
+    monkeypatch.setattr(retriever, "hybrid_search", lambda *args, **kwargs: [(0, 0.99)])
+
+    spec = importlib.util.spec_from_file_location("ragonometrics.core.main", Path("ragonometrics/core/main.py").resolve())
+    main = importlib.util.module_from_spec(spec)
+    sys.modules["ragonometrics.core.main"] = main
+    spec.loader.exec_module(main)
+
+    top_k_context = main.top_k_context
+    Settings = main.Settings
+
+    chunks = [{"text": "target paper chunk", "page": 1, "start_word": 0, "end_word": 3}]
+    embeddings = [[0.01] * 8]
+    fake_client = FakeClient()
+    settings = Settings(
+        papers_dir=None,
+        max_papers=1,
+        max_words=1000,
+        chunk_words=256,
+        chunk_overlap=32,
+        top_k=1,
+        batch_size=1,
+        embedding_model="e",
+        chat_model="c",
+    )
+
+    ctx = top_k_context(
+        chunks,
+        embeddings,
+        "hello",
+        client=fake_client,
+        settings=settings,
+        paper_path="/app/papers/target.pdf",
+    )
+    assert "target paper chunk" in ctx
+    assert "other paper chunk" not in ctx

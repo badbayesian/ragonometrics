@@ -13,6 +13,6 @@ def ensure_run_records_table(conn) -> None:
     """Validate that workflow ledger schema has already been migrated.
 
     Args:
-        conn (Any): Description.
+        conn (Any): Open database connection.
     """
     ensure_schema_ready(conn)

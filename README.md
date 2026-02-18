@@ -24,6 +24,16 @@ PAPERS_HOST_DIR=./papers
 CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
+Optional Streamlit multi-user login (admin + tester with the same password):
+
+```bash
+STREAMLIT_USERS_JSON={"admin":"REDACTED_STREAMLIT_PASSWORD","tester":"REDACTED_STREAMLIT_PASSWORD"}
+```
+
+Streamlit auth now uses Postgres tables (`auth.streamlit_users`, `auth.streamlit_sessions`).
+If these tables are empty, env credentials can auto-bootstrap into Postgres on startup
+(`STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV=1`, default).
+
 2. Apply DB migrations (required once per environment):
 
 ```bash
@@ -91,6 +101,38 @@ docker compose --profile batch run --rm workflow \
   --meta-db-url "$DATABASE_URL"
 ```
 
+LLM Provider Routing (OpenAI, Anthropic, Local)
+------------------------------------------------
+The runtime now uses composable provider routing across all LLM touchpoints (chat, streaming, embeddings, rerank/query expansion, and OpenAlex title fallback).
+
+Defaults preserve existing behavior (`llm_provider=openai`).
+
+Use an OpenAI-compatible local endpoint (for example Ollama/vLLM/LM Studio):
+
+```bash
+LLM_PROVIDER=openai_compatible
+LLM_BASE_URL=http://localhost:11434/v1
+CHAT_MODEL=your-local-chat-model
+EMBEDDING_MODEL=your-local-embedding-model
+EMBEDDING_PROVIDER=openai_compatible
+```
+
+Use Anthropic for chat with OpenAI-compatible embeddings:
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=your_key
+EMBEDDING_PROVIDER=openai_compatible
+LLM_BASE_URL=http://localhost:11434/v1
+```
+
+Capability-specific overrides are supported:
+- `CHAT_PROVIDER`
+- `EMBEDDING_PROVIDER`
+- `RERANK_PROVIDER`
+- `QUERY_EXPAND_PROVIDER`
+- `METADATA_TITLE_PROVIDER`
+
 Outputs
 -------
 Filesystem artifacts:
@@ -127,7 +169,19 @@ Historical import/backfill (optional):
 ```bash
 python tools/backfill_sqlite_to_postgres.py --db-url "$DATABASE_URL"
 python tools/validate_backfill_parity.py --db-url "$DATABASE_URL"
+# Backfill full structured-question fields for older compact Streamlit rows:
+python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
 ```
+
+Structured Workstream Export Modes (Streamlit)
+----------------------------------------------
+In the Streamlit **Structured Workstream** tab, export now supports:
+- `Compact`: minimal question/answer export.
+- `Full`: includes detailed workflow question payload fields (confidence, retrieval method, citation anchors, etc.) when available.
+
+If older cached rows were written in compact form, either:
+- click **Regenerate Missing Full Fields (Export Scope)** in Streamlit, or
+- run `tools/backfill_structured_question_fields.py` to backfill deterministic full fields.
 
 Usage rollups:
 

@@ -20,10 +20,10 @@ def get_git_sha(repo_root: Path = PROJECT_ROOT) -> Optional[str]:
     """Return the current git SHA if available.
 
     Args:
-        repo_root (Path): Description.
+        repo_root (Path): Path to repo root.
 
     Returns:
-        Optional[str]: Description.
+        Optional[str]: Computed result, or `None` when unavailable.
     """
     try:
         result = subprocess.run(
@@ -43,10 +43,10 @@ def _sha256_file(path: Path) -> Optional[str]:
     """Sha256 file.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        Optional[str]: Description.
+        Optional[str]: Computed result, or `None` when unavailable.
     """
     if not path.exists():
         return None
@@ -61,10 +61,10 @@ def _redact_url(url: str | None) -> str | None:
     """Redact url.
 
     Args:
-        url (str | None): Description.
+        url (str | None): Input value for url.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if not url:
         return None
@@ -86,10 +86,10 @@ def _sanitize_config(config: dict | None) -> dict | None:
     """Sanitize config.
 
     Args:
-        config (dict | None): Description.
+        config (dict | None): Loaded configuration object.
 
     Returns:
-        dict | None: Description.
+        dict | None: Computed result, or `None` when unavailable.
     """
     if not config:
         return None
@@ -115,19 +115,19 @@ def build_run_manifest(
     """Build a run manifest for an indexing run.
 
     Args:
-        settings (Settings): Description.
-        paper_paths (Iterable[Path]): Description.
-        index_path (Path): Description.
-        shard_path (Path): Description.
-        pipeline_run_id (Optional[int]): Description.
-        corpus_fingerprint (Optional[str]): Description.
-        embedding_dim (Optional[int]): Description.
-        index_sha256 (Optional[str]): Description.
-        embeddings_sha256 (Optional[str]): Description.
-        paper_manifest (Optional[list[dict]]): Description.
+        settings (Settings): Loaded application settings.
+        paper_paths (Iterable[Path]): Paths to paper files.
+        index_path (Path): Path to the vector index file.
+        shard_path (Path): Path to shard path.
+        pipeline_run_id (Optional[int]): Pipeline run identifier associated with this record.
+        corpus_fingerprint (Optional[str]): Input value for corpus fingerprint.
+        embedding_dim (Optional[int]): Input value for embedding dim.
+        index_sha256 (Optional[str]): Input value for index sha256.
+        embeddings_sha256 (Optional[str]): Input value for embeddings sha256.
+        paper_manifest (Optional[list[dict]]): Mapping containing paper manifest.
 
     Returns:
-        dict: Description.
+        dict: Dictionary containing the computed result payload.
     """
     config_effective = _sanitize_config(settings.config_effective)
     dependency_fingerprint = {
@@ -175,11 +175,11 @@ def write_run_manifest(shard_path: Path, manifest: dict) -> Path:
     """Write a manifest JSON file next to the index shard.
 
     Args:
-        shard_path (Path): Description.
-        manifest (dict): Description.
+        shard_path (Path): Path to shard path.
+        manifest (dict): Mapping containing manifest.
 
     Returns:
-        Path: Description.
+        Path: Path to the generated artifact.
     """
     manifest_path = shard_path.with_suffix(".manifest.json")
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -199,16 +199,16 @@ def build_index_version(
     """Build the index version payload for sidecar storage.
 
     Args:
-        index_id (str): Description.
-        embedding_model (str): Description.
-        chunk_words (int): Description.
-        chunk_overlap (int): Description.
-        corpus_fingerprint (str): Description.
-        embedding_dim (Optional[int]): Description.
-        created_at (Optional[str]): Description.
+        index_id (str): Identifier of the index record.
+        embedding_model (str): Embedding model name.
+        chunk_words (int): Input value for chunk words.
+        chunk_overlap (int): Input value for chunk overlap.
+        corpus_fingerprint (str): Input value for corpus fingerprint.
+        embedding_dim (Optional[int]): Input value for embedding dim.
+        created_at (Optional[str]): Input value for created at.
 
     Returns:
-        dict: Description.
+        dict: Dictionary containing the computed result payload.
     """
     return {
         "index_id": index_id,
@@ -225,11 +225,11 @@ def write_index_version_sidecar(shard_path: Path, payload: dict) -> Path:
     """Write an index version sidecar JSON next to the FAISS artifact.
 
     Args:
-        shard_path (Path): Description.
-        payload (dict): Description.
+        shard_path (Path): Path to shard path.
+        payload (dict): Payload data to persist or transmit.
 
     Returns:
-        Path: Description.
+        Path: Path to the generated artifact.
     """
     sidecar = shard_path.with_suffix(".index.version.json")
     sidecar.write_text(json.dumps(payload, indent=2), encoding="utf-8")

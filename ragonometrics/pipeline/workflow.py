@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from openai import OpenAI
 from tqdm import tqdm
 
 from ragonometrics.core.main import (
@@ -25,8 +24,9 @@ from ragonometrics.core.main import (
     top_k_context,
 )
 from ragonometrics.core.prompts import RESEARCHER_QA_PROMPT
+from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.indexing.indexer import build_index
-from ragonometrics.pipeline import call_openai, extract_citations as llm_extract_citations
+from ragonometrics.pipeline import call_llm, extract_citations as llm_extract_citations
 from ragonometrics.pipeline.pipeline import extract_json
 from ragonometrics.pipeline.state import (
     DEFAULT_STATE_DB,
@@ -46,7 +46,7 @@ def _utc_now() -> str:
     """Return the current UTC timestamp in ISO-8601 format.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return datetime.now(timezone.utc).isoformat()
 
@@ -55,10 +55,10 @@ def _is_insufficient_quota_error(exc: Exception) -> bool:
     """Return whether an exception chain represents an insufficient quota error.
 
     Args:
-        exc (Exception): Description.
+        exc (Exception): Input value for exc.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     current: Exception | None = exc
     seen: set[int] = set()
@@ -81,10 +81,10 @@ def _estimate_tokens(text: str) -> int:
     """Estimate token usage from text length using a coarse heuristic.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     if not text:
         return 0
@@ -99,10 +99,10 @@ def _resolve_paper_paths(papers_path: Path) -> List[Path]:
     """Resolve a file or directory input into a list of PDF paths.
 
     Args:
-        papers_path (Path): Description.
+        papers_path (Path): Path to papers path.
 
     Returns:
-        List[Path]: Description.
+        List[Path]: List result produced by the operation.
     """
     if papers_path.is_file():
         if papers_path.suffix.lower() == ".pdf":
@@ -117,12 +117,12 @@ def _progress_iter(items, desc: str, *, total: int | None = None):
     """Wrap an iterable with a tqdm progress bar.
 
     Args:
-        items (Any): Description.
-        desc (str): Description.
-        total (int | None): Description.
+        items (Any): Input value for items.
+        desc (str): Input value for desc.
+        total (int | None): Input value for total.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     return tqdm(items, desc=desc, total=total)
 
@@ -131,10 +131,10 @@ def _can_connect_db(db_url: str) -> bool:
     """Return True when the provided database URL is reachable.
 
     Args:
-        db_url (str): Description.
+        db_url (str): Postgres connection URL.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     try:
         conn = db_connect(db_url, require_migrated=False)
@@ -148,10 +148,10 @@ def _resolve_meta_db_url(preferred_db_url: str | None) -> tuple[str | None, Dict
     """Select the metadata database URL and capture fallback diagnostics.
 
     Args:
-        preferred_db_url (str | None): Description.
+        preferred_db_url (str | None): Input value for preferred db url.
 
     Returns:
-        tuple[str | None, Dict[str, Any]]: Description.
+        tuple[str | None, Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     preferred = (preferred_db_url or "").strip() or None
     env_db = (os.environ.get("DATABASE_URL") or "").strip() or None
@@ -192,12 +192,12 @@ def _write_report(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> Pat
     """Write the workflow report JSON file and return its path.
 
     Args:
-        report_dir (Path): Description.
-        run_id (str): Description.
-        payload (Dict[str, Any]): Description.
+        report_dir (Path): Directory for generated reports.
+        run_id (str): Unique workflow run identifier.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        Path: Description.
+        Path: Path to the generated artifact.
     """
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"workflow-report-{run_id}.json"
@@ -212,11 +212,11 @@ def _bool_env(name: str, default: bool) -> bool:
     """Parse a boolean environment variable with a default fallback.
 
     Args:
-        name (str): Description.
-        default (bool): Description.
+        name (str): Input value for name.
+        default (bool): Default value used when primary input is missing.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     raw = os.environ.get(name)
     if raw is None:
@@ -233,12 +233,12 @@ def _with_reuse_marker(step_output: Any, *, source_run_id: str, source_finished_
     """Attach source-run reuse metadata to a step output payload.
 
     Args:
-        step_output (Any): Description.
-        source_run_id (str): Description.
-        source_finished_at (str | None): Description.
+        step_output (Any): Input value for step output.
+        source_run_id (str): Input value for source run id.
+        source_finished_at (str | None): Input value for source finished at.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     if isinstance(step_output, dict):
         out = dict(step_output)
@@ -255,11 +255,11 @@ def _tail(text: str, limit: int = 800) -> str:
     """Return the trailing slice of a string constrained by the provided limit.
 
     Args:
-        text (str): Description.
-        limit (int): Description.
+        text (str): Input text value.
+        limit (int): Maximum number of records to process.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not text:
         return ""
@@ -270,11 +270,11 @@ def _run_subprocess(cmd: List[str], *, cwd: Path) -> tuple[int, str, str]:
     """Execute a subprocess command and capture return code, stdout, and stderr.
 
     Args:
-        cmd (List[str]): Description.
-        cwd (Path): Description.
+        cmd (List[str]): Collection of cmd.
+        cwd (Path): Path to cwd.
 
     Returns:
-        tuple[int, str, str]: Description.
+        tuple[int, str, str]: Tuple of result values produced by the operation.
     """
     proc = subprocess.run(
         cmd,
@@ -291,10 +291,10 @@ def _git_value(args: List[str]) -> str | None:
     """Run a git command and return a trimmed stdout value when successful.
 
     Args:
-        args (List[str]): Description.
+        args (List[str]): Collection of args.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     try:
         proc = subprocess.run(
@@ -318,12 +318,12 @@ def _render_audit_artifacts(*, run_id: str, report_path: Path, report_dir: Path)
     """Render markdown/PDF audit artifacts for a workflow report.
 
     Args:
-        run_id (str): Description.
-        report_path (Path): Description.
-        report_dir (Path): Description.
+        run_id (str): Unique workflow run identifier.
+        report_path (Path): Path to the workflow report file.
+        report_dir (Path): Directory for generated reports.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     out: Dict[str, Any] = {
         "enabled": _bool_env("WORKFLOW_RENDER_AUDIT_ARTIFACTS", True),
@@ -426,14 +426,14 @@ def _store_report_in_db(
     """Persist the finalized workflow report payload to Postgres.
 
     Args:
-        db_url (str | None): Description.
-        run_id (str): Description.
-        report_path (Path): Description.
-        payload (Dict[str, Any]): Description.
-        workflow_status (str): Description.
+        db_url (str | None): Postgres connection URL.
+        run_id (str): Unique workflow run identifier.
+        report_path (Path): Path to the workflow report file.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
+        workflow_status (str): Input value for workflow status.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     out: Dict[str, Any] = {"database_url": bool(db_url)}
     if not db_url:
@@ -602,16 +602,16 @@ def _finalize_workflow_report(
     """Finalize workflow output, write report artifacts, and persist report state.
 
     Args:
-        report_dir (Path): Description.
-        run_id (str): Description.
-        summary (Dict[str, Any]): Description.
-        state_db (Path): Description.
-        report_started_at (str): Description.
-        db_url (str | None): Description.
-        workflow_status (str): Description.
+        report_dir (Path): Directory for generated reports.
+        run_id (str): Unique workflow run identifier.
+        summary (Dict[str, Any]): Mapping containing summary.
+        state_db (Path): Path to the workflow state database.
+        report_started_at (str): Input value for report started at.
+        db_url (str | None): Postgres connection URL.
+        workflow_status (str): Input value for workflow status.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     summary.setdefault("finished_at", _utc_now())
     summary["usage_store"] = _collect_usage_rollup_for_run(db_url=db_url, run_id=run_id)
@@ -661,16 +661,16 @@ def _finalize_quota_termination(
     """Finalize workflow state and report when execution stops due to quota limits.
 
     Args:
-        report_dir (Path): Description.
-        run_id (str): Description.
-        summary (Dict[str, Any]): Description.
-        state_db (Path): Description.
-        db_url (str | None): Description.
-        step (str): Description.
-        exc (Exception): Description.
+        report_dir (Path): Directory for generated reports.
+        run_id (str): Unique workflow run identifier.
+        summary (Dict[str, Any]): Mapping containing summary.
+        state_db (Path): Path to the workflow state database.
+        db_url (str | None): Postgres connection URL.
+        step (str): Pipeline step name.
+        exc (Exception): Input value for exc.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     err_text = str(exc)
     summary["error"] = err_text
@@ -698,11 +698,11 @@ def _parse_subquestions(raw: str, max_items: int) -> List[str]:
     """Parse raw planner output into a deduplicated list of subquestions.
 
     Args:
-        raw (str): Description.
-        max_items (int): Description.
+        raw (str): Input value for raw.
+        max_items (int): Input value for max items.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     items: List[str] = []
     for line in raw.splitlines():
@@ -731,20 +731,20 @@ def _agentic_plan(
     """Generate agentic subquestions for the main research prompt.
 
     Args:
-        client (OpenAI): Description.
-        question (str): Description.
-        model (str): Description.
-        max_items (int): Description.
-        run_id (str | None): Description.
+        client (OpenAI): Provider client instance.
+        question (str): Question text to answer.
+        model (str): Model name used for this operation.
+        max_items (int): Input value for max items.
+        run_id (str | None): Unique workflow run identifier.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     instructions = (
         "You are a research analyst. Generate a short list of sub-questions that would help "
         "answer the main question. Return one sub-question per line, no extra text."
     )
-    raw = call_openai(
+    raw = call_llm(
         client,
         model=model,
         instructions=instructions,
@@ -772,14 +772,14 @@ def _agentic_summarize(
     """Synthesize sub-answer results into a final response.
 
     Args:
-        client (OpenAI): Description.
-        model (str): Description.
-        question (str): Description.
-        sub_answers (List[Dict[str, str]]): Description.
-        run_id (str | None): Description.
+        client (OpenAI): Provider client instance.
+        model (str): Model name used for this operation.
+        question (str): Question text to answer.
+        sub_answers (List[Dict[str, str]]): Mapping containing sub answers.
+        run_id (str | None): Unique workflow run identifier.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     bullets = "\n".join([f"- {item['question']}: {item['answer']}" for item in sub_answers])
     synthesis_prompt = (
@@ -787,7 +787,7 @@ def _agentic_summarize(
         "Keep it factual and avoid speculation.\n\n"
         f"Main question: {question}\n\nSub-answers:\n{bullets}"
     )
-    return call_openai(
+    return call_llm(
         client,
         model=model,
         instructions=RESEARCHER_QA_PROMPT,
@@ -804,11 +804,11 @@ def _format_citations_context(citations: List[Dict[str, Any]], max_items: int) -
     """Format extracted citations into a compact context block for prompting.
 
     Args:
-        citations (List[Dict[str, Any]]): Description.
-        max_items (int): Description.
+        citations (List[Dict[str, Any]]): Mapping containing citations.
+        max_items (int): Input value for max items.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not citations:
         return ""
@@ -842,10 +842,10 @@ def _split_context_chunks(context: str) -> List[Dict[str, Any]]:
     """Parse provenance-tagged context text into structured chunk metadata.
 
     Args:
-        context (str): Description.
+        context (str): Input value for context.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     chunks: List[Dict[str, Any]] = []
     if not context:
@@ -877,10 +877,10 @@ def _confidence_from_retrieval_stats(stats: Dict[str, Any] | None) -> tuple[str,
     """Convert retrieval statistics into a confidence label and numeric score.
 
     Args:
-        stats (Dict[str, Any] | None): Description.
+        stats (Dict[str, Any] | None): Mapping containing stats.
 
     Returns:
-        tuple[str, float, str]: Description.
+        tuple[str, float, str]: Tuple of result values produced by the operation.
     """
     if not stats or int(stats.get("top_k", 0) or 0) <= 0:
         return "low", 0.0, "unknown"
@@ -915,12 +915,12 @@ def _build_report_prompt(
     """Build the JSON-output prompt for a structured report question.
 
     Args:
-        question (str): Description.
-        context (str): Description.
-        anchors (List[Dict[str, Any]]): Description.
+        question (str): Question text to answer.
+        context (str): Input value for context.
+        anchors (List[Dict[str, Any]]): Mapping containing anchors.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     anchor_lines = []
     for item in anchors:
@@ -1100,11 +1100,11 @@ def _normalize_report_question_set(value: str | None, enabled_default: bool) -> 
     """Normalize report question set mode to a supported value.
 
     Args:
-        value (str | None): Description.
-        enabled_default (bool): Description.
+        value (str | None): Value to serialize, store, or compare.
+        enabled_default (bool): Whether to enable enabled default.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not value:
         return "structured" if enabled_default else "none"
@@ -1124,7 +1124,7 @@ def _build_report_questions() -> List[Dict[str, str]]:
     """Construct the structured report question definitions.
 
     Returns:
-        List[Dict[str, str]]: Description.
+        List[Dict[str, str]]: Dictionary containing the computed result payload.
     """
     questions: List[Dict[str, str]] = []
     for section_key, section_title, items in REPORT_QUESTION_SECTIONS:
@@ -1143,10 +1143,10 @@ def _report_questions_from_sub_answers(sub_answers: List[Dict[str, str]]) -> Lis
     """Convert subquestion answers into report-question style entries.
 
     Args:
-        sub_answers (List[Dict[str, str]]): Description.
+        sub_answers (List[Dict[str, str]]): Mapping containing sub answers.
 
     Returns:
-        List[Dict[str, str]]: Description.
+        List[Dict[str, str]]: Dictionary containing the computed result payload.
     """
     report: List[Dict[str, str]] = []
     for idx, item in enumerate(sub_answers, start=1):
@@ -1166,10 +1166,10 @@ def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Summarize confidence scores and labels across report-question answers.
 
     Args:
-        items (List[Dict[str, Any]]): Description.
+        items (List[Dict[str, Any]]): Mapping containing items.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     scores: List[float] = []
     labels: Dict[str, int] = {"high": 0, "medium": 0, "low": 0}
@@ -1209,10 +1209,10 @@ def _summarize_confidence_scores(items: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Percentile.
 
         Args:
-            p (float): Description.
+            p (float): Input value for p.
 
         Returns:
-            float: Description.
+            float: Computed numeric result.
         """
         if n == 1:
             return scores_sorted[0]
@@ -1245,22 +1245,24 @@ def _answer_report_question_item(
     chunk_embeddings: List[List[float]],
     citations_context: str,
     item: Dict[str, str],
+    paper_path: str | Path | None = None,
     run_id: str | None = None,
 ) -> Dict[str, Any]:
     """Answer one structured report question using retrieval and LLM output parsing.
 
     Args:
-        client (OpenAI): Description.
-        model (str): Description.
-        settings (Any): Description.
-        chunks (List[Dict[str, Any]] | List[str]): Description.
-        chunk_embeddings (List[List[float]]): Description.
-        citations_context (str): Description.
-        item (Dict[str, str]): Description.
-        run_id (str | None): Description.
+        client (OpenAI): Provider client instance.
+        model (str): Model name used for this operation.
+        settings (Any): Loaded application settings.
+        chunks (List[Dict[str, Any]] | List[str]): Mapping containing chunks.
+        chunk_embeddings (List[List[float]]): Collection of chunk embeddings.
+        paper_path (str | Path | None): Optional path to scope retrieval to one paper.
+        citations_context (str): Input value for citations context.
+        item (Dict[str, str]): Mapping containing item.
+        run_id (str | None): Unique workflow run identifier.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     context, retrieval_stats = top_k_context(
         chunks,
@@ -1268,6 +1270,7 @@ def _answer_report_question_item(
         query=item["question"],
         client=client,
         settings=settings,
+        paper_path=paper_path,
         run_id=run_id,
         step="agentic_report_question_retrieval",
         question_id=item.get("id"),
@@ -1294,7 +1297,7 @@ def _answer_report_question_item(
         context=context,
         anchors=parsed_chunks[: settings.top_k],
     )
-    raw = call_openai(
+    raw = call_llm(
         client,
         model=model,
         instructions="Return JSON only.",
@@ -1349,26 +1352,28 @@ def _answer_report_questions(
     chunks: List[Dict[str, Any]] | List[str],
     chunk_embeddings: List[List[float]],
     citations_context: str,
+    paper_path: str | Path | None = None,
     run_id: str | None = None,
     reusable_items_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Answer all structured report questions with optional reuse of prior results.
 
     Args:
-        client (OpenAI): Description.
-        model (str): Description.
-        settings (Any): Description.
-        chunks (List[Dict[str, Any]] | List[str]): Description.
-        chunk_embeddings (List[List[float]]): Description.
-        citations_context (str): Description.
-        run_id (str | None): Description.
-        reusable_items_by_id (Optional[Dict[str, Dict[str, Any]]]): Description.
+        client (OpenAI): Provider client instance.
+        model (str): Model name used for this operation.
+        settings (Any): Loaded application settings.
+        chunks (List[Dict[str, Any]] | List[str]): Mapping containing chunks.
+        chunk_embeddings (List[List[float]]): Collection of chunk embeddings.
+        paper_path (str | Path | None): Optional path to scope retrieval to one paper.
+        citations_context (str): Input value for citations context.
+        run_id (str | None): Unique workflow run identifier.
+        reusable_items_by_id (Optional[Dict[str, Dict[str, Any]]]): Mapping containing reusable items by id.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     questions = _build_report_questions()
     if not questions:
@@ -1417,6 +1422,7 @@ def _answer_report_questions(
                 settings=settings,
                 chunks=chunks,
                 chunk_embeddings=chunk_embeddings,
+                paper_path=paper_path,
                 citations_context=citations_context,
                 item=item,
                 run_id=run_id,
@@ -1431,6 +1437,7 @@ def _answer_report_questions(
                 settings=settings,
                 chunks=chunks,
                 chunk_embeddings=chunk_embeddings,
+                paper_path=paper_path,
                 citations_context=citations_context,
                 item=item,
                 run_id=run_id,
@@ -1475,24 +1482,26 @@ def _answer_subquestion(
     chunk_embeddings: List[List[float]],
     citations_context: str,
     subq: str,
+    paper_path: str | Path | None = None,
     run_id: str | None = None,
     question_id: str | None = None,
 ) -> Dict[str, str]:
     """Answer a single agentic subquestion using retrieved context.
 
     Args:
-        client (OpenAI): Description.
-        model (str): Description.
-        settings (Any): Description.
-        chunks (List[Dict[str, Any]] | List[str]): Description.
-        chunk_embeddings (List[List[float]]): Description.
-        citations_context (str): Description.
-        subq (str): Description.
-        run_id (str | None): Description.
-        question_id (str | None): Description.
+        client (OpenAI): Provider client instance.
+        model (str): Model name used for this operation.
+        settings (Any): Loaded application settings.
+        chunks (List[Dict[str, Any]] | List[str]): Mapping containing chunks.
+        chunk_embeddings (List[List[float]]): Collection of chunk embeddings.
+        paper_path (str | Path | None): Optional path to scope retrieval to one paper.
+        citations_context (str): Input value for citations context.
+        subq (str): Input value for subq.
+        run_id (str | None): Unique workflow run identifier.
+        question_id (str | None): Structured question identifier.
 
     Returns:
-        Dict[str, str]: Description.
+        Dict[str, str]: Dictionary containing the computed result payload.
     """
     context = top_k_context(
         chunks,
@@ -1500,13 +1509,14 @@ def _answer_subquestion(
         query=subq,
         client=client,
         settings=settings,
+        paper_path=paper_path,
         run_id=run_id,
         step="agentic_subquestion_retrieval",
         question_id=question_id,
     )
     if citations_context:
         context = f"{context}\n\n{citations_context}"
-    answer = call_openai(
+    answer = call_llm(
         client,
         model=model,
         instructions=RESEARCHER_QA_PROMPT,
@@ -1546,28 +1556,28 @@ def run_workflow(
     """Run the multi-step workflow and persist state transitions.
 
     Args:
-        papers_dir (Path): Description.
-        config_path (Optional[Path]): Description.
-        meta_db_url (Optional[str]): Description.
-        report_dir (Optional[Path]): Description.
-        state_db (Path): Description.
-        agentic (Optional[bool]): Description.
-        question (Optional[str]): Description.
-        agentic_model (Optional[str]): Description.
-        agentic_max_subquestions (Optional[int]): Description.
-        agentic_citations (Optional[bool]): Description.
-        agentic_citations_max_items (Optional[int]): Description.
-        report_question_set (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        parent_run_id (Optional[str]): Description.
-        trigger_source (Optional[str]): Description.
+        papers_dir (Path): Directory containing input paper files.
+        config_path (Optional[Path]): Path to the configuration file.
+        meta_db_url (Optional[str]): Postgres metadata database URL.
+        report_dir (Optional[Path]): Directory for generated reports.
+        state_db (Path): Path to the workflow state database.
+        agentic (Optional[bool]): Whether to enable agentic.
+        question (Optional[str]): Question text to answer.
+        agentic_model (Optional[str]): Model name used for the agentic workflow stage.
+        agentic_max_subquestions (Optional[int]): Input value for agentic max subquestions.
+        agentic_citations (Optional[bool]): Whether to enable agentic citations.
+        agentic_citations_max_items (Optional[int]): Input value for agentic citations max items.
+        report_question_set (Optional[str]): Structured question set selector.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        parent_run_id (Optional[str]): Run identifier of the parent run, when applicable.
+        trigger_source (Optional[str]): Source that triggered the run.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     settings = load_settings(config_path=config_path)
     run_id = uuid4().hex
@@ -1639,7 +1649,7 @@ def run_workflow(
         """Ensure papers loaded.
 
         Returns:
-            List[Any]: Description.
+            List[Any]: List result produced by the operation.
         """
         nonlocal papers_cache
         if papers_cache is None:
@@ -1655,12 +1665,12 @@ def run_workflow(
         """Find reusable step.
 
         Args:
-            step_name (str): Description.
-            match_question (bool): Description.
-            match_report_question_set (bool): Description.
+            step_name (str): Input value for step name.
+            match_question (bool): Whether question text must match during reuse lookup.
+            match_report_question_set (bool): Whether report question set must match during reuse lookup.
 
         Returns:
-            Optional[Dict[str, Any]]: Description.
+            Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
         """
         if not step_reuse_enabled:
             return None
@@ -1885,7 +1895,7 @@ def run_workflow(
             agentic_out = {"status": "skipped", "reason": "no_papers"}
         else:
             try:
-                client = OpenAI()
+                client = build_llm_runtime(settings)
                 target_paper = papers[0]
                 citations_context = ""
                 citations_preview: List[Dict[str, Any]] = []
@@ -1895,7 +1905,7 @@ def run_workflow(
                         citations_full = llm_extract_citations(
                             paper_path=target_paper.path,
                             model=agentic_model,
-                            api_key=os.environ.get("OPENAI_API_KEY"),
+                            api_key=None,
                         )
                         if isinstance(citations_full, list):
                             citations_preview = citations_full[:max_citations]
@@ -1934,6 +1944,7 @@ def run_workflow(
                             settings=settings,
                             chunks=chunks,
                             chunk_embeddings=chunk_embeddings,
+                            paper_path=target_paper.path,
                             citations_context=citations_context,
                             subq=subq,
                             run_id=run_id,
@@ -1974,6 +1985,7 @@ def run_workflow(
                             settings=settings,
                             chunks=chunks,
                             chunk_embeddings=chunk_embeddings,
+                            paper_path=target_paper.path,
                             citations_context=citations_context,
                             run_id=run_id,
                             reusable_items_by_id=reusable_structured_questions,
@@ -2163,21 +2175,21 @@ def workflow_entrypoint(
     """Helper for queue execution. Returns run_id for logging.
 
     Args:
-        papers_dir (str): Description.
-        config_path (Optional[str]): Description.
-        meta_db_url (Optional[str]): Description.
-        agentic (Optional[bool]): Description.
-        question (Optional[str]): Description.
-        agentic_model (Optional[str]): Description.
-        agentic_citations (Optional[bool]): Description.
-        report_question_set (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        parent_run_id (Optional[str]): Description.
-        trigger_source (Optional[str]): Description.
+        papers_dir (str): Directory containing input paper files.
+        config_path (Optional[str]): Path to the configuration file.
+        meta_db_url (Optional[str]): Postgres metadata database URL.
+        agentic (Optional[bool]): Whether to enable agentic.
+        question (Optional[str]): Question text to answer.
+        agentic_model (Optional[str]): Model name used for the agentic workflow stage.
+        agentic_citations (Optional[bool]): Whether to enable agentic citations.
+        report_question_set (Optional[str]): Structured question set selector.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        parent_run_id (Optional[str]): Run identifier of the parent run, when applicable.
+        trigger_source (Optional[str]): Source that triggered the run.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     summary = run_workflow(
         papers_dir=Path(papers_dir),

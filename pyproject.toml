@@ -9,6 +9,7 @@ description = "Simple RAG pipeline for economics papers"
 requires-python = ">=3.11"
 dependencies = [
   "openai>=2.17.0",
+  "anthropic>=0.39.0",
   "streamlit>=1.54.0",
   "requests>=2.32.5",
   "faiss-cpu>=1.13.2",
@@ -21,6 +22,8 @@ dependencies = [
   "pydantic-core>=2.41.5",
   "pydantic>=2.12.5",
   "tqdm>=4.67.1",
+  "fpdf2>=2.8.3",
+  "pdf2image>=1.17.0",
 ]
   
 
@@ -33,7 +36,6 @@ dev = [
 # Optional OCR/image dependencies (install only if you need OCR fallback)
 ocr = [
   "pillow>=12.1.0",
-  "pdf2image>=1.17.0",
   "pytesseract>=0.3.13",
 ]
 

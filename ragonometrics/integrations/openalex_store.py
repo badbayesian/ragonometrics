@@ -9,11 +9,10 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from openai import OpenAI
-
 from ragonometrics.db.connection import connect, ensure_schema_ready
-from ragonometrics.core.main import load_papers
+from ragonometrics.core.main import load_papers, load_settings
 from ragonometrics.core.io_loaders import run_pdftotext_pages
+from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.integrations.openalex import (
     fetch_openalex_metadata,
     get_title_override_work_id,
@@ -35,10 +34,10 @@ def _year_from_path(path: Path) -> int | None:
     """Year from path.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        int | None: Description.
+        int | None: Computed result, or `None` when unavailable.
     """
     match = re.search(r"\((\d{4})\)", path.stem)
     if not match:
@@ -53,10 +52,10 @@ def _openalex_author_names(meta: Dict[str, Any] | None) -> List[str]:
     """Openalex author names.
 
     Args:
-        meta (Dict[str, Any] | None): Description.
+        meta (Dict[str, Any] | None): Additional metadata dictionary.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not isinstance(meta, dict):
         return []
@@ -339,10 +338,6 @@ def _extract_title_from_first_page_with_ai(
     Returns:
         Optional[str]: Model-inferred title, or ``None`` if unavailable.
     """
-    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
-    if not api_key:
-        return None
-
     page_text = str(first_page_text or "").strip()
     if not page_text:
         try:
@@ -353,8 +348,17 @@ def _extract_title_from_first_page_with_ai(
     if not page_text:
         return None
 
-    model = (os.environ.get("OPENALEX_TITLE_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-5-nano").strip()
-    client = OpenAI(api_key=api_key)
+    try:
+        settings = load_settings()
+        llm_runtime = build_llm_runtime(settings)
+    except Exception:
+        return None
+    model = (
+        os.environ.get("OPENALEX_TITLE_MODEL")
+        or settings.metadata_title_model
+        or settings.chat_model
+        or "gpt-5-nano"
+    ).strip()
     user_input = (
         f"File name: {paper_path.name}\n"
         f"Current extracted title guess: {fallback_title}\n\n"
@@ -362,30 +366,17 @@ def _extract_title_from_first_page_with_ai(
         f"{page_text[:7000]}"
     )
     try:
-        response = client.responses.create(
+        response = llm_runtime.metadata_title_chat.generate(
             model=model,
             instructions=TITLE_EXTRACTION_PROMPT,
-            input=user_input,
+            user_input=user_input,
             max_output_tokens=180,
+            metadata={"capability": "metadata_title"},
         )
     except Exception:
         return None
 
-    output_text = str(getattr(response, "output_text", "") or "").strip()
-    if not output_text:
-        try:
-            chunks: List[str] = []
-            for item in getattr(response, "output", []) or []:
-                if getattr(item, "type", None) != "message":
-                    continue
-                for content in getattr(item, "content", []) or []:
-                    if getattr(content, "type", None) == "output_text":
-                        chunk = str(getattr(content, "text", "") or "").strip()
-                        if chunk:
-                            chunks.append(chunk)
-            output_text = "\n".join(chunks).strip()
-        except Exception:
-            output_text = ""
+    output_text = str(getattr(response, "text", "") or "").strip()
     title = _parse_title_json(output_text)
     if not title:
         return None
@@ -441,8 +432,6 @@ def _resolve_openalex_metadata_for_paper(
     if author_meta:
         return author_meta, initial_title, "Resolved via author-catalog fallback."
 
-    has_openai_key = bool((os.environ.get("OPENAI_API_KEY") or "").strip())
-
     ai_title = _extract_title_from_first_page_with_ai(
         paper_path=paper_path,
         fallback_title=initial_title,
@@ -475,9 +464,9 @@ def _resolve_openalex_metadata_for_paper(
     note = "No economics OpenAlex match."
     if len(attempted_titles) > 1:
         note = f"{note} Tried titles: {attempted_titles[0]!r} -> {attempted_titles[1]!r}."
-    elif not has_openai_key:
+    elif not ai_title_clean:
         note = (
-            f"{note} AI first-page title fallback skipped because OPENAI_API_KEY is not set. "
+            f"{note} AI first-page title fallback unavailable from configured provider. "
             f"Could not find economics match for title {attempted_titles[0]!r}."
         )
     elif first_meta and not _is_acceptable_openalex_match(
@@ -499,7 +488,7 @@ def _ensure_table(conn) -> None:
     """Ensure table.
 
     Args:
-        conn (Any): Description.
+        conn (Any): Open database connection.
     """
     ensure_schema_ready(conn)
 
@@ -508,11 +497,11 @@ def _has_existing_match(conn, paper_path: str) -> bool:
     """Has existing match.
 
     Args:
-        conn (Any): Description.
-        paper_path (str): Description.
+        conn (Any): Open database connection.
+        paper_path (str): Path to a single paper file.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     cur = conn.cursor()
     cur.execute(
@@ -544,16 +533,16 @@ def _upsert_row(
     """Upsert row.
 
     Args:
-        conn (Any): Description.
-        paper_path (str): Description.
-        title (str): Description.
-        authors (str): Description.
-        query_title (str): Description.
-        query_authors (str): Description.
-        query_year (int | None): Description.
-        openalex_meta (Dict[str, Any] | None): Description.
-        status (str): Description.
-        error_text (str | None): Description.
+        conn (Any): Open database connection.
+        paper_path (str): Path to a single paper file.
+        title (str): Paper title text.
+        authors (str): List of author names.
+        query_title (str): Input value for query title.
+        query_authors (str): Input value for query authors.
+        query_year (int | None): Input value for query year.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
+        status (str): Status value to persist for the run or step.
+        error_text (str | None): Input value for error text.
     """
     meta = openalex_meta or {}
     cur = conn.cursor()
@@ -640,16 +629,16 @@ def store_openalex_metadata_by_title_author(
     """Match papers by title+authors on OpenAlex and persist results in Postgres.
 
     Args:
-        paper_paths (Iterable[Path]): Description.
-        db_url (str | None): Description.
-        progress (bool): Description.
-        refresh (bool): Description.
+        paper_paths (Iterable[Path]): Paths to paper files.
+        db_url (str | None): Postgres connection URL.
+        progress (bool): Whether to enable progress.
+        refresh (bool): Whether to enable refresh.
 
     Returns:
-        Dict[str, int]: Description.
+        Dict[str, int]: Dictionary containing the computed result payload.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     resolved_db_url = (db_url or os.environ.get("DATABASE_URL") or "").strip()
     if not resolved_db_url:

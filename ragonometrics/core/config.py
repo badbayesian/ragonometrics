@@ -16,6 +16,23 @@ DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.toml"
 
 ENV_CONFIG_MAP = {
     "DATABASE_URL": "database_url",
+    "LLM_PROVIDER": "llm_provider",
+    "LLM_BASE_URL": "llm_base_url",
+    "LLM_API_KEY": "llm_api_key",
+    "OPENAI_API_KEY": "openai_api_key",
+    "ANTHROPIC_API_KEY": "anthropic_api_key",
+    "OPENAI_COMPATIBLE_API_KEY": "openai_compatible_api_key",
+    "CHAT_PROVIDER": "chat_provider",
+    "EMBEDDING_PROVIDER": "embedding_provider",
+    "RERANK_PROVIDER": "rerank_provider",
+    "QUERY_EXPAND_PROVIDER": "query_expand_provider",
+    "METADATA_TITLE_PROVIDER": "metadata_title_provider",
+    "CHAT_PROVIDER_FALLBACK": "chat_provider_fallback",
+    "EMBEDDING_PROVIDER_FALLBACK": "embedding_provider_fallback",
+    "RERANK_PROVIDER_FALLBACK": "rerank_provider_fallback",
+    "QUERY_EXPAND_PROVIDER_FALLBACK": "query_expand_provider_fallback",
+    "METADATA_TITLE_PROVIDER_FALLBACK": "metadata_title_provider_fallback",
+    "METADATA_TITLE_MODEL": "metadata_title_model",
     "BM25_WEIGHT": "bm25_weight",
     "RERANKER_MODEL": "reranker_model",
     "RERANK_TOP_N": "rerank_top_n",
@@ -32,10 +49,10 @@ def load_config(path: Path | None) -> Dict[str, Any]:
     """Load a TOML config file and return the ragonometrics section or top-level dict.
 
     Args:
-        path (Path | None): Description.
+        path (Path | None): Filesystem path value.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     if not path or not path.exists():
         return {}
@@ -49,10 +66,10 @@ def hash_config_dict(config: Mapping[str, Any]) -> str:
     """Return a stable SHA-256 hash of a config mapping.
 
     Args:
-        config (Mapping[str, Any]): Description.
+        config (Mapping[str, Any]): Loaded configuration object.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     payload = json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -62,14 +79,14 @@ def _env_or_config(env: Mapping[str, str], config: Mapping[str, Any], env_key: s
     """Env or config.
 
     Args:
-        env (Mapping[str, str]): Description.
-        config (Mapping[str, Any]): Description.
-        env_key (str): Description.
-        config_key (str): Description.
-        default (Any): Description.
+        env (Mapping[str, str]): Mapping containing env.
+        config (Mapping[str, Any]): Loaded configuration object.
+        env_key (str): Input value for env key.
+        config_key (str): Configuration key name.
+        default (Any): Default value used when primary input is missing.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     if env_key in env and env[env_key] != "":
         return env[env_key]
@@ -82,11 +99,11 @@ def _coerce_int(value: Any, default: int) -> int:
     """Coerce int.
 
     Args:
-        value (Any): Description.
-        default (int): Description.
+        value (Any): Value to serialize, store, or compare.
+        default (int): Default value used when primary input is missing.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     try:
         return int(value)
@@ -98,11 +115,11 @@ def _coerce_float(value: Any, default: float) -> float:
     """Coerce float.
 
     Args:
-        value (Any): Description.
-        default (float): Description.
+        value (Any): Value to serialize, store, or compare.
+        default (float): Default value used when primary input is missing.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     try:
         return float(value)
@@ -114,11 +131,11 @@ def _coerce_bool(value: Any, default: bool) -> bool:
     """Coerce bool.
 
     Args:
-        value (Any): Description.
-        default (bool): Description.
+        value (Any): Value to serialize, store, or compare.
+        default (bool): Default value used when primary input is missing.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     if isinstance(value, bool):
         return value
@@ -143,12 +160,12 @@ def build_effective_config(
     """Build the effective config with env overrides applied.
 
     Args:
-        config (Mapping[str, Any]): Description.
-        env (Mapping[str, str]): Description.
-        project_root (Path): Description.
+        config (Mapping[str, Any]): Loaded configuration object.
+        env (Mapping[str, str]): Mapping containing env.
+        project_root (Path): Path to project root.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     papers_dir_val = _env_or_config(env, config, "PAPERS_DIR", "papers_dir", project_root / "papers")
     papers_dir = Path(papers_dir_val)
@@ -166,6 +183,37 @@ def build_effective_config(
         "embedding_model": _env_or_config(env, config, "EMBEDDING_MODEL", "embedding_model", "text-embedding-3-small"),
         "chat_model": _env_or_config(env, config, "OPENAI_MODEL", "chat_model", None)
         or _env_or_config(env, config, "CHAT_MODEL", "chat_model", "gpt-5-nano"),
+        "llm_provider": _env_or_config(env, config, "LLM_PROVIDER", "llm_provider", "openai"),
+        "llm_base_url": _env_or_config(env, config, "LLM_BASE_URL", "llm_base_url", ""),
+        "llm_api_key": _env_or_config(env, config, "LLM_API_KEY", "llm_api_key", ""),
+        "openai_api_key": _env_or_config(env, config, "OPENAI_API_KEY", "openai_api_key", ""),
+        "anthropic_api_key": _env_or_config(env, config, "ANTHROPIC_API_KEY", "anthropic_api_key", ""),
+        "openai_compatible_api_key": _env_or_config(
+            env, config, "OPENAI_COMPATIBLE_API_KEY", "openai_compatible_api_key", ""
+        ),
+        "chat_provider": _env_or_config(env, config, "CHAT_PROVIDER", "chat_provider", ""),
+        "embedding_provider": _env_or_config(env, config, "EMBEDDING_PROVIDER", "embedding_provider", ""),
+        "rerank_provider": _env_or_config(env, config, "RERANK_PROVIDER", "rerank_provider", ""),
+        "query_expand_provider": _env_or_config(env, config, "QUERY_EXPAND_PROVIDER", "query_expand_provider", ""),
+        "metadata_title_provider": _env_or_config(
+            env, config, "METADATA_TITLE_PROVIDER", "metadata_title_provider", ""
+        ),
+        "chat_provider_fallback": _env_or_config(
+            env, config, "CHAT_PROVIDER_FALLBACK", "chat_provider_fallback", ""
+        ),
+        "embedding_provider_fallback": _env_or_config(
+            env, config, "EMBEDDING_PROVIDER_FALLBACK", "embedding_provider_fallback", ""
+        ),
+        "rerank_provider_fallback": _env_or_config(
+            env, config, "RERANK_PROVIDER_FALLBACK", "rerank_provider_fallback", ""
+        ),
+        "query_expand_provider_fallback": _env_or_config(
+            env, config, "QUERY_EXPAND_PROVIDER_FALLBACK", "query_expand_provider_fallback", ""
+        ),
+        "metadata_title_provider_fallback": _env_or_config(
+            env, config, "METADATA_TITLE_PROVIDER_FALLBACK", "metadata_title_provider_fallback", ""
+        ),
+        "metadata_title_model": _env_or_config(env, config, "METADATA_TITLE_MODEL", "metadata_title_model", ""),
         "database_url": _env_or_config(env, config, "DATABASE_URL", "database_url", None),
         "bm25_weight": _coerce_float(_env_or_config(env, config, "BM25_WEIGHT", "bm25_weight", 0.5), 0.5),
         "reranker_model": _env_or_config(env, config, "RERANKER_MODEL", "reranker_model", ""),
@@ -190,8 +238,8 @@ def apply_config_env_overrides(config: Mapping[str, Any], env: Mapping[str, str]
     """Populate env vars from config when not already set.
 
     Args:
-        config (Mapping[str, Any]): Description.
-        env (Mapping[str, str]): Description.
+        config (Mapping[str, Any]): Loaded configuration object.
+        env (Mapping[str, str]): Mapping containing env.
     """
     for env_key, config_key in ENV_CONFIG_MAP.items():
         if env_key in env and env[env_key] != "":

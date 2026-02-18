@@ -36,15 +36,15 @@ def _ocr_pdf(path: Path, *, first_page: int | None = None, last_page: int | None
     """Ocr pdf.
 
     Args:
-        path (Path): Description.
-        first_page (int | None): Description.
-        last_page (int | None): Description.
+        path (Path): Filesystem path value.
+        first_page (int | None): Input value for first page.
+        last_page (int | None): Input value for last page.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     if not convert_from_path or not pytesseract:
         raise RuntimeError("OCR tools are not available. Install pdf2image+pytesseract to enable OCR.")
@@ -56,13 +56,13 @@ def run_pdftotext(path: Path) -> str:
     """Extract text from a PDF using `pdftotext`, with OCR fallback.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     if os.environ.get("FORCE_OCR"):
         texts = _ocr_pdf(path)
@@ -95,10 +95,10 @@ def run_pdftotext_pages(path: Path) -> List[str]:
     """Extract text from each page of a PDF.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if os.environ.get("FORCE_OCR"):
         return _ocr_pdf(path)
@@ -150,13 +150,13 @@ def load_pdf(path: Path) -> LoadedText:
     """Load a PDF file and return extracted text with metadata.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        LoadedText: Description.
+        LoadedText: Result produced by the operation.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     if not path.exists():
         raise FileNotFoundError(path)
@@ -168,14 +168,14 @@ def load_text_file(path: Path, encoding: str = "utf-8") -> LoadedText:
     """Load a text file and return its contents with metadata.
 
     Args:
-        path (Path): Description.
-        encoding (str): Description.
+        path (Path): Filesystem path value.
+        encoding (str): Input value for encoding.
 
     Returns:
-        LoadedText: Description.
+        LoadedText: Result produced by the operation.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     if not path.exists():
         raise FileNotFoundError(path)
@@ -187,10 +187,10 @@ def normalize_text(text: str) -> str:
     """Normalize extracted text by removing nulls and collapsing whitespace.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     text = text.replace("\u0000", " ")
     text = re.sub(r"\s+", " ", text)
@@ -201,11 +201,11 @@ def trim_words(text: str, max_words: int) -> str:
     """Trim text to a maximum number of words.
 
     Args:
-        text (str): Description.
-        max_words (int): Description.
+        text (str): Input text value.
+        max_words (int): Input value for max words.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if max_words <= 0:
         return text
@@ -219,12 +219,12 @@ def chunk_words(text: str, chunk_words: int, overlap_words: int) -> List[str]:
     """Split text into overlapping word chunks.
 
     Args:
-        text (str): Description.
-        chunk_words (int): Description.
-        overlap_words (int): Description.
+        text (str): Input text value.
+        chunk_words (int): Input value for chunk words.
+        overlap_words (int): Input value for overlap words.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     words = text.split()
     if not words:
@@ -245,12 +245,12 @@ def chunk_pages(page_texts: List[str], chunk_words_count: int, overlap_words: in
     """Chunk page texts into word windows with provenance metadata.
 
     Args:
-        page_texts (List[str]): Description.
-        chunk_words_count (int): Description.
-        overlap_words (int): Description.
+        page_texts (List[str]): Collection of page texts.
+        chunk_words_count (int): Input value for chunk words count.
+        overlap_words (int): Input value for overlap words.
 
     Returns:
-        List[Dict]: Description.
+        List[Dict]: Dictionary containing the computed result payload.
     """
     sections: Optional[List[str]] = None
     if os.environ.get("SECTION_AWARE_CHUNKING"):
@@ -296,10 +296,10 @@ def infer_sections(page_texts: List[str]) -> List[str]:
     """Infer a coarse section label for each page based on headings.
 
     Args:
-        page_texts (List[str]): Description.
+        page_texts (List[str]): Collection of page texts.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     current = "unknown"
     labels: List[str] = []

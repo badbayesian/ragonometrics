@@ -17,15 +17,15 @@ def _request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: in
     """Request json.
 
     Args:
-        url (str): Description.
-        params (Optional[Dict[str, Any]]): Description.
-        timeout (int): Description.
+        url (str): Input value for url.
+        params (Optional[Dict[str, Any]]): Mapping containing params.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Any]: Description.
+        Optional[Any]: Computed result, or `None` when unavailable.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     max_retries = int(os.environ.get("ECON_API_MAX_RETRIES", "2"))
     for attempt in range(max_retries + 1):
@@ -55,14 +55,14 @@ def fetch_fred_series(
     """Fetch FRED series observations.
 
     Args:
-        series_id (str): Description.
-        api_key (Optional[str]): Description.
-        start_date (Optional[str]): Description.
-        end_date (Optional[str]): Description.
-        limit (Optional[int]): Description.
+        series_id (str): Input value for series id.
+        api_key (Optional[str]): Input value for api key.
+        start_date (Optional[str]): Input value for start date.
+        end_date (Optional[str]): Input value for end date.
+        limit (Optional[int]): Maximum number of records to process.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     key = api_key or os.environ.get("FRED_API_KEY")
     params: Dict[str, Any] = {"series_id": series_id, "file_type": "json"}
@@ -91,14 +91,14 @@ def fetch_world_bank_indicator(
     """Fetch World Bank indicator data for a country.
 
     Args:
-        indicator (str): Description.
-        country (str): Description.
-        start_year (Optional[int]): Description.
-        end_year (Optional[int]): Description.
-        per_page (int): Description.
+        indicator (str): Input value for indicator.
+        country (str): Input value for country.
+        start_year (Optional[int]): Input value for start year.
+        end_year (Optional[int]): Input value for end year.
+        per_page (int): Input value for per page.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     params: Dict[str, Any] = {"format": "json", "per_page": per_page}
     if start_year:

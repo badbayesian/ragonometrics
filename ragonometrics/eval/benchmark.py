@@ -7,8 +7,7 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from openai import OpenAI
-
+from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.indexing.indexer import build_index
 from ragonometrics.core.main import (
     Paper,
@@ -31,11 +30,11 @@ class FakeClient:
             """Return deterministic embedding vectors for testing.
 
             Args:
-                model (Any): Description.
-                input (Any): Description.
+                model (Any): Model name used for this operation.
+                input (Any): Input value for input.
 
             Returns:
-                Any: Description.
+                Any: Return value produced by the operation.
             """
             # return a fixed-length small vector for deterministic dry runs
             class Item:
@@ -43,7 +42,7 @@ class FakeClient:
                     """Init.
 
                     Args:
-                        embedding (Any): Description.
+                        embedding (Any): Input value for embedding.
                     """
                     self.embedding = embedding
 
@@ -55,11 +54,11 @@ def benchmark_indexing(papers: List[Path], runs: int = 1) -> List[dict]:
     """Benchmark vector index building across runs.
 
     Args:
-        papers (List[Path]): Description.
-        runs (int): Description.
+        papers (List[Path]): Path to papers.
+        runs (int): Input value for runs.
 
     Returns:
-        List[dict]: Description.
+        List[dict]: Dictionary containing the computed result payload.
     """
     settings = load_settings()
     results = []
@@ -75,10 +74,10 @@ def benchmark_chunking(paper: Path) -> dict:
     """Benchmark chunk preparation for a single paper.
 
     Args:
-        paper (Path): Description.
+        paper (Path): Path to paper.
 
     Returns:
-        dict: Description.
+        dict: Dictionary containing the computed result payload.
     """
     settings = load_settings()
     papers = load_papers([paper])
@@ -105,18 +104,18 @@ def bench_papers(
     """Benchmark chunking, embedding, and retrieval across papers.
 
     Args:
-        papers_dir (Path): Description.
-        out_csv (Path): Description.
-        limit (int): Description.
-        use_openai (bool): Description.
-        db_url (Optional[str]): Description.
-        chunk_words (Optional[int]): Description.
-        chunk_overlap (Optional[int]): Description.
-        bm25_weight (Optional[float]): Description.
-        force_ocr (bool): Description.
+        papers_dir (Path): Directory containing input paper files.
+        out_csv (Path): Path to out csv.
+        limit (int): Maximum number of records to process.
+        use_openai (bool): Whether to enable use openai.
+        db_url (Optional[str]): Postgres connection URL.
+        chunk_words (Optional[int]): Input value for chunk words.
+        chunk_overlap (Optional[int]): Input value for chunk overlap.
+        bm25_weight (Optional[float]): Input value for bm25 weight.
+        force_ocr (bool): Whether to enable force ocr.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     settings = load_settings()
     settings = Settings(
@@ -135,7 +134,7 @@ def bench_papers(
     if limit > 0:
         files = files[:limit]
 
-    client = OpenAI() if use_openai else FakeClient()
+    client = build_llm_runtime(settings) if use_openai else FakeClient()
 
     rows = []
     for p in files:

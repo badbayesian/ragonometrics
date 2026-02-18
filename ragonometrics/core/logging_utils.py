@@ -11,8 +11,8 @@ def log_event(event: str, payload: Dict[str, Any] | None = None) -> None:
     """Emit a structured JSON log line to stdout.
 
     Args:
-        event (str): Description.
-        payload (Dict[str, Any] | None): Description.
+        event (str): Input value for event.
+        payload (Dict[str, Any] | None): Payload data to persist or transmit.
     """
     data = {
         "event": event,

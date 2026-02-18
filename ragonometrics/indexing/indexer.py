@@ -8,7 +8,6 @@ from typing import Any, Dict, List
 
 import faiss
 import numpy as np
-from openai import OpenAI
 
 from ragonometrics.core.main import (
     Paper,
@@ -19,6 +18,7 @@ from ragonometrics.core.main import (
     load_settings,
     prepare_chunks_for_paper,
 )
+from ragonometrics.llm.runtime import build_llm_runtime
 import os
 from datetime import datetime
 import hashlib
@@ -33,10 +33,10 @@ def normalize(v: np.ndarray) -> np.ndarray:
     """L2-normalize a 2D array of vectors.
 
     Args:
-        v (np.ndarray): Description.
+        v (np.ndarray): Input value for v.
 
     Returns:
-        np.ndarray: Description.
+        np.ndarray: NumPy array containing the computed values.
     """
     norms = np.linalg.norm(v, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -47,10 +47,10 @@ def _sha256_bytes(payload: bytes) -> str:
     """Sha256 bytes.
 
     Args:
-        payload (bytes): Description.
+        payload (bytes): Payload data to persist or transmit.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return hashlib.sha256(payload).hexdigest()
 
@@ -59,10 +59,10 @@ def _sha256_text(text: str) -> str:
     """Sha256 text.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return _sha256_bytes(text.encode("utf-8", errors="ignore"))
 
@@ -71,14 +71,14 @@ def _stable_chunk_id(doc_id: str, page: int | None, start_word: int | None, end_
     """Stable chunk id.
 
     Args:
-        doc_id (str): Description.
-        page (int | None): Description.
-        start_word (int | None): Description.
-        end_word (int | None): Description.
-        chunk_hash (str): Description.
+        doc_id (str): Input value for doc id.
+        page (int | None): Input value for page.
+        start_word (int | None): Input value for start word.
+        end_word (int | None): Input value for end word.
+        chunk_hash (str): Input value for chunk hash.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     payload = f"{doc_id}|{page}|{start_word}|{end_word}|{chunk_hash}"
     return _sha256_text(payload)
@@ -88,10 +88,10 @@ def _to_pgvector_literal(values: np.ndarray) -> str:
     """To pgvector literal.
 
     Args:
-        values (np.ndarray): Description.
+        values (np.ndarray): Input value for values.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return "[" + ",".join(f"{float(v):.10f}" for v in values.tolist()) + "]"
 
@@ -100,10 +100,10 @@ def _dedupe_keep_order(values: List[str]) -> List[str]:
     """Dedupe keep order.
 
     Args:
-        values (List[str]): Description.
+        values (List[str]): Collection of values.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     seen = set()
     out: List[str] = []
@@ -123,10 +123,10 @@ def _split_author_names(author_text: str) -> List[str]:
     """Split author names.
 
     Args:
-        author_text (str): Description.
+        author_text (str): Author name text used for lookup.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     text = str(author_text or "").strip()
     if not text:
@@ -139,10 +139,10 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
     """Openalex author names.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not openalex_meta:
         return []
@@ -161,10 +161,10 @@ def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
     """Openalex venue.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if not openalex_meta:
         return None
@@ -182,10 +182,10 @@ def _openalex_source_url(openalex_meta: Dict[str, Any] | None) -> str | None:
     """Openalex source url.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if not openalex_meta:
         return None
@@ -212,20 +212,20 @@ def build_index(
     """Build vector indexes from paper paths and persist metadata to Postgres.
 
     Args:
-        settings (Settings): Description.
-        paper_paths (List[Path]): Description.
-        index_path (Path): Description.
-        meta_db_url (str | None): Description.
-        workflow_run_id (str | None): Description.
-        workstream_id (str | None): Description.
-        arm (str | None): Description.
-        paper_set_hash (str | None): Description.
-        index_build_reason (str | None): Description.
+        settings (Settings): Loaded application settings.
+        paper_paths (List[Path]): Paths to paper files.
+        index_path (Path): Path to the vector index file.
+        meta_db_url (str | None): Postgres metadata database URL.
+        workflow_run_id (str | None): Workflow run identifier associated with this operation.
+        workstream_id (str | None): Logical workstream identifier for grouping related runs.
+        arm (str | None): Experiment arm label for this run.
+        paper_set_hash (str | None): Stable hash representing the selected paper set.
+        index_build_reason (str | None): Reason recorded for this index build.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
-    client = OpenAI()
+    client = build_llm_runtime(settings)
     log_event("index_start", {"papers": len(paper_paths), "index_path": str(index_path)})
 
     paper_paths = sorted(paper_paths, key=lambda p: str(p).lower())

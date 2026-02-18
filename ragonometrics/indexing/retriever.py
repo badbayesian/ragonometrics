@@ -6,10 +6,10 @@ from typing import List, Tuple, Dict
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 import faiss
 import numpy as np
-from openai import OpenAI
 from rank_bm25 import BM25Okapi
 from ragonometrics.db.connection import connect
 
@@ -18,10 +18,10 @@ def _normalize(vec: np.ndarray) -> np.ndarray:
     """Normalize.
 
     Args:
-        vec (np.ndarray): Description.
+        vec (np.ndarray): Input value for vec.
 
     Returns:
-        np.ndarray: Description.
+        np.ndarray: NumPy array containing the computed values.
     """
     norm = np.linalg.norm(vec, axis=1, keepdims=True)
     norm[norm == 0] = 1.0
@@ -32,10 +32,10 @@ def _to_pgvector_literal(vec: np.ndarray) -> str:
     """To pgvector literal.
 
     Args:
-        vec (np.ndarray): Description.
+        vec (np.ndarray): Input value for vec.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     values = vec[0].tolist()
     return "[" + ",".join(f"{float(v):.10f}" for v in values) + "]"
@@ -45,13 +45,13 @@ def _load_index_sidecar(path: str) -> Dict:
     """Load index sidecar.
 
     Args:
-        path (str): Description.
+        path (str): Filesystem path value.
 
     Returns:
-        Dict: Description.
+        Dict: Dictionary containing the computed result payload.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     sidecar = Path(path).with_suffix(".index.version.json")
     if not sidecar.exists():
@@ -66,11 +66,11 @@ def _verify_index_version(path: str, db_index_id: str | None) -> None:
     """Verify index version.
 
     Args:
-        path (str): Description.
-        db_index_id (str | None): Description.
+        path (str): Filesystem path value.
+        db_index_id (str | None): Input value for db index id.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     if os.environ.get("ALLOW_UNVERIFIED_INDEX"):
         return
@@ -88,10 +88,10 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     """Load active FAISS indexes from metadata.
 
     Args:
-        db_url (str): Description.
+        db_url (str): Postgres connection URL.
 
     Returns:
-        List[Tuple[str, faiss.Index]]: Description.
+        List[Tuple[str, faiss.Index]]: List result produced by the operation.
     """
     conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
@@ -106,18 +106,38 @@ def _load_active_indexes(db_url: str) -> List[Tuple[str, faiss.Index]]:
     return res
 
 
-def _load_texts_for_shards(db_url: str) -> Tuple[List[str], List[int]]:
+def _normalize_paper_path(paper_path: str | None) -> str | None:
+    """Normalize a paper path for cross-platform DB comparisons."""
+    if paper_path is None:
+        return None
+    normalized = str(paper_path).strip().replace("\\", "/")
+    return normalized or None
+
+
+def _load_texts_for_shards(db_url: str, *, paper_path: str | None = None) -> Tuple[List[str], List[int]]:
     """Load vector texts and ids from Postgres.
 
     Args:
-        db_url (str): Description.
+        db_url (str): Postgres connection URL.
 
     Returns:
-        Tuple[List[str], List[int]]: Description.
+        Tuple[List[str], List[int]]: List result produced by the operation.
     """
     conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
-    cur.execute("SELECT id, text FROM indexing.vectors ORDER BY id")
+    normalized_paper_path = _normalize_paper_path(paper_path)
+    if normalized_paper_path:
+        cur.execute(
+            """
+            SELECT id, text
+            FROM indexing.vectors
+            WHERE lower(replace(COALESCE(paper_path, ''), '\\', '/')) = lower(%s)
+            ORDER BY id
+            """,
+            (normalized_paper_path,),
+        )
+    else:
+        cur.execute("SELECT id, text FROM indexing.vectors ORDER BY id")
     rows = cur.fetchall()
     conn.close()
     ids = [r[0] for r in rows]
@@ -130,7 +150,7 @@ def _set_diskann_runtime_knobs(cur) -> None:
     """Set diskann runtime knobs.
 
     Args:
-        cur (Any): Description.
+        cur (Any): Open database cursor.
     """
     try:
         if os.environ.get("DISKANN_QUERY_RESCORE"):
@@ -143,33 +163,42 @@ def _set_diskann_runtime_knobs(cur) -> None:
         pass
 
 
-def _embedding_search_pg(db_url: str, vec: np.ndarray, top_k: int) -> List[Tuple[int, float]]:
+def _embedding_search_pg(
+    db_url: str,
+    vec: np.ndarray,
+    top_k: int,
+    *,
+    paper_path: str | None = None,
+) -> List[Tuple[int, float]]:
     """Embedding search pg.
 
     Args:
-        db_url (str): Description.
-        vec (np.ndarray): Description.
-        top_k (int): Description.
+        db_url (str): Postgres connection URL.
+        vec (np.ndarray): Input value for vec.
+        top_k (int): Input value for top k.
 
     Returns:
-        List[Tuple[int, float]]: Description.
+        List[Tuple[int, float]]: List result produced by the operation.
     """
     conn = connect(db_url, require_migrated=True)
     cur = conn.cursor()
     vector_literal = _to_pgvector_literal(vec)
+    normalized_paper_path = _normalize_paper_path(paper_path)
     rows = []
     try:
         _set_diskann_runtime_knobs(cur)
-        cur.execute(
-            """
+        sql = """
             SELECT id, (1 - (embedding <=> %s::vector)) AS score
             FROM indexing.vectors
             WHERE embedding IS NOT NULL
-            ORDER BY embedding <=> %s::vector
-            LIMIT %s
-            """,
-            (vector_literal, vector_literal, top_k * 5),
-        )
+        """
+        params: list[Any] = [vector_literal]
+        if normalized_paper_path:
+            sql += " AND lower(replace(COALESCE(paper_path, ''), '\\\\', '/')) = lower(%s)"
+            params.append(normalized_paper_path)
+        sql += " ORDER BY embedding <=> %s::vector LIMIT %s"
+        params.extend([vector_literal, top_k * 5])
+        cur.execute(sql, tuple(params))
         rows = cur.fetchall()
     finally:
         conn.close()
@@ -180,12 +209,12 @@ def _embedding_search_faiss(db_url: str, vec: np.ndarray, top_k: int) -> List[Tu
     """Embedding search faiss.
 
     Args:
-        db_url (str): Description.
-        vec (np.ndarray): Description.
-        top_k (int): Description.
+        db_url (str): Postgres connection URL.
+        vec (np.ndarray): Input value for vec.
+        top_k (int): Input value for top k.
 
     Returns:
-        List[Tuple[int, float]]: Description.
+        List[Tuple[int, float]]: List result produced by the operation.
     """
     indexes = _load_active_indexes(db_url)
     if not indexes:
@@ -196,21 +225,65 @@ def _embedding_search_faiss(db_url: str, vec: np.ndarray, top_k: int) -> List[Tu
     return [(int(doc_id), float(score)) for doc_id, score in hits if int(doc_id) >= 0]
 
 
-def hybrid_search(query: str, client: OpenAI, db_url: str, top_k: int = 6, bm25_weight: float = 0.5) -> List[Tuple[int, float]]:
+def _embed_query(
+    *,
+    query: str,
+    embedding_client: Any,
+    embedding_model: str,
+) -> List[float]:
+    """Embed one query using runtime/provider or legacy OpenAI-like client."""
+    # Bound embeddings capability from runtime.
+    if hasattr(embedding_client, "embed"):
+        response = embedding_client.embed(texts=[query], model=embedding_model, metadata={"capability": "embeddings"})
+        if response.embeddings:
+            return list(response.embeddings[0])
+    # Runtime container exposing .embeddings capability.
+    if hasattr(embedding_client, "embeddings") and hasattr(embedding_client.embeddings, "embed"):
+        response = embedding_client.embeddings.embed(
+            texts=[query],
+            model=embedding_model,
+            metadata={"capability": "embeddings"},
+        )
+        if response.embeddings:
+            return list(response.embeddings[0])
+    # Legacy OpenAI-like client.
+    if hasattr(embedding_client, "embeddings") and hasattr(embedding_client.embeddings, "create"):
+        resp = embedding_client.embeddings.create(model=embedding_model, input=[query])
+        data = getattr(resp, "data", None) or []
+        if data:
+            return list(getattr(data[0], "embedding", []) or [])
+    raise RuntimeError("No compatible embedding interface found for hybrid retrieval")
+
+
+def hybrid_search(
+    query: str,
+    *,
+    db_url: str,
+    top_k: int = 6,
+    bm25_weight: float = 0.5,
+    embedding_client: Any = None,
+    embedding_model: str | None = None,
+    client: Any = None,
+    paper_path: str | None = None,
+) -> List[Tuple[int, float]]:
     """Perform hybrid BM25 + embedding search over stored vectors.
 
     Args:
-        query (str): Description.
-        client (OpenAI): Description.
-        db_url (str): Description.
-        top_k (int): Description.
-        bm25_weight (float): Description.
+        query (str): Input query text.
+        db_url (str): Postgres connection URL.
+        top_k (int): Input value for top k.
+        bm25_weight (float): Input value for bm25 weight.
+        embedding_client (Any): Provider/runtime or legacy client for query embeddings.
+        embedding_model (str | None): Embedding model override.
+        client (Any): Backward-compatible alias for ``embedding_client``.
+        paper_path (str | None): Optional absolute/normalized paper path for strict retrieval scoping.
 
     Returns:
-        List[Tuple[int, float]]: Description.
+        List[Tuple[int, float]]: List result produced by the operation.
     """
     # 1. BM25 over stored texts
-    texts, ids = _load_texts_for_shards(db_url)
+    normalized_paper_path = _normalize_paper_path(paper_path)
+    texts, ids = _load_texts_for_shards(db_url, paper_path=normalized_paper_path)
     if not texts:
         return []
     tokenized = [t.split() for t in texts]
@@ -218,20 +291,27 @@ def hybrid_search(query: str, client: OpenAI, db_url: str, top_k: int = 6, bm25_
     q_tokens = query.split()
     bm25_scores = bm25.get_scores(q_tokens)
 
-    # 2. embedding search via FAISS across active indexes (concatenate results)
-    emb = client.embeddings.create(model=os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small"), input=[query]).data[0].embedding
+    # Backward compatibility: accept `client=` as alias for embedding_client.
+    embed_source = embedding_client if embedding_client is not None else client
+    if embed_source is None:
+        raise RuntimeError("hybrid_search requires embedding_client (or legacy client)")
+    model_name = str(embedding_model or os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small"))
+
+    # 2. embedding search via DB/FAISS.
+    emb = _embed_query(query=query, embedding_client=embed_source, embedding_model=model_name)
     vec = np.array([emb], dtype=np.float32)
     vec = _normalize(vec)
 
     # 2a. Prefer Postgres-native vector search (pgvector + vectorscale).
     emb_hits: List[Tuple[int, float]] = []
     try:
-        emb_hits = _embedding_search_pg(db_url, vec, top_k)
+        emb_hits = _embedding_search_pg(db_url, vec, top_k, paper_path=normalized_paper_path)
     except Exception:
         emb_hits = []
 
     # 2b. Fallback to legacy FAISS path when DB vector search is unavailable.
-    if not emb_hits:
+    # FAISS path cannot be scoped to a single paper, so keep it disabled when a scope is requested.
+    if not emb_hits and not normalized_paper_path:
         try:
             emb_hits = _embedding_search_faiss(db_url, vec, top_k)
         except Exception:

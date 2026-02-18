@@ -21,7 +21,7 @@ def _utc_now() -> str:
     """Utc now.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return datetime.now(timezone.utc).isoformat()
 
@@ -36,10 +36,10 @@ def _database_url() -> str:
     """Database url.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
@@ -51,10 +51,10 @@ def _to_iso(value: Any) -> str | None:
     """To iso.
 
     Args:
-        value (Any): Description.
+        value (Any): Value to serialize, store, or compare.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if value is None:
         return None
@@ -70,10 +70,10 @@ def _connect(_db_path: Path):
     """Connect.
 
     Args:
-        _db_path (Path): Description.
+        _db_path (Path): Path to the local SQLite state database.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     conn = connect(_database_url(), require_migrated=True)
     ensure_run_records_table(conn)
@@ -104,24 +104,24 @@ def create_workflow_run(
     """Create workflow run.
 
     Args:
-        db_path (Path): Description.
-        run_id (str): Description.
-        papers_dir (str): Description.
-        config_hash (Optional[str]): Description.
-        status (str): Description.
-        metadata (Optional[Dict[str, Any]]): Description.
-        started_at (Optional[str]): Description.
-        finished_at (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        parent_run_id (Optional[str]): Description.
-        trigger_source (Optional[str]): Description.
-        git_sha (Optional[str]): Description.
-        git_branch (Optional[str]): Description.
-        config_effective (Optional[Dict[str, Any]]): Description.
-        paper_set_hash (Optional[str]): Description.
-        question (Optional[str]): Description.
-        report_question_set (Optional[str]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        run_id (str): Unique workflow run identifier.
+        papers_dir (str): Directory containing input paper files.
+        config_hash (Optional[str]): Hash of the effective configuration.
+        status (str): Status value to persist for the run or step.
+        metadata (Optional[Dict[str, Any]]): Mapping containing metadata.
+        started_at (Optional[str]): ISO timestamp when execution started.
+        finished_at (Optional[str]): ISO timestamp when execution finished.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        parent_run_id (Optional[str]): Run identifier of the parent run, when applicable.
+        trigger_source (Optional[str]): Source that triggered the run.
+        git_sha (Optional[str]): Input value for git sha.
+        git_branch (Optional[str]): Input value for git branch.
+        config_effective (Optional[Dict[str, Any]]): Mapping containing config effective.
+        paper_set_hash (Optional[str]): Stable hash representing the selected paper set.
+        question (Optional[str]): Question text to answer.
+        report_question_set (Optional[str]): Structured question set selector.
     """
     conn = _connect(db_path)
     try:
@@ -248,10 +248,10 @@ def set_workflow_status(db_path: Path, run_id: str, status: str, *, finished_at:
     """Set workflow status.
 
     Args:
-        db_path (Path): Description.
-        run_id (str): Description.
-        status (str): Description.
-        finished_at (Optional[str]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        run_id (str): Unique workflow run identifier.
+        status (str): Status value to persist for the run or step.
+        finished_at (Optional[str]): ISO timestamp when execution finished.
     """
     conn = _connect(db_path)
     try:
@@ -303,26 +303,26 @@ def record_step(
     """Record step.
 
     Args:
-        db_path (Path): Description.
-        run_id (str): Description.
-        step (str): Description.
-        status (str): Description.
-        step_attempt_id (Optional[str]): Description.
-        attempt_no (Optional[int]): Description.
-        queued_at (Optional[str]): Description.
-        started_at (Optional[str]): Description.
-        finished_at (Optional[str]): Description.
-        duration_ms (Optional[int]): Description.
-        status_reason (Optional[str]): Description.
-        error_code (Optional[str]): Description.
-        error_message (Optional[str]): Description.
-        worker_id (Optional[str]): Description.
-        retry_of_attempt_id (Optional[str]): Description.
-        idempotency_key (Optional[str]): Description.
-        input_hash (Optional[str]): Description.
-        reuse_source_run_id (Optional[str]): Description.
-        reuse_source_record_key (Optional[str]): Description.
-        output (Optional[Dict[str, Any]]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        run_id (str): Unique workflow run identifier.
+        step (str): Pipeline step name.
+        status (str): Status value to persist for the run or step.
+        step_attempt_id (Optional[str]): Input value for step attempt id.
+        attempt_no (Optional[int]): Input value for attempt no.
+        queued_at (Optional[str]): Input value for queued at.
+        started_at (Optional[str]): ISO timestamp when execution started.
+        finished_at (Optional[str]): ISO timestamp when execution finished.
+        duration_ms (Optional[int]): Input value for duration ms.
+        status_reason (Optional[str]): Reason associated with the current status.
+        error_code (Optional[str]): Input value for error code.
+        error_message (Optional[str]): Input value for error message.
+        worker_id (Optional[str]): Worker identifier handling the job.
+        retry_of_attempt_id (Optional[str]): Input value for retry of attempt id.
+        idempotency_key (Optional[str]): Deterministic key used for idempotent writes.
+        input_hash (Optional[str]): Hash of normalized inputs used for reuse checks.
+        reuse_source_run_id (Optional[str]): Run identifier of the reused source result.
+        reuse_source_record_key (Optional[str]): Record key of the reused source result.
+        output (Optional[Dict[str, Any]]): Mapping containing output.
     """
     conn = _connect(db_path)
     try:
@@ -456,21 +456,21 @@ def find_similar_completed_step(
     """Return latest completed step output from a similar prior run, if any.
 
     Args:
-        db_path (Path): Description.
-        step (str): Description.
-        exclude_run_id (str): Description.
-        config_hash (Optional[str]): Description.
-        papers_dir (Optional[str]): Description.
-        paper_set_hash (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        question (Optional[str]): Description.
-        report_question_set (Optional[str]): Description.
-        match_question (bool): Description.
-        match_report_question_set (bool): Description.
+        db_path (Path): Path to the local SQLite state database.
+        step (str): Pipeline step name.
+        exclude_run_id (str): Run identifier excluded from reuse lookup.
+        config_hash (Optional[str]): Hash of the effective configuration.
+        papers_dir (Optional[str]): Directory containing input paper files.
+        paper_set_hash (Optional[str]): Stable hash representing the selected paper set.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        question (Optional[str]): Question text to answer.
+        report_question_set (Optional[str]): Structured question set selector.
+        match_question (bool): Whether question text must match during reuse lookup.
+        match_report_question_set (bool): Whether report question set must match during reuse lookup.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
 
     conn = _connect(db_path)
@@ -557,20 +557,20 @@ def find_similar_report_question_items(
     """Return latest reusable structured question payloads keyed by question_id.
 
     Args:
-        db_path (Path): Description.
-        exclude_run_id (str): Description.
-        config_hash (Optional[str]): Description.
-        papers_dir (Optional[str]): Description.
-        paper_set_hash (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        question (Optional[str]): Description.
-        report_question_set (Optional[str]): Description.
-        match_question (bool): Description.
-        match_report_question_set (bool): Description.
+        db_path (Path): Path to the local SQLite state database.
+        exclude_run_id (str): Run identifier excluded from reuse lookup.
+        config_hash (Optional[str]): Hash of the effective configuration.
+        papers_dir (Optional[str]): Directory containing input paper files.
+        paper_set_hash (Optional[str]): Stable hash representing the selected paper set.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        question (Optional[str]): Question text to answer.
+        report_question_set (Optional[str]): Structured question set selector.
+        match_question (bool): Whether question text must match during reuse lookup.
+        match_report_question_set (bool): Whether report question set must match during reuse lookup.
 
     Returns:
-        Dict[str, Dict[str, Any]]: Description.
+        Dict[str, Dict[str, Any]]: Dictionary containing the computed result payload.
     """
 
     conn = _connect(db_path)
@@ -647,11 +647,11 @@ def get_workflow_run(db_path: Path, run_id: str) -> Optional[Dict[str, Any]]:
     """Get workflow run.
 
     Args:
-        db_path (Path): Description.
-        run_id (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        run_id (str): Unique workflow run identifier.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     conn = _connect(db_path)
     try:
@@ -714,11 +714,11 @@ def list_workflow_steps(db_path: Path, run_id: str) -> List[Dict[str, Any]]:
     """List workflow steps.
 
     Args:
-        db_path (Path): Description.
-        run_id (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        run_id (str): Unique workflow run identifier.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     conn = _connect(db_path)
     try:

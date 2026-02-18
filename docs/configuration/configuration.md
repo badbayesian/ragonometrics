@@ -41,8 +41,10 @@ Runtime + workflow settings (env-only)
 | `LLM_MODELS` | Extra models shown in Streamlit dropdown. | empty | CSV string | Example: `gpt-5,gpt-4.1-mini`. |
 | `MATH_LATEX_REVIEW_ENABLED` | Enable post-answer review that formats math/function notation to LaTeX in UI answers. | `1` | bool | Set `0` to disable. |
 | `MATH_LATEX_REVIEW_MODEL` | Model override for the math-format review pass. | `OPENAI_MODEL` | string | Falls back to the selected chat model when unset. |
+| `STREAMLIT_USERS_JSON` | Optional multi-user auth map for Streamlit. | unset | JSON object | Example: `{\"admin\":\"pass\",\"tester\":\"pass\"}`. Takes precedence over single-user vars. |
 | `STREAMLIT_USERNAME` | Optional UI username. | unset | string | Login disabled if missing. |
 | `STREAMLIT_PASSWORD` | Optional UI password. | unset | string | Login disabled if missing. |
+| `STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV` | Auto-seed env credentials into `auth.streamlit_users` when DB table is empty. | `1` | bool | Set `0` to disable bootstrap seeding. |
 | `OPENALEX_API_KEY` | OpenAlex API key. | unset | string | Required for higher rate limits. |
 | `OPENALEX_MAILTO` | Contact email for OpenAlex polite pool. | unset | string | Recommended by OpenAlex. |
 | `FRED_API_KEY` | FRED API key for econ step. | unset | string | Enables econ step. |
@@ -71,6 +73,20 @@ Runtime + workflow settings (env-only)
 | `PREP_FAIL_ON_EMPTY` | Fail workflow if corpus is empty. | `0` | bool | Treats no PDFs or no text as failure. |
 | `PREP_VALIDATE_ONLY` | Exit after prep step. | `0` | bool | Writes report and skips ingest/agentic/index. |
 
+Streamlit Auth Precedence
+-------------------------
+Streamlit resolves login credentials in this order:
+1. Active users in Postgres table `auth.streamlit_users`.
+2. If DB has no active users, fallback to env credentials from:
+   - `STREAMLIT_USERS_JSON` (JSON object map of `{username: password}`), then
+   - legacy single-user pair `STREAMLIT_USERNAME` + `STREAMLIT_PASSWORD`.
+
+Example multi-user value:
+
+```bash
+STREAMLIT_USERS_JSON={"admin":"REDACTED_STREAMLIT_PASSWORD","tester":"REDACTED_STREAMLIT_PASSWORD"}
+```
+
 Config Persistence
 ------------------
 Workflow runs persist resolved config values in Postgres:
@@ -80,3 +96,13 @@ Workflow runs persist resolved config values in Postgres:
 
 The full run report JSON (including the full `config` snapshot) is also stored in:
 - `workflow.run_records.payload_json` (for `record_kind='report'`)
+
+Structured Workstream Export Notes
+----------------------------------
+Streamlit structured export supports two formats:
+- `Compact`: minimal fields for question/answer cache inspection.
+- `Full`: includes richer structured-question fields from `workflow.run_records` question payloads (for example `confidence_score`, `retrieval_method`, `citation_anchors`).
+
+For historical compact-only rows, use one of:
+- Streamlit button: `Regenerate Missing Full Fields (Export Scope)`.
+- CLI tool: `python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply`.

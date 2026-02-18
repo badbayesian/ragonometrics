@@ -21,6 +21,25 @@ batch_size = 64
 embedding_model = "text-embedding-3-large"
 chat_model = "gpt-5-nano"
 
+# Provider routing (optional; defaults preserve OpenAI behavior)
+llm_provider = "openai" # openai | anthropic | openai_compatible
+# llm_base_url = "http://localhost:11434/v1" # for openai_compatible providers (Ollama/vLLM/etc.)
+# llm_api_key = "" # optional generic key for openai_compatible endpoints
+# openai_api_key = ""
+# anthropic_api_key = ""
+# openai_compatible_api_key = ""
+# chat_provider = ""
+# embedding_provider = ""
+# rerank_provider = ""
+# query_expand_provider = ""
+# metadata_title_provider = ""
+# chat_provider_fallback = ""
+# embedding_provider_fallback = ""
+# rerank_provider_fallback = ""
+# query_expand_provider_fallback = ""
+# metadata_title_provider_fallback = ""
+# metadata_title_model = ""
+
 # Storage / indexing
 database_url = "postgres://postgres:postgres@localhost:5432/ragonometrics"
 index_idempotent_skip = true

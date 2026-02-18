@@ -94,6 +94,24 @@ def test_sanitize_title_for_lookup_removes_filename_suffix_author_year() -> None
     assert openalex._sanitize_title_for_lookup(raw) == "Bundle-Size Pricing as an Approximation to Mixed Bundling"
 
 
+def test_normalize_author_for_search_drops_placeholders() -> None:
+    assert openalex._normalize_author_for_search("Unknown") is None
+    assert openalex._normalize_author_for_search("N/A") is None
+    assert openalex._normalize_author_for_search("none") is None
+    assert openalex._normalize_author_for_search("Phillip Leslie") == "Phillip Leslie"
+
+
+def test_build_title_lookup_variants_generates_projects_projections_and_var_vars() -> None:
+    title = "Local Projects or VAR A Primer for Macroeconomists"
+    variants = openalex._build_title_lookup_variants(title)
+
+    assert variants
+    assert variants[0] == "Local Projects or VAR A Primer for Macroeconomists"
+    lowered = [variant.lower() for variant in variants]
+    assert any("local projections or vars a primer for macroeconomists" in variant for variant in lowered)
+    assert len(lowered) == len(set(lowered))
+
+
 def test_normalize_openalex_work_id_supports_api_url() -> None:
     assert openalex._normalize_openalex_work_id("https://api.openalex.org/w2075304461") == "W2075304461"
 
@@ -217,6 +235,103 @@ def test_fetch_openalex_metadata_ignores_cached_non_matching_title(monkeypatch) 
     assert result is not None
     assert result.get("id") == "https://openalex.org/W2099952424"
     assert called["title"] == 1
+
+
+def test_fetch_openalex_metadata_uses_variant_fallback_when_direct_lookup_fails(monkeypatch) -> None:
+    seen_queries = []
+
+    def _fake_request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10):
+        query = str((params or {}).get("search") or "")
+        if query:
+            seen_queries.append(query)
+        lowered = query.lower()
+        if "projections" in lowered and "vars" in lowered:
+            return {
+                "results": [
+                    {
+                        "id": "https://openalex.org/W4411016694",
+                        "display_name": "Local Projections or VARs? A Primer for Macroeconomists",
+                        "publication_year": 2025,
+                        "authorships": [],
+                        "cited_by_count": 3,
+                    }
+                ]
+            }
+        return {"results": []}
+
+    monkeypatch.setattr(openalex, "get_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "set_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title_author_year", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "_request_json", _fake_request_json)
+
+    result = openalex.fetch_openalex_metadata(
+        title="Local Projects or VAR A Primer for Macroeconomists",
+        author="Unknown",
+        year=2025,
+        doi=None,
+    )
+
+    assert result is not None
+    assert result.get("id") == "https://openalex.org/W4411016694"
+    assert any("projections" in query.lower() and "vars" in query.lower() for query in seen_queries)
+
+
+def test_fetch_openalex_metadata_variant_fallback_rejects_non_plausible_candidate(monkeypatch) -> None:
+    def _fake_request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10):
+        return {
+            "results": [
+                {
+                    "id": "https://openalex.org/W999",
+                    "display_name": "Calorie Posting in Chain Restaurants",
+                    "publication_year": 2011,
+                    "authorships": [],
+                    "cited_by_count": 999,
+                }
+            ]
+        }
+
+    monkeypatch.setattr(openalex, "get_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "set_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title_author_year", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "_request_json", _fake_request_json)
+
+    result = openalex.fetch_openalex_metadata(
+        title="Local Projects or VAR A Primer for Macroeconomists",
+        author="Unknown",
+        year=2025,
+        doi=None,
+    )
+
+    assert result is None
+
+
+def test_fetch_openalex_metadata_does_not_include_unknown_author_in_queries(monkeypatch) -> None:
+    seen_queries = []
+
+    def _fake_request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: int = 10):
+        query = str((params or {}).get("search") or "")
+        if query:
+            seen_queries.append(query)
+        return {"results": []}
+
+    monkeypatch.setattr(openalex, "get_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "set_cached_metadata", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "search_work_by_title_author_year", lambda *a, **k: None)
+    monkeypatch.setattr(openalex, "_request_json", _fake_request_json)
+
+    result = openalex.fetch_openalex_metadata(
+        title="Local Projects or VAR A Primer for Macroeconomists",
+        author="Unknown",
+        year=2025,
+        doi=None,
+    )
+
+    assert result is None
+    assert seen_queries
+    assert all("unknown" not in query.lower() for query in seen_queries)
 
 
 def test_search_work_by_title_falls_back_when_select_fails(monkeypatch) -> None:

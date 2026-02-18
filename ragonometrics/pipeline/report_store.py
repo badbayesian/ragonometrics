@@ -17,7 +17,7 @@ def _utc_now() -> str:
     """Utc now.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return datetime.now(timezone.utc).isoformat()
 
@@ -26,10 +26,10 @@ def infer_workflow_status(payload: Dict[str, Any]) -> str:
     """Infer a top-level workflow status from report payload data.
 
     Args:
-        payload (Dict[str, Any]): Description.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     status = str(payload.get("status") or "").strip().lower()
     if status in {"running", "completed", "failed"}:
@@ -46,10 +46,10 @@ def _agentic_status(payload: Dict[str, Any]) -> str | None:
     """Agentic status.
 
     Args:
-        payload (Dict[str, Any]): Description.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
@@ -62,10 +62,10 @@ def _report_questions_set(payload: Dict[str, Any]) -> str | None:
     """Report questions set.
 
     Args:
-        payload (Dict[str, Any]): Description.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
@@ -78,10 +78,10 @@ def _report_questions(payload: Dict[str, Any]) -> list[dict[str, Any]]:
     """Report questions.
 
     Args:
-        payload (Dict[str, Any]): Description.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        list[dict[str, Any]]: Description.
+        list[dict[str, Any]]: Dictionary containing the computed result payload.
     """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
@@ -96,10 +96,10 @@ def _report_question_confidence(payload: Dict[str, Any]) -> dict[str, Any]:
     """Report question confidence.
 
     Args:
-        payload (Dict[str, Any]): Description.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        dict[str, Any]: Description.
+        dict[str, Any]: Dictionary containing the computed result payload.
     """
     agentic = payload.get("agentic")
     if not isinstance(agentic, dict):
@@ -114,10 +114,10 @@ def _sha256_text(text: str) -> str:
     """Sha256 text.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return hashlib.sha256((text or "").encode("utf-8", errors="ignore")).hexdigest()
 
@@ -126,10 +126,10 @@ def _sha256_file(path: Path) -> str | None:
     """Sha256 file.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     try:
         return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -141,7 +141,7 @@ def ensure_workflow_report_store(conn) -> None:
     """Create unified workflow report persistence table/indexes if needed.
 
     Args:
-        conn (Any): Description.
+        conn (Any): Open database connection.
     """
     ensure_run_records_table(conn)
 
@@ -150,12 +150,12 @@ def _upsert_run_record(cur, *, run_id: str, status: str, papers_dir: str, report
     """Upsert run record.
 
     Args:
-        cur (Any): Description.
-        run_id (str): Description.
-        status (str): Description.
-        papers_dir (str): Description.
-        report_path (str): Description.
-        payload (Dict[str, Any]): Description.
+        cur (Any): Open database cursor.
+        run_id (str): Unique workflow run identifier.
+        status (str): Status value to persist for the run or step.
+        papers_dir (str): Directory containing input paper files.
+        report_path (str): Path to the workflow report file.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
     """
     workstream_id = str(payload.get("workstream_id") or "").strip() or None
     arm = str(payload.get("arm") or "").strip() or None
@@ -288,9 +288,9 @@ def _upsert_report_questions(cur, *, run_id: str, payload: Dict[str, Any]) -> No
     """Upsert report questions.
 
     Args:
-        cur (Any): Description.
-        run_id (str): Description.
-        payload (Dict[str, Any]): Description.
+        cur (Any): Open database cursor.
+        run_id (str): Unique workflow run identifier.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
     """
     questions = _report_questions(payload)
     if not questions:
@@ -341,10 +341,10 @@ def _upsert_artifacts(cur, *, run_id: str, report_path: str, payload: Dict[str, 
     """Upsert artifacts.
 
     Args:
-        cur (Any): Description.
-        run_id (str): Description.
-        report_path (str): Description.
-        payload (Dict[str, Any]): Description.
+        cur (Any): Open database cursor.
+        run_id (str): Unique workflow run identifier.
+        report_path (str): Path to the workflow report file.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
     """
     artifact_candidates: list[tuple[str, str | None, dict[str, Any]]] = [
         ("workflow_report_json", report_path, {"source": "workflow.report_path"}),
@@ -409,11 +409,11 @@ def upsert_workflow_report(
     """Upsert one workflow report row into the unified workflow ledger.
 
     Args:
-        conn (Any): Description.
-        run_id (str): Description.
-        report_path (str): Description.
-        payload (Dict[str, Any]): Description.
-        status (str | None): Description.
+        conn (Any): Open database connection.
+        run_id (str): Unique workflow run identifier.
+        report_path (str): Path to the workflow report file.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
+        status (str | None): Status value to persist for the run or step.
     """
     cur = conn.cursor()
     now = _utc_now()
@@ -518,11 +518,11 @@ def store_workflow_report(
     """Connect and store a single workflow report row.
 
     Args:
-        db_url (str): Description.
-        run_id (str): Description.
-        report_path (str): Description.
-        payload (Dict[str, Any]): Description.
-        status (str | None): Description.
+        db_url (str): Postgres connection URL.
+        run_id (str): Unique workflow run identifier.
+        report_path (str): Path to the workflow report file.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
+        status (str | None): Status value to persist for the run or step.
     """
     conn = connect(db_url, require_migrated=True)
     try:
@@ -542,13 +542,13 @@ def store_workflow_reports_from_dir(
     """Backfill workflow report JSON files from disk into Postgres.
 
     Args:
-        reports_dir (Path): Description.
-        db_url (str): Description.
-        recursive (bool): Description.
-        limit (int): Description.
+        reports_dir (Path): Path to reports dir.
+        db_url (str): Postgres connection URL.
+        recursive (bool): Whether to enable recursive.
+        limit (int): Maximum number of records to process.
 
     Returns:
-        Dict[str, int]: Description.
+        Dict[str, int]: Dictionary containing the computed result payload.
     """
     if not reports_dir.exists():
         return {"total": 0, "stored": 0, "skipped": 0}

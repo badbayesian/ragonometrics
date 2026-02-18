@@ -41,13 +41,13 @@ def _resolve_db_url(db_url: str | None) -> str:
     """Resolve db url.
 
     Args:
-        db_url (str | None): Description.
+        db_url (str | None): Postgres connection URL.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     raw = (db_url or "").strip()
     if raw.startswith("redis://"):
@@ -63,10 +63,10 @@ def _connect(db_url: str):
     """Connect.
 
     Args:
-        db_url (str): Description.
+        db_url (str): Postgres connection URL.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     return connect(db_url, require_migrated=True)
 
@@ -75,7 +75,7 @@ def ensure_async_jobs_table(conn) -> None:
     """Ensure async jobs table.
 
     Args:
-        conn (Any): Description.
+        conn (Any): Open database connection.
     """
     ensure_schema_ready(conn)
 
@@ -92,15 +92,15 @@ def _enqueue_job(
     """Enqueue job.
 
     Args:
-        db_url (str | None): Description.
-        queue_name (str): Description.
-        job_type (str): Description.
-        payload (Dict[str, Any]): Description.
-        max_attempts (int): Description.
-        retry_delay_seconds (int): Description.
+        db_url (str | None): Postgres connection URL.
+        queue_name (str): Queue name used for background processing.
+        job_type (str): Asynchronous job type.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
+        max_attempts (int): Input value for max attempts.
+        retry_delay_seconds (int): Input value for retry delay seconds.
 
     Returns:
-        EnqueuedJob: Description.
+        EnqueuedJob: Result produced by the operation.
     """
     resolved_db_url = _resolve_db_url(db_url)
     job_id = uuid.uuid4().hex
@@ -145,15 +145,15 @@ def enqueue_index(
     """Enqueue an indexing job in Postgres.
 
     Args:
-        papers (List[Path]): Description.
-        db_url (str | None): Description.
-        config_path (Path | None): Description.
-        meta_db_url (str | None): Description.
-        index_path (Path | None): Description.
-        queue_name (str): Description.
+        papers (List[Path]): Path to papers.
+        db_url (str | None): Postgres connection URL.
+        config_path (Path | None): Path to the configuration file.
+        meta_db_url (str | None): Postgres metadata database URL.
+        index_path (Path | None): Path to the vector index file.
+        queue_name (str): Queue name used for background processing.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
 
     payload = {
@@ -190,23 +190,23 @@ def enqueue_workflow(
     """Enqueue a multi-step workflow run in Postgres.
 
     Args:
-        papers_dir (Path): Description.
-        db_url (str | None): Description.
-        config_path (Path | None): Description.
-        meta_db_url (str | None): Description.
-        agentic (bool | None): Description.
-        question (str | None): Description.
-        agentic_model (str | None): Description.
-        agentic_citations (bool | None): Description.
-        report_question_set (str | None): Description.
-        workstream_id (str | None): Description.
-        arm (str | None): Description.
-        parent_run_id (str | None): Description.
-        trigger_source (str | None): Description.
-        queue_name (str): Description.
+        papers_dir (Path): Directory containing input paper files.
+        db_url (str | None): Postgres connection URL.
+        config_path (Path | None): Path to the configuration file.
+        meta_db_url (str | None): Postgres metadata database URL.
+        agentic (bool | None): Whether to enable agentic.
+        question (str | None): Question text to answer.
+        agentic_model (str | None): Model name used for the agentic workflow stage.
+        agentic_citations (bool | None): Whether to enable agentic citations.
+        report_question_set (str | None): Structured question set selector.
+        workstream_id (str | None): Logical workstream identifier for grouping related runs.
+        arm (str | None): Experiment arm label for this run.
+        parent_run_id (str | None): Run identifier of the parent run, when applicable.
+        trigger_source (str | None): Source that triggered the run.
+        queue_name (str): Queue name used for background processing.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
 
     payload = {
@@ -235,12 +235,12 @@ def _claim_next_job(conn, *, queue_name: str, worker_id: str) -> Optional[Dict[s
     """Claim next job.
 
     Args:
-        conn (Any): Description.
-        queue_name (str): Description.
-        worker_id (str): Description.
+        conn (Any): Open database connection.
+        queue_name (str): Queue name used for background processing.
+        worker_id (str): Worker identifier handling the job.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     cur = conn.cursor()
     cur.execute(
@@ -293,9 +293,9 @@ def _mark_completed(conn, *, job_id: str, result: Dict[str, Any]) -> None:
     """Mark completed.
 
     Args:
-        conn (Any): Description.
-        job_id (str): Description.
-        result (Dict[str, Any]): Description.
+        conn (Any): Open database connection.
+        job_id (str): Asynchronous job identifier.
+        result (Dict[str, Any]): Mapping containing result.
     """
     cur = conn.cursor()
     cur.execute(
@@ -317,9 +317,9 @@ def _mark_failed(conn, *, job: Dict[str, Any], error_text: str) -> None:
     """Mark failed.
 
     Args:
-        conn (Any): Description.
-        job (Dict[str, Any]): Description.
-        error_text (str): Description.
+        conn (Any): Open database connection.
+        job (Dict[str, Any]): Mapping containing job.
+        error_text (str): Input value for error text.
     """
     attempts = int(job["attempt_count"])
     max_attempts = int(job["max_attempts"])
@@ -358,14 +358,14 @@ def _execute_job(job: Dict[str, Any], *, default_meta_db_url: str | None = None)
     """Execute job.
 
     Args:
-        job (Dict[str, Any]): Description.
-        default_meta_db_url (str | None): Description.
+        job (Dict[str, Any]): Mapping containing job.
+        default_meta_db_url (str | None): Input value for default meta db url.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     payload = job.get("payload_json") or {}
     job_type = str(job.get("job_type") or "").strip()
@@ -419,15 +419,15 @@ def run_worker(
     """Run polling worker loop for Postgres-backed jobs.
 
     Args:
-        db_url (str | None): Description.
-        queue_name (str): Description.
-        poll_seconds (float): Description.
-        once (bool): Description.
-        max_jobs (int): Description.
-        worker_id (str | None): Description.
+        db_url (str | None): Postgres connection URL.
+        queue_name (str): Queue name used for background processing.
+        poll_seconds (float): Input value for poll seconds.
+        once (bool): Whether to enable once.
+        max_jobs (int): Input value for max jobs.
+        worker_id (str | None): Worker identifier handling the job.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
 
     resolved_db_url = _resolve_db_url(db_url)
@@ -472,7 +472,7 @@ def _build_parser() -> argparse.ArgumentParser:
     """Build parser.
 
     Returns:
-        argparse.ArgumentParser: Description.
+        argparse.ArgumentParser: Configured argument parser.
     """
     parser = argparse.ArgumentParser(
         description="Postgres-backed async queue worker for Ragonometrics."
@@ -494,7 +494,7 @@ def main() -> int:
     """Main.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     parser = _build_parser()
     args = parser.parse_args()

@@ -17,7 +17,7 @@ def _utc_now() -> str:
     """Utc now.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return datetime.now(timezone.utc).isoformat()
 
@@ -26,11 +26,11 @@ def _truthy(value: str | None, *, default: bool = False) -> bool:
     """Truthy.
 
     Args:
-        value (str | None): Description.
-        default (bool): Description.
+        value (str | None): Value to serialize, store, or compare.
+        default (bool): Default value used when primary input is missing.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     if value is None:
         return default
@@ -46,11 +46,11 @@ def _hash_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
     """Hash file.
 
     Args:
-        path (Path): Description.
-        chunk_size (int): Description.
+        path (Path): Filesystem path value.
+        chunk_size (int): Input value for chunk size.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     hasher = hashlib.sha256()
     with path.open("rb") as handle:
@@ -66,10 +66,10 @@ def _pdfinfo_pages(path: Path) -> Optional[int]:
     """Pdfinfo pages.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        Optional[int]: Description.
+        Optional[int]: Computed result, or `None` when unavailable.
     """
     try:
         result = subprocess.run(
@@ -96,12 +96,12 @@ def _write_manifest(report_dir: Path, run_id: str, payload: Dict[str, Any]) -> P
     """Write manifest.
 
     Args:
-        report_dir (Path): Description.
-        run_id (str): Description.
-        payload (Dict[str, Any]): Description.
+        report_dir (Path): Directory for generated reports.
+        run_id (str): Unique workflow run identifier.
+        payload (Dict[str, Any]): Payload data to persist or transmit.
 
     Returns:
-        Path: Description.
+        Path: Path to the generated artifact.
     """
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"prep-manifest-{run_id}.json"
@@ -118,12 +118,12 @@ def prep_corpus(
     """Profile and validate a corpus of PDF files before ingestion.
 
     Args:
-        pdfs (List[Path]): Description.
-        report_dir (Path): Description.
-        run_id (str): Description.
+        pdfs (List[Path]): Path to pdfs.
+        report_dir (Path): Directory for generated reports.
+        run_id (str): Unique workflow run identifier.
 
     Returns:
-        Dict[str, Any]: Description.
+        Dict[str, Any]: Dictionary containing the computed result payload.
     """
     hash_files = _truthy(os.environ.get("PREP_HASH_FILES"), default=True)
     validate_text = _truthy(os.environ.get("PREP_VALIDATE_TEXT"), default=False)

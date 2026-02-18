@@ -15,10 +15,10 @@ def _sha256_bytes(payload: bytes) -> str:
     """Sha256 bytes.
 
     Args:
-        payload (bytes): Description.
+        payload (bytes): Payload data to persist or transmit.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return hashlib.sha256(payload).hexdigest()
 
@@ -27,10 +27,10 @@ def _sha256_text(text: str) -> str:
     """Sha256 text.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return _sha256_bytes(text.encode("utf-8", errors="ignore"))
 
@@ -39,11 +39,11 @@ def _doc_id_for_paper(path: Path, text: str) -> str:
     """Doc id for paper.
 
     Args:
-        path (Path): Description.
-        text (str): Description.
+        path (Path): Filesystem path value.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     try:
         file_bytes = path.read_bytes()
@@ -58,11 +58,11 @@ def _hashes_for_paper(path: Path, text: str) -> tuple[str, str]:
     """Hashes for paper.
 
     Args:
-        path (Path): Description.
-        text (str): Description.
+        path (Path): Filesystem path value.
+        text (str): Input text value.
 
     Returns:
-        tuple[str, str]: Description.
+        tuple[str, str]: Tuple of result values produced by the operation.
     """
     try:
         file_bytes = path.read_bytes()
@@ -77,10 +77,10 @@ def _dedupe_keep_order(values: List[str]) -> List[str]:
     """Dedupe keep order.
 
     Args:
-        values (List[str]): Description.
+        values (List[str]): Collection of values.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     seen = set()
     out: List[str] = []
@@ -100,10 +100,10 @@ def _split_author_names(author_text: str) -> List[str]:
     """Split author names.
 
     Args:
-        author_text (str): Description.
+        author_text (str): Author name text used for lookup.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     text = str(author_text or "").strip()
     if not text:
@@ -116,10 +116,10 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
     """Openalex author names.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not openalex_meta:
         return []
@@ -138,10 +138,10 @@ def _openalex_venue(openalex_meta: Dict[str, Any] | None) -> str | None:
     """Openalex venue.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if not openalex_meta:
         return None
@@ -159,10 +159,10 @@ def _openalex_source_url(openalex_meta: Dict[str, Any] | None) -> str | None:
     """Openalex source url.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        str | None: Description.
+        str | None: Computed result, or `None` when unavailable.
     """
     if not openalex_meta:
         return None
@@ -183,15 +183,15 @@ def store_paper_metadata(
     """Load papers and upsert paper-level metadata rows into Postgres.
 
     Args:
-        paper_paths (Iterable[Path]): Description.
-        meta_db_url (str | None): Description.
-        progress (bool): Description.
+        paper_paths (Iterable[Path]): Paths to paper files.
+        meta_db_url (str | None): Postgres metadata database URL.
+        progress (bool): Whether to enable progress.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = meta_db_url or os.environ.get("DATABASE_URL")
     if not db_url:
@@ -282,7 +282,7 @@ def main() -> None:
     """CLI entrypoint for metadata-only ingestion.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     import argparse
 

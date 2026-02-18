@@ -14,9 +14,6 @@ from typing import Any, Dict, Iterable, List, Tuple
 from typing import Optional
 from tqdm import tqdm
 
-
-from openai import OpenAI
-
 from ragonometrics.core.config import (
     DEFAULT_CONFIG_PATH,
     apply_config_env_overrides,
@@ -36,7 +33,8 @@ from ragonometrics.integrations.openalex import (
 )
 from ragonometrics.integrations.citec import fetch_citec_plain, format_citec_context
 from ragonometrics.db.connection import connect
-from ragonometrics.pipeline import call_openai
+from ragonometrics.llm.runtime import build_llm_runtime
+from ragonometrics.pipeline import call_llm
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +67,26 @@ class Settings:
     batch_size: int
     embedding_model: str
     chat_model: str
+    llm_provider: str = "openai"
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    openai_compatible_api_key: str = ""
+    chat_provider: str = ""
+    embedding_provider: str = ""
+    rerank_provider: str = ""
+    query_expand_provider: str = ""
+    metadata_title_provider: str = ""
+    chat_provider_fallback: str = ""
+    embedding_provider_fallback: str = ""
+    rerank_provider_fallback: str = ""
+    query_expand_provider_fallback: str = ""
+    metadata_title_provider_fallback: str = ""
+    reranker_model: str = ""
+    query_expand_model: str = ""
+    metadata_title_model: str = ""
+    query_expansion: str = ""
     config_path: Path | None = None
     config_hash: str | None = None
     config_effective: Dict[str, Any] | None = None
@@ -101,7 +119,7 @@ def load_env(path: Path) -> None:
     """Load environment variables from a .env-style file.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
     """
     if not path.exists():
         return
@@ -120,10 +138,10 @@ def load_settings(config_path: Path | None = None) -> Settings:
     """Load runtime settings from config file, environment variables, and defaults.
 
     Args:
-        config_path (Path | None): Description.
+        config_path (Path | None): Path to the configuration file.
 
     Returns:
-        Settings: Description.
+        Settings: List result produced by the operation.
     """
     load_env(DOTENV_PATH)
     cfg_path = config_path or Path(os.getenv("RAG_CONFIG", DEFAULT_CONFIG_PATH))
@@ -140,6 +158,26 @@ def load_settings(config_path: Path | None = None) -> Settings:
         batch_size=int(effective["batch_size"]),
         embedding_model=str(effective["embedding_model"]),
         chat_model=str(effective["chat_model"]),
+        llm_provider=str(effective.get("llm_provider") or "openai"),
+        llm_base_url=str(effective.get("llm_base_url") or ""),
+        llm_api_key=str(effective.get("llm_api_key") or ""),
+        openai_api_key=str(effective.get("openai_api_key") or ""),
+        anthropic_api_key=str(effective.get("anthropic_api_key") or ""),
+        openai_compatible_api_key=str(effective.get("openai_compatible_api_key") or ""),
+        chat_provider=str(effective.get("chat_provider") or ""),
+        embedding_provider=str(effective.get("embedding_provider") or ""),
+        rerank_provider=str(effective.get("rerank_provider") or ""),
+        query_expand_provider=str(effective.get("query_expand_provider") or ""),
+        metadata_title_provider=str(effective.get("metadata_title_provider") or ""),
+        chat_provider_fallback=str(effective.get("chat_provider_fallback") or ""),
+        embedding_provider_fallback=str(effective.get("embedding_provider_fallback") or ""),
+        rerank_provider_fallback=str(effective.get("rerank_provider_fallback") or ""),
+        query_expand_provider_fallback=str(effective.get("query_expand_provider_fallback") or ""),
+        metadata_title_provider_fallback=str(effective.get("metadata_title_provider_fallback") or ""),
+        reranker_model=str(effective.get("reranker_model") or ""),
+        query_expand_model=str(effective.get("query_expand_model") or ""),
+        metadata_title_model=str(effective.get("metadata_title_model") or ""),
+        query_expansion=str(effective.get("query_expansion") or ""),
         config_path=cfg_path if cfg_path.exists() else None,
         config_hash=hash_config_dict(effective),
         config_effective=effective,
@@ -150,10 +188,10 @@ def run_pdfinfo(path: Path) -> Dict[str, str]:
     """Extract basic PDF metadata using `pdfinfo`.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        Dict[str, str]: Description.
+        Dict[str, str]: Dictionary containing the computed result payload.
     """
     try:
         result = subprocess.run(
@@ -272,10 +310,10 @@ def _normalize_spaces(text: str) -> str:
     """Normalize spaces.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return re.sub(r"\s+", " ", (text or "")).strip()
 
@@ -284,10 +322,10 @@ def _normalize_title_key(text: str) -> str:
     """Normalize title key.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     value = _normalize_spaces(text).lower()
     value = re.sub(r"[^a-z0-9]+", " ", value)
@@ -298,10 +336,10 @@ def _is_unknown_author(value: str | None) -> bool:
     """Is unknown author.
 
     Args:
-        value (str | None): Description.
+        value (str | None): Value to serialize, store, or compare.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     if value is None:
         return True
@@ -312,10 +350,10 @@ def _clean_author_blob(blob: str) -> str:
     """Clean author blob.
 
     Args:
-        blob (str): Description.
+        blob (str): Input value for blob.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     text = _normalize_spaces(blob)
     text = _AUTHOR_FOOTNOTE_PATTERN.sub(" ", text)
@@ -328,10 +366,10 @@ def _is_probable_person_name(name: str) -> bool:
     """Is probable person name.
 
     Args:
-        name (str): Description.
+        name (str): Input value for name.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     text = _normalize_spaces(name)
     if not text:
@@ -361,10 +399,10 @@ def extract_author_names(text: str) -> List[str]:
     """Extract likely person names from a short author text blob.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     blob = _clean_author_blob(text)
     if not blob:
@@ -387,10 +425,10 @@ def _looks_like_author_line(line: str) -> bool:
     """Looks like author line.
 
     Args:
-        line (str): Description.
+        line (str): Input value for line.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     text = _normalize_spaces(line)
     if not text:
@@ -415,10 +453,10 @@ def _name_token_ratio(text: str) -> float:
     """Name token ratio.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     tokens = re.findall(r"[A-Za-z][A-Za-z.'`-]*", text or "")
     if not tokens:
@@ -439,10 +477,10 @@ def _looks_like_author_continuation(line: str) -> bool:
     """Looks like author continuation.
 
     Args:
-        line (str): Description.
+        line (str): Input value for line.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     text = _normalize_spaces(line)
     if not _looks_like_author_line(text):
@@ -456,11 +494,11 @@ def _author_candidate_score(blob: str, names_count: int) -> Tuple[int, int]:
     """Author candidate score.
 
     Args:
-        blob (str): Description.
-        names_count (int): Description.
+        blob (str): Input value for blob.
+        names_count (int): Input value for names count.
 
     Returns:
-        Tuple[int, int]: Description.
+        Tuple[int, int]: Tuple of result values produced by the operation.
     """
     low = blob.lower()
     signal = 0
@@ -477,10 +515,10 @@ def infer_author_names_from_pages(page_texts: List[str]) -> List[str]:
     """Infer author names from early page text when PDF metadata is weak.
 
     Args:
-        page_texts (List[str]): Description.
+        page_texts (List[str]): Collection of page texts.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not page_texts:
         return []
@@ -535,10 +573,10 @@ def _openalex_author_names(openalex_meta: Dict[str, Any] | None) -> List[str]:
     """Openalex author names.
 
     Args:
-        openalex_meta (Dict[str, Any] | None): Description.
+        openalex_meta (Dict[str, Any] | None): OpenAlex metadata payload for the paper.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     names: List[str] = []
     seen = set()
@@ -563,10 +601,10 @@ def _select_best_author_names(candidates: List[Tuple[str, List[str]]]) -> List[s
     """Select best author names.
 
     Args:
-        candidates (List[Tuple[str, List[str]]]): Description.
+        candidates (List[Tuple[str, List[str]]]): Collection of candidates.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     priority = {"openalex": 3, "page_text": 2, "pdfinfo": 1}
     best_names: List[str] = []
@@ -585,11 +623,11 @@ def _format_author_names(names: List[str], *, max_names: int = 8) -> str:
     """Format author names.
 
     Args:
-        names (List[str]): Description.
-        max_names (int): Description.
+        names (List[str]): Collection of names.
+        max_names (int): Input value for max names.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not names:
         return "Unknown"
@@ -602,12 +640,12 @@ def _apply_paper_metadata_overrides(path: Path, title: str, author: str) -> Tupl
     """Apply deterministic metadata corrections for known problematic files.
 
     Args:
-        path (Path): Description.
-        title (str): Description.
-        author (str): Description.
+        path (Path): Filesystem path value.
+        title (str): Paper title text.
+        author (str): Author name text.
 
     Returns:
-        Tuple[str, str]: Description.
+        Tuple[str, str]: Tuple of result values produced by the operation.
     """
     title_key = _normalize_title_key(title)
     stem_key = _normalize_title_key(path.stem)
@@ -628,10 +666,10 @@ def extract_dois_from_text(text: str) -> List[str]:
     """Extract and normalize DOIs from text.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not text:
         return []
@@ -662,10 +700,10 @@ def extract_repec_handles_from_text(text: str) -> List[str]:
     """Extract RePEc handles from text.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     if not text:
         return []
@@ -681,7 +719,7 @@ def extract_repec_handles_from_text(text: str) -> List[str]:
 
 
 def embed_texts(
-    client: OpenAI,
+    client: Any,
     texts: List[str],
     model: str,
     batch_size: int,
@@ -696,40 +734,75 @@ def embed_texts(
     """Embed a list of texts in batches.
 
     Args:
-        client (OpenAI): Description.
-        texts (List[str]): Description.
-        model (str): Description.
-        batch_size (int): Description.
-        session_id (str | None): Description.
-        request_id (str | None): Description.
-        run_id (str | None): Description.
-        step (str | None): Description.
-        question_id (str | None): Description.
-        meta (Dict[str, Any] | None): Description.
+        client (OpenAI): Provider client instance.
+        texts (List[str]): Collection of texts.
+        model (str): Model name used for this operation.
+        batch_size (int): Input value for batch size.
+        session_id (str | None): Session identifier.
+        request_id (str | None): Request identifier.
+        run_id (str | None): Unique workflow run identifier.
+        step (str | None): Pipeline step name.
+        question_id (str | None): Structured question identifier.
+        meta (Dict[str, Any] | None): Additional metadata dictionary.
 
     Returns:
-        List[List[float]]: Description.
+        List[List[float]]: List result produced by the operation.
     """
+    def _usage_counts(usage_obj: Any) -> tuple[int, int, int]:
+        if usage_obj is None:
+            return 0, 0, 0
+        if isinstance(usage_obj, dict):
+            input_tokens = int(usage_obj.get("input_tokens") or 0)
+            output_tokens = int(usage_obj.get("output_tokens") or 0)
+            total_tokens = int(usage_obj.get("total_tokens") or 0)
+        else:
+            input_tokens = int(getattr(usage_obj, "input_tokens", 0) or 0)
+            output_tokens = int(getattr(usage_obj, "output_tokens", 0) or 0)
+            total_tokens = int(getattr(usage_obj, "total_tokens", 0) or 0)
+        if total_tokens == 0:
+            total_tokens = input_tokens + output_tokens
+        return input_tokens, output_tokens, total_tokens
+
+    def _embed_batch(provider_obj: Any, batch_items: List[str]) -> tuple[List[List[float]], int, int, int, str | None]:
+        # New provider runtime wrapper.
+        if hasattr(provider_obj, "embed"):
+            result = provider_obj.embed(texts=batch_items, model=model, metadata=meta or {})
+            return (
+                [list(v) for v in result.embeddings],
+                int(getattr(result, "input_tokens", 0) or 0),
+                int(getattr(result, "output_tokens", 0) or 0),
+                int(getattr(result, "total_tokens", 0) or 0),
+                str(getattr(result, "provider", "") or "") or None,
+            )
+        # Runtime container exposing .embeddings capability.
+        if hasattr(provider_obj, "embeddings") and hasattr(provider_obj.embeddings, "embed"):
+            result = provider_obj.embeddings.embed(texts=batch_items, model=model, metadata=meta or {})
+            return (
+                [list(v) for v in result.embeddings],
+                int(getattr(result, "input_tokens", 0) or 0),
+                int(getattr(result, "output_tokens", 0) or 0),
+                int(getattr(result, "total_tokens", 0) or 0),
+                str(getattr(result, "provider", "") or "") or None,
+            )
+        # Legacy OpenAI-like client shape.
+        if hasattr(provider_obj, "embeddings") and hasattr(provider_obj.embeddings, "create"):
+            resp = provider_obj.embeddings.create(model=model, input=batch_items)
+            emb_list = [list(item.embedding) for item in (getattr(resp, "data", None) or [])]
+            in_tok, out_tok, total_tok = _usage_counts(getattr(resp, "usage", None))
+            return emb_list, in_tok, out_tok, total_tok, None
+        raise RuntimeError("Embedding provider does not support embeddings")
+
     embeddings: List[List[float]] = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
-        resp = client.embeddings.create(model=model, input=batch)
+        emb_batch, input_tokens, output_tokens, total_tokens, provider_name = _embed_batch(client, batch)
         try:
             from ragonometrics.pipeline.token_usage import record_usage
 
-            usage = getattr(resp, "usage", None)
-            input_tokens = output_tokens = total_tokens = 0
-            if usage is not None:
-                if isinstance(usage, dict):
-                    input_tokens = int(usage.get("input_tokens") or 0)
-                    output_tokens = int(usage.get("output_tokens") or 0)
-                    total_tokens = int(usage.get("total_tokens") or 0)
-                else:
-                    input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
-                    output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
-                    total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
-            if total_tokens == 0:
-                total_tokens = input_tokens + output_tokens
+            usage_meta = dict(meta or {})
+            if provider_name:
+                usage_meta.setdefault("provider", provider_name)
+                usage_meta.setdefault("capability", "embeddings")
             record_usage(
                 model=model,
                 operation="embeddings",
@@ -741,11 +814,11 @@ def embed_texts(
                 session_id=session_id,
                 request_id=request_id,
                 run_id=run_id,
-                meta=meta,
+                meta=usage_meta,
             )
         except Exception:
             pass
-        embeddings.extend([item.embedding for item in resp.data])
+        embeddings.extend(emb_batch)
     return embeddings
 
 
@@ -753,11 +826,11 @@ def cosine(a: List[float], b: List[float]) -> float:
     """Compute cosine similarity between two vectors.
 
     Args:
-        a (List[float]): Description.
-        b (List[float]): Description.
+        a (List[float]): Collection of a.
+        b (List[float]): Collection of b.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     dot = 0.0
     norm_a = 0.0
@@ -773,7 +846,7 @@ def cosine(a: List[float], b: List[float]) -> float:
 
 def expand_queries(
     query: str,
-    client: OpenAI,
+    client: Any,
     settings: Settings,
     *,
     session_id: str | None = None,
@@ -785,24 +858,24 @@ def expand_queries(
     """Optionally expand a query using a lightweight LLM prompt.
 
     Args:
-        query (str): Description.
-        client (OpenAI): Description.
-        settings (Settings): Description.
-        session_id (str | None): Description.
-        request_id (str | None): Description.
-        run_id (str | None): Description.
-        step (str | None): Description.
-        question_id (str | None): Description.
+        query (str): Input query text.
+        client (OpenAI): Provider client instance.
+        settings (Settings): Loaded application settings.
+        session_id (str | None): Session identifier.
+        request_id (str | None): Request identifier.
+        run_id (str | None): Unique workflow run identifier.
+        step (str | None): Pipeline step name.
+        question_id (str | None): Structured question identifier.
 
     Returns:
-        List[str]: Description.
+        List[str]: List result produced by the operation.
     """
     mode = os.environ.get("QUERY_EXPANSION", "").strip().lower()
     if not mode:
         return [query]
-    model = os.environ.get("QUERY_EXPAND_MODEL") or settings.chat_model
+    model = os.environ.get("QUERY_EXPAND_MODEL") or settings.query_expand_model or settings.chat_model
     try:
-        raw = call_openai(
+        raw = call_llm(
             client,
             model=model,
             instructions=QUERY_EXPANSION_PROMPT,
@@ -833,7 +906,7 @@ def rerank_with_llm(
     *,
     query: str,
     items: List[Dict[str, str]],
-    client: OpenAI,
+    client: Any,
     settings: Settings,
     session_id: str | None = None,
     request_id: str | None = None,
@@ -844,26 +917,26 @@ def rerank_with_llm(
     """Use an LLM to rerank items by relevance.
 
     Args:
-        query (str): Description.
-        items (List[Dict[str, str]]): Description.
-        client (OpenAI): Description.
-        settings (Settings): Description.
-        session_id (str | None): Description.
-        request_id (str | None): Description.
-        run_id (str | None): Description.
-        step (str | None): Description.
-        question_id (str | None): Description.
+        query (str): Input query text.
+        items (List[Dict[str, str]]): Mapping containing items.
+        client (OpenAI): Provider client instance.
+        settings (Settings): Loaded application settings.
+        session_id (str | None): Session identifier.
+        request_id (str | None): Request identifier.
+        run_id (str | None): Unique workflow run identifier.
+        step (str | None): Pipeline step name.
+        question_id (str | None): Structured question identifier.
 
     Returns:
-        List[str] | None: Description.
+        List[str] | None: Computed result, or `None` when unavailable.
     """
-    model = os.environ.get("RERANKER_MODEL")
+    model = os.environ.get("RERANKER_MODEL") or settings.reranker_model
     if not model:
         return None
     payload_lines = [f"{it['id']}: {it['text']}" for it in items]
     payload = "\n\n".join(payload_lines)
     try:
-        raw = call_openai(
+        raw = call_llm(
             client,
             model=model,
             instructions=RERANK_PROMPT,
@@ -890,9 +963,10 @@ def top_k_context(
     chunks: List[str],
     chunk_embeddings: List[List[float]],
     query: str,
-    client: OpenAI,
+    client: Any,
     settings: Settings,
     *,
+    paper_path: str | Path | None = None,
     session_id: str | None = None,
     request_id: str | None = None,
     run_id: str | None = None,
@@ -903,20 +977,21 @@ def top_k_context(
     """Select top-k relevant chunk text for a query.
 
     Args:
-        chunks (List[str]): Description.
-        chunk_embeddings (List[List[float]]): Description.
-        query (str): Description.
-        client (OpenAI): Description.
-        settings (Settings): Description.
-        session_id (str | None): Description.
-        request_id (str | None): Description.
-        run_id (str | None): Description.
-        step (str | None): Description.
-        question_id (str | None): Description.
-        return_stats (bool): Description.
+        chunks (List[str]): Collection of chunks.
+        chunk_embeddings (List[List[float]]): Collection of chunk embeddings.
+        query (str): Input query text.
+        client (OpenAI): Provider client instance.
+        settings (Settings): Loaded application settings.
+        paper_path (str | Path | None): Optional path to scope retrieval to one paper.
+        session_id (str | None): Session identifier.
+        request_id (str | None): Request identifier.
+        run_id (str | None): Unique workflow run identifier.
+        step (str | None): Pipeline step name.
+        question_id (str | None): Structured question identifier.
+        return_stats (bool): Whether to enable return stats.
 
     Returns:
-        str | tuple[str, Dict[str, float | str | int]]: Description.
+        str | tuple[str, Dict[str, float | str | int]]: Dictionary containing the computed result payload.
     """
     queries = expand_queries(
         query,
@@ -932,6 +1007,7 @@ def top_k_context(
     # If a Postgres-backed retriever is available, prefer hybrid retrieval
     db_url = os.environ.get("DATABASE_URL")
     stats: Dict[str, float | str | int] = {"method": "local"}
+    normalized_paper_path = str(paper_path).replace("\\", "/") if paper_path else None
     if db_url:
         try:
             from ragonometrics.indexing.retriever import hybrid_search
@@ -948,7 +1024,15 @@ def top_k_context(
 
                 combined: Dict[int, float] = {}
                 for q in queries:
-                    hits = hybrid_search(q, client=client, db_url=db_url, top_k=settings.top_k * 5, bm25_weight=bm25_weight)
+                    hits = hybrid_search(
+                        q,
+                        embedding_client=client,
+                        embedding_model=settings.embedding_model,
+                        db_url=db_url,
+                        top_k=settings.top_k * 5,
+                        bm25_weight=bm25_weight,
+                        paper_path=normalized_paper_path,
+                    )
                     for vid, score in hits:
                         combined[vid] = max(combined.get(vid, float("-inf")), float(score))
                 hits = sorted(combined.items(), key=lambda x: x[1], reverse=True)[: settings.top_k * 5]
@@ -975,10 +1059,14 @@ def top_k_context(
                     cur = conn.cursor()
                     ids = [h[0] for h in hits]
                     placeholders = ",".join(["%s"] * len(ids))
-                    cur.execute(
-                        f"SELECT id, text, page, start_word, end_word FROM indexing.vectors WHERE id IN ({placeholders})",
-                        tuple(ids),
+                    sql = (
+                        f"SELECT id, text, page, start_word, end_word FROM indexing.vectors WHERE id IN ({placeholders})"
                     )
+                    params: List[Any] = list(ids)
+                    if normalized_paper_path:
+                        sql += " AND lower(replace(COALESCE(paper_path, ''), '\\\\', '/')) = lower(%s)"
+                        params.append(normalized_paper_path)
+                    cur.execute(sql, tuple(params))
                     rows = cur.fetchall()
                     conn.close()
                     id_to_row = {r[0]: r for r in rows}
@@ -1015,48 +1103,28 @@ def top_k_context(
                         _, text, page, start_word, end_word = r
                         meta = f"(page {page} words {start_word}-{end_word})"
                         out_parts.append(f"{meta}\n{text}")
-                    context = "\n\n".join(out_parts)
-                    if return_stats:
-                        return context, stats
-                    return context
+                    if out_parts:
+                        context = "\n\n".join(out_parts)
+                        if return_stats:
+                            return context, stats
+                        return context
             except Exception:
                 # fall back to local embedding retrieval if DB is unreachable
                 pass
 
     # fallback: support chunks as list of dicts with provenance metadata or simple strings
-    query_emb_response = client.embeddings.create(model=settings.embedding_model, input=queries)
-    try:
-        from ragonometrics.pipeline.token_usage import record_usage
-
-        usage = getattr(query_emb_response, "usage", None)
-        input_tokens = output_tokens = total_tokens = 0
-        if usage is not None:
-            if isinstance(usage, dict):
-                input_tokens = int(usage.get("input_tokens") or 0)
-                output_tokens = int(usage.get("output_tokens") or 0)
-                total_tokens = int(usage.get("total_tokens") or 0)
-            else:
-                input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
-                output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
-                total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
-        if total_tokens == 0:
-            total_tokens = input_tokens + output_tokens
-        record_usage(
-            model=settings.embedding_model,
-            operation="query_embedding",
-            step=step,
-            question_id=question_id,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            total_tokens=total_tokens,
-            session_id=session_id,
-            request_id=request_id,
-            run_id=run_id,
-        )
-    except Exception:
-        pass
-    query_emb_resp = query_emb_response.data
-    query_embeddings = [item.embedding for item in query_emb_resp]
+    query_embeddings = embed_texts(
+        client,
+        queries,
+        settings.embedding_model,
+        batch_size=max(1, len(queries)),
+        session_id=session_id,
+        request_id=request_id,
+        run_id=run_id,
+        step=step,
+        question_id=question_id,
+        meta={"capability": "query_embedding"},
+    )
     scored = [(idx, max(cosine(qemb, emb) for qemb in query_embeddings)) for idx, emb in enumerate(chunk_embeddings)]
     scored.sort(key=lambda x: x[1], reverse=True)
     top = [idx for idx, _ in scored[: settings.top_k * 5]]
@@ -1122,11 +1190,11 @@ def prepare_chunks_for_paper(paper: Paper, settings: Settings) -> List[Dict]:
     """Prepare provenance-aware chunks for a paper.
 
     Args:
-        paper (Paper): Description.
-        settings (Settings): Description.
+        paper (Paper): Input value for paper.
+        settings (Settings): Loaded application settings.
 
     Returns:
-        List[Dict]: Description.
+        List[Dict]: Dictionary containing the computed result payload.
     """
     if paper.pages:
         page_texts = paper.pages
@@ -1136,16 +1204,16 @@ def prepare_chunks_for_paper(paper: Paper, settings: Settings) -> List[Dict]:
     return chunk_pages(page_texts, settings.chunk_words, settings.chunk_overlap)
 
 
-def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
+def summarize_paper(client: Any, paper: Paper, settings: Settings) -> str:
     """Summarize a paper using retrieved context and a chat model.
 
     Args:
-        client (OpenAI): Description.
-        paper (Paper): Description.
-        settings (Settings): Description.
+        client (OpenAI): Provider client instance.
+        paper (Paper): Input value for paper.
+        settings (Settings): Loaded application settings.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     chunks = prepare_chunks_for_paper(paper, settings)
     if not chunks:
@@ -1160,6 +1228,7 @@ def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
         query=MAIN_SUMMARY_PROMPT,
         client=client,
         settings=settings,
+        paper_path=paper.path,
     )
 
     openalex_context = format_openalex_context(paper.openalex)
@@ -1174,7 +1243,7 @@ def summarize_paper(client: OpenAI, paper: Paper, settings: Settings) -> str:
     if prefix_parts:
         prefix = "\n\n".join(prefix_parts)
         user_input = f"{prefix}\n\n{user_input}"
-    return call_openai(
+    return call_llm(
         client,
         model=settings.chat_model,
         instructions=MAIN_SUMMARY_PROMPT,
@@ -1192,12 +1261,12 @@ def load_papers(
     """Load and extract text for a collection of PDF files.
 
     Args:
-        paths (Iterable[Path]): Description.
-        progress (bool): Description.
-        progress_desc (str): Description.
+        paths (Iterable[Path]): Path to paths.
+        progress (bool): Whether to enable progress.
+        progress_desc (str): Input value for progress desc.
 
     Returns:
-        List[Paper]: Description.
+        List[Paper]: List result produced by the operation.
     """
     path_list = list(paths)
     iterator = path_list
@@ -1274,14 +1343,14 @@ def main() -> None:
     """Entry point for summarizing economics papers from the papers directory.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
     settings = load_settings()
-    client = OpenAI()
+    client = build_llm_runtime(settings)
 
     if not settings.papers_dir.exists():
         raise SystemExit(f"Papers directory not found: {settings.papers_dir}")

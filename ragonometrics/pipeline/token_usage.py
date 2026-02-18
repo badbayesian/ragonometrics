@@ -28,10 +28,10 @@ def _database_url() -> str:
     """Database url.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
@@ -63,24 +63,24 @@ def record_usage(
     """Persist a token usage record to Postgres.
 
     Args:
-        db_path (Path): Description.
-        model (str): Description.
-        operation (str): Description.
-        input_tokens (int): Description.
-        output_tokens (int): Description.
-        total_tokens (int): Description.
-        session_id (Optional[str]): Description.
-        request_id (Optional[str]): Description.
-        run_id (Optional[str]): Description.
-        step (Optional[str]): Description.
-        question_id (Optional[str]): Description.
-        provider_request_id (Optional[str]): Description.
-        latency_ms (Optional[int]): Description.
-        cache_hit (Optional[bool]): Description.
-        cost_usd_input (Optional[float]): Description.
-        cost_usd_output (Optional[float]): Description.
-        cost_usd_total (Optional[float]): Description.
-        meta (Optional[Dict[str, Any]]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        model (str): Model name used for this operation.
+        operation (str): Input value for operation.
+        input_tokens (int): Input value for input tokens.
+        output_tokens (int): Input value for output tokens.
+        total_tokens (int): Input value for total tokens.
+        session_id (Optional[str]): Session identifier.
+        request_id (Optional[str]): Request identifier.
+        run_id (Optional[str]): Unique workflow run identifier.
+        step (Optional[str]): Pipeline step name.
+        question_id (Optional[str]): Structured question identifier.
+        provider_request_id (Optional[str]): Input value for provider request id.
+        latency_ms (Optional[int]): Input value for latency ms.
+        cache_hit (Optional[bool]): Whether the result was served from cache.
+        cost_usd_input (Optional[float]): Input value for cost usd input.
+        cost_usd_output (Optional[float]): Input value for cost usd output.
+        cost_usd_total (Optional[float]): Input value for cost usd total.
+        meta (Optional[Dict[str, Any]]): Additional metadata dictionary.
     """
     with pooled_connection(_database_url(), require_migrated=True) as conn:
         resolved_run_id = run_id
@@ -146,12 +146,12 @@ def _where_clauses(
     """Where clauses.
 
     Args:
-        session_id (Optional[str]): Description.
-        request_id (Optional[str]): Description.
-        since (Optional[str]): Description.
+        session_id (Optional[str]): Session identifier.
+        request_id (Optional[str]): Request identifier.
+        since (Optional[str]): Input value for since.
 
     Returns:
-        tuple[str, List[Any]]: Description.
+        tuple[str, List[Any]]: List result produced by the operation.
     """
     clauses = []
     params: List[Any] = []
@@ -179,13 +179,13 @@ def get_usage_summary(
     """Return aggregate usage stats.
 
     Args:
-        db_path (Path): Description.
-        session_id (Optional[str]): Description.
-        request_id (Optional[str]): Description.
-        since (Optional[str]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        session_id (Optional[str]): Session identifier.
+        request_id (Optional[str]): Request identifier.
+        since (Optional[str]): Input value for since.
 
     Returns:
-        UsageSummary: Description.
+        UsageSummary: Result produced by the operation.
     """
     with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
@@ -220,13 +220,13 @@ def get_usage_by_model(
     """Return aggregated usage totals grouped by model.
 
     Args:
-        db_path (Path): Description.
-        session_id (Optional[str]): Description.
-        request_id (Optional[str]): Description.
-        since (Optional[str]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        session_id (Optional[str]): Session identifier.
+        request_id (Optional[str]): Request identifier.
+        since (Optional[str]): Input value for since.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=since)
@@ -260,13 +260,13 @@ def get_recent_usage(
     """Return the most recent usage rows.
 
     Args:
-        db_path (Path): Description.
-        limit (int): Description.
-        session_id (Optional[str]): Description.
-        request_id (Optional[str]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        limit (int): Maximum number of records to process.
+        session_id (Optional[str]): Session identifier.
+        request_id (Optional[str]): Request identifier.
 
     Returns:
-        List[Dict[str, Any]]: Description.
+        List[Dict[str, Any]]: Dictionary containing the computed result payload.
     """
     with pooled_connection(_database_url(), require_migrated=True) as conn:
         where_sql, params = _where_clauses(session_id=session_id, request_id=request_id, since=None)

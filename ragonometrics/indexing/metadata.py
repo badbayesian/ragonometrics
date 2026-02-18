@@ -13,10 +13,10 @@ def init_metadata_db(db_url: str):
     """Open validated metadata DB connection.
 
     Args:
-        db_url (str): Description.
+        db_url (str): Postgres connection URL.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     conn = connect(db_url, require_migrated=True)
     ensure_schema_ready(conn)
@@ -47,24 +47,24 @@ def upsert_paper_metadata(
     """Upsert one paper metadata row into `ingestion.paper_metadata`.
 
     Args:
-        conn (Any): Description.
-        doc_id (str): Description.
-        path (str): Description.
-        title (str): Description.
-        author (str): Description.
-        authors (list[str] | None): Description.
-        primary_doi (str | None): Description.
-        dois (list[str] | None): Description.
-        openalex_id (str | None): Description.
-        openalex_doi (str | None): Description.
-        publication_year (int | None): Description.
-        venue (str | None): Description.
-        repec_handle (str | None): Description.
-        source_url (str | None): Description.
-        openalex_json (dict[str, Any] | None): Description.
-        citec_json (dict[str, Any] | None): Description.
-        metadata_json (dict[str, Any] | None): Description.
-        extracted_at (str | None): Description.
+        conn (Any): Open database connection.
+        doc_id (str): Input value for doc id.
+        path (str): Filesystem path value.
+        title (str): Paper title text.
+        author (str): Author name text.
+        authors (list[str] | None): List of author names.
+        primary_doi (str | None): Input value for primary doi.
+        dois (list[str] | None): Collection of dois.
+        openalex_id (str | None): OpenAlex work identifier.
+        openalex_doi (str | None): DOI reported by OpenAlex.
+        publication_year (int | None): Publication year value.
+        venue (str | None): Publication venue name.
+        repec_handle (str | None): RePEc handle value.
+        source_url (str | None): Source URL for external metadata.
+        openalex_json (dict[str, Any] | None): Raw OpenAlex metadata payload.
+        citec_json (dict[str, Any] | None): Raw CitEc metadata payload.
+        metadata_json (dict[str, Any] | None): Raw merged metadata payload.
+        extracted_at (str | None): ISO timestamp when metadata was extracted.
     """
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
@@ -148,22 +148,22 @@ def create_pipeline_run(
     """Create a pipeline run record and return its id.
 
     Args:
-        conn (Any): Description.
-        git_sha (Optional[str]): Description.
-        extractor_version (Optional[str]): Description.
-        embedding_model (str): Description.
-        chunk_words (int): Description.
-        chunk_overlap (int): Description.
-        normalized (bool): Description.
-        idempotency_key (Optional[str]): Description.
-        workflow_run_id (Optional[str]): Description.
-        workstream_id (Optional[str]): Description.
-        arm (Optional[str]): Description.
-        paper_set_hash (Optional[str]): Description.
-        index_build_reason (Optional[str]): Description.
+        conn (Any): Open database connection.
+        git_sha (Optional[str]): Input value for git sha.
+        extractor_version (Optional[str]): Input value for extractor version.
+        embedding_model (str): Embedding model name.
+        chunk_words (int): Input value for chunk words.
+        chunk_overlap (int): Input value for chunk overlap.
+        normalized (bool): Whether to enable normalized.
+        idempotency_key (Optional[str]): Deterministic key used for idempotent writes.
+        workflow_run_id (Optional[str]): Workflow run identifier associated with this operation.
+        workstream_id (Optional[str]): Logical workstream identifier for grouping related runs.
+        arm (Optional[str]): Experiment arm label for this run.
+        paper_set_hash (Optional[str]): Stable hash representing the selected paper set.
+        index_build_reason (Optional[str]): Reason recorded for this index build.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     cur = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
@@ -251,14 +251,14 @@ def publish_shard(conn, shard_name: str, path: str, pipeline_run_id: int, index_
     """Upsert an index shard and mark it active.
 
     Args:
-        conn (Any): Description.
-        shard_name (str): Description.
-        path (str): Description.
-        pipeline_run_id (int): Description.
-        index_id (str | None): Description.
+        conn (Any): Open database connection.
+        shard_name (str): Input value for shard name.
+        path (str): Filesystem path value.
+        pipeline_run_id (int): Pipeline run identifier associated with this record.
+        index_id (str | None): Identifier of the index record.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     cur = conn.cursor()
     cur.execute("UPDATE indexing.index_shards SET is_active = FALSE WHERE is_active = TRUE")
@@ -294,10 +294,10 @@ def get_active_shards(conn):
     """Fetch active index shards ordered by creation time.
 
     Args:
-        conn (Any): Description.
+        conn (Any): Open database connection.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     cur = conn.cursor()
     cur.execute(
@@ -310,10 +310,10 @@ def record_failure(conn, component: str, error: str, context: dict | None = None
     """Record a failure for later replay/debug.
 
     Args:
-        conn (Any): Description.
-        component (str): Description.
-        error (str): Description.
-        context (dict | None): Description.
+        conn (Any): Open database connection.
+        component (str): Input value for component.
+        error (str): Input value for error.
+        context (dict | None): Mapping containing context.
     """
     cur = conn.cursor()
     payload = json.dumps(context or {}, ensure_ascii=False)
@@ -338,17 +338,17 @@ def create_index_version(
     """Insert an index version row and return the index id.
 
     Args:
-        conn (Any): Description.
-        index_id (str): Description.
-        embedding_model (str): Description.
-        chunk_words (int): Description.
-        chunk_overlap (int): Description.
-        corpus_fingerprint (str): Description.
-        index_path (str): Description.
-        shard_path (str): Description.
+        conn (Any): Open database connection.
+        index_id (str): Identifier of the index record.
+        embedding_model (str): Embedding model name.
+        chunk_words (int): Input value for chunk words.
+        chunk_overlap (int): Input value for chunk overlap.
+        corpus_fingerprint (str): Input value for corpus fingerprint.
+        index_path (str): Path to the vector index file.
+        shard_path (str): Input value for shard path.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     cur = conn.cursor()
     cur.execute(

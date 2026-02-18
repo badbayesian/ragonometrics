@@ -8,10 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from openai import OpenAI
-
 from ragonometrics.db.connection import connect, normalize_alembic_version_marker
 from ragonometrics.eval.benchmark import bench_papers
+from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.indexing.indexer import build_index
 from ragonometrics.indexing.paper_store import store_paper_metadata
 from ragonometrics.core.main import (
@@ -21,7 +20,7 @@ from ragonometrics.core.main import (
     prepare_chunks_for_paper,
     top_k_context,
 )
-from ragonometrics.pipeline import call_openai
+from ragonometrics.pipeline import call_llm
 from ragonometrics.core.prompts import RESEARCHER_QA_PROMPT
 from ragonometrics.pipeline.query_cache import DEFAULT_CACHE_PATH, get_cached_answer, make_cache_key, set_cached_answer
 from ragonometrics.integrations.openalex import format_openalex_context
@@ -139,10 +138,10 @@ def cmd_index(args: argparse.Namespace) -> int:
     """Build vector indexes from PDFs.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -160,10 +159,10 @@ def cmd_query(args: argparse.Namespace) -> int:
     """Run a single query against a paper.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     paper_path = Path(args.paper)
@@ -176,7 +175,7 @@ def cmd_query(args: argparse.Namespace) -> int:
     if not chunks:
         print("No chunks extracted.")
         return 1
-    client = OpenAI()
+    client = build_llm_runtime(settings)
     chunk_texts = [c["text"] if isinstance(c, dict) else str(c) for c in chunks]
     chunk_embeddings = embed_texts(client, chunk_texts, settings.embedding_model, settings.batch_size)
     context = top_k_context(
@@ -185,6 +184,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         query=args.question,
         client=client,
         settings=settings,
+        paper_path=paper.path,
     )
     model = args.model or settings.chat_model
     cache_key = make_cache_key(args.question, str(paper_path), model, context)
@@ -199,7 +199,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         if prefix_parts:
             prefix = "\n\n".join(prefix_parts)
             user_input = f"{prefix}\n\n{user_input}"
-        answer = call_openai(
+        answer = call_llm(
             client,
             model=model,
             instructions=RESEARCHER_QA_PROMPT,
@@ -223,10 +223,10 @@ def cmd_ui(args: argparse.Namespace) -> int:
     """Launch the Streamlit UI.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     app_path = Path(__file__).resolve().parents[1] / "ui" / "streamlit_app.py"
     try:
@@ -240,10 +240,10 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
     """Run benchmark suite.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -262,10 +262,10 @@ def cmd_store_metadata(args: argparse.Namespace) -> int:
     """Store paper-level metadata in Postgres without building vector indexes.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -284,10 +284,10 @@ def cmd_store_workflow_reports(args: argparse.Namespace) -> int:
     """Store workflow report JSON files in Postgres JSONB.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     db_url = args.meta_db_url or (settings.config_effective or {}).get("database_url")
@@ -315,10 +315,10 @@ def cmd_store_openalex_metadata(args: argparse.Namespace) -> int:
     """Resolve OpenAlex papers by title+authors and persist results to Postgres.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     settings = load_settings()
     papers_dir = Path(args.papers_dir) if args.papers_dir else settings.papers_dir
@@ -352,10 +352,10 @@ def cmd_workflow(args: argparse.Namespace) -> int:
     """Run or enqueue the multi-step workflow.
 
     Args:
-        args (argparse.Namespace): Description.
+        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     papers_dir = Path(args.papers) if args.papers else load_settings().papers_dir
     if args.async_mode:
@@ -401,7 +401,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
     Returns:
-        argparse.ArgumentParser: Description.
+        argparse.ArgumentParser: Configured argument parser.
     """
     p = argparse.ArgumentParser(prog="ragonometrics")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -501,7 +501,7 @@ def main() -> int:
     """CLI entrypoint for ragonometrics.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     parser = build_parser()
     args = parser.parse_args()

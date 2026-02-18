@@ -17,10 +17,10 @@ def _database_url() -> str:
     """Database url.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
@@ -32,10 +32,10 @@ def _connect(_db_path: Path):
     """Connect.
 
     Args:
-        _db_path (Path): Description.
+        _db_path (Path): Path to the local SQLite state database.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     return connect(_database_url(), require_migrated=True)
 
@@ -44,13 +44,13 @@ def make_cache_key(query: str, paper_path: str, model: str, context: str) -> str
     """Make cache key.
 
     Args:
-        query (str): Description.
-        paper_path (str): Description.
-        model (str): Description.
-        context (str): Description.
+        query (str): Input query text.
+        paper_path (str): Path to a single paper file.
+        model (str): Model name used for this operation.
+        context (str): Input value for context.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     payload = f"{paper_path}||{model}||{query}||{hashlib.sha256(context.encode('utf-8')).hexdigest()}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -60,11 +60,11 @@ def get_cached_answer(db_path: Path, cache_key: str) -> Optional[str]:
     """Get cached answer.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
 
     Returns:
-        Optional[str]: Description.
+        Optional[str]: Computed result, or `None` when unavailable.
     """
     conn = _connect(db_path)
     try:
@@ -89,13 +89,13 @@ def set_cached_answer(
     """Set cached answer.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
-        query (str): Description.
-        paper_path (str): Description.
-        model (str): Description.
-        context (str): Description.
-        answer (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
+        query (str): Input query text.
+        paper_path (str): Path to a single paper file.
+        model (str): Model name used for this operation.
+        context (str): Input value for context.
+        answer (str): Input value for answer.
     """
     conn = _connect(db_path)
     try:

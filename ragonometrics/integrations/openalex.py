@@ -34,16 +34,18 @@ DEFAULT_SELECT = ",".join(
     ]
 )
 _TITLE_OVERRIDE_CACHE: Dict[str, Any] = {"loaded_at": 0.0, "rows": []}
+_LOOKUP_CANDIDATE_LIMIT = 10
+_MAX_TITLE_LOOKUP_VARIANTS = 8
 
 
 def _database_url() -> str:
     """Database url.
 
     Returns:
-        str: Description.
+        str: Computed string result.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
@@ -55,10 +57,10 @@ def _connect(_db_path: Path):
     """Connect.
 
     Args:
-        _db_path (Path): Description.
+        _db_path (Path): Path to the local SQLite state database.
 
     Returns:
-        Any: Description.
+        Any: Return value produced by the operation.
     """
     return connect(_database_url(), require_migrated=True)
 
@@ -67,7 +69,7 @@ def _cache_ttl_seconds() -> int:
     """Cache ttl seconds.
 
     Returns:
-        int: Description.
+        int: Computed integer result.
     """
     try:
         days = int(os.environ.get("OPENALEX_CACHE_TTL_DAYS", "30"))
@@ -99,13 +101,13 @@ def make_cache_key(
     """Make cache key.
 
     Args:
-        doi (Optional[str]): Description.
-        title (Optional[str]): Description.
-        author (Optional[str]): Description.
-        year (Optional[int]): Description.
+        doi (Optional[str]): Digital Object Identifier value.
+        title (Optional[str]): Paper title text.
+        author (Optional[str]): Author name text.
+        year (Optional[int]): Publication year.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     payload = f"{(doi or '').lower()}||{(title or '').lower()}||{(author or '').lower()}||{year or ''}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -115,11 +117,11 @@ def get_cached_metadata(db_path: Path, cache_key: str) -> Optional[Dict[str, Any
     """Get cached metadata.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     # Deprecated by design: canonical metadata persistence is
     # `enrichment.paper_openalex_metadata`, while request-level caching is handled
@@ -139,11 +141,11 @@ def set_cached_metadata(
     """Set cached metadata.
 
     Args:
-        db_path (Path): Description.
-        cache_key (str): Description.
-        work_id (Optional[str]): Description.
-        query (Optional[str]): Description.
-        response (Dict[str, Any]): Description.
+        db_path (Path): Path to the local SQLite state database.
+        cache_key (str): Deterministic cache lookup key.
+        work_id (Optional[str]): Input value for work id.
+        query (Optional[str]): Input query text.
+        response (Dict[str, Any]): Response payload returned by the upstream call.
     """
     # Deprecated by design: retained for call-site compatibility.
     _ = (db_path, cache_key, work_id, query, response)
@@ -310,15 +312,15 @@ def _request_json(url: str, params: Optional[Dict[str, Any]] = None, timeout: in
     """Request json.
 
     Args:
-        url (str): Description.
-        params (Optional[Dict[str, Any]]): Description.
-        timeout (int): Description.
+        url (str): Input value for url.
+        params (Optional[Dict[str, Any]]): Mapping containing params.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
 
     Raises:
-        Exception: Description.
+        Exception: If an unexpected runtime error occurs.
     """
     max_retries = int(os.environ.get("OPENALEX_MAX_RETRIES", "2"))
     raw_params = dict(params or {})
@@ -404,12 +406,12 @@ def fetch_work_by_doi(doi: str, select: str = DEFAULT_SELECT, timeout: int = 10)
     """Fetch work by doi.
 
     Args:
-        doi (str): Description.
-        select (str): Description.
-        timeout (int): Description.
+        doi (str): Digital Object Identifier value.
+        select (str): Input value for select.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     if not doi:
         return None
@@ -472,13 +474,13 @@ def search_work(query: str, select: str = DEFAULT_SELECT, limit: int = 1, timeou
     """Search work.
 
     Args:
-        query (str): Description.
-        select (str): Description.
-        limit (int): Description.
-        timeout (int): Description.
+        query (str): Input query text.
+        select (str): Input value for select.
+        limit (int): Maximum number of records to process.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     if not query:
         return None
@@ -532,6 +534,91 @@ def _sanitize_title_for_lookup(title: str) -> str:
     # Normalize whitespace and strip outer quotes.
     text = re.sub(r"\s+", " ", text).strip().strip('"').strip("'")
     return text
+
+
+def _normalize_author_for_search(author: Optional[str]) -> Optional[str]:
+    """Normalize author input for OpenAlex search query construction.
+
+    Args:
+        author (Optional[str]): Raw author text.
+
+    Returns:
+        Optional[str]: Clean author string, or ``None`` for placeholders.
+    """
+    text = re.sub(r"\s+", " ", str(author or "").strip())
+    if not text:
+        return None
+    lowered = text.lower()
+    if re.fullmatch(r"-+", lowered):
+        return None
+    placeholder_key = re.sub(r"[^a-z0-9]+", "", lowered)
+    if placeholder_key in {"unknown", "unknownauthor", "na", "none", "null"}:
+        return None
+    return text
+
+
+def _build_title_lookup_variants(title: str) -> List[str]:
+    """Build deterministic title variants for fallback OpenAlex lookup.
+
+    Args:
+        title (str): Raw title text.
+
+    Returns:
+        List[str]: Ordered, de-duplicated title variants.
+    """
+    base = _sanitize_title_for_lookup(title)
+    if not base:
+        return []
+
+    out: List[str] = []
+    seen = set()
+
+    def _add_variant(value: str) -> None:
+        cleaned = _sanitize_title_for_lookup(value)
+        if not cleaned:
+            return
+        key = re.sub(r"\s+", " ", cleaned).strip().lower()
+        if not key or key in seen:
+            return
+        seen.add(key)
+        out.append(cleaned)
+
+    def _swap_token(text: str, pattern: str, replacement: str) -> str:
+        def _replace(match: re.Match[str]) -> str:
+            token = str(match.group(0) or "")
+            if token.isupper():
+                return replacement.upper()
+            if token[:1].isupper() and token[1:].islower():
+                return replacement.capitalize()
+            return replacement
+
+        return re.sub(pattern, _replace, text, flags=re.IGNORECASE)
+
+    _add_variant(base)
+    swap_rules = [
+        (r"\bprojects\b", "projections"),
+        (r"\bprojections\b", "projects"),
+        (r"\bvar\b", "vars"),
+        (r"\bvars\b", "var"),
+    ]
+    for pattern, replacement in swap_rules:
+        snapshot = list(out)
+        for candidate in snapshot:
+            swapped = _swap_token(candidate, pattern, replacement)
+            if swapped != candidate:
+                _add_variant(swapped)
+            if len(out) >= _MAX_TITLE_LOOKUP_VARIANTS:
+                return out[:_MAX_TITLE_LOOKUP_VARIANTS]
+
+    for candidate in list(out):
+        punctuation_light = re.sub(r"[^A-Za-z0-9\s]+", " ", candidate)
+        punctuation_light = re.sub(r"\s+", " ", punctuation_light).strip()
+        if punctuation_light:
+            _add_variant(punctuation_light)
+        if len(out) >= _MAX_TITLE_LOOKUP_VARIANTS:
+            break
+
+    return out[:_MAX_TITLE_LOOKUP_VARIANTS]
 
 
 def _title_key(title: str) -> str:
@@ -792,6 +879,97 @@ def _is_plausible_match(
             return False
 
     return True
+
+
+def _search_work_results(
+    query: str,
+    *,
+    limit: int,
+    select: str,
+    timeout: int,
+) -> List[Dict[str, Any]]:
+    """Search OpenAlex works and return candidate result rows.
+
+    Args:
+        query (str): Search query text.
+        limit (int): Maximum number of rows to request.
+        select (str): Comma-separated OpenAlex fields to request.
+        timeout (int): Request timeout in seconds.
+
+    Returns:
+        List[Dict[str, Any]]: Candidate work payloads.
+    """
+    query_text = str(query or "").strip()
+    if not query_text:
+        return []
+    max_items = max(1, min(int(limit), 50))
+    url = "https://api.openalex.org/works"
+    data = _request_json(
+        url,
+        params={"search": query_text, "per-page": max_items, "select": select},
+        timeout=timeout,
+    )
+    if not data:
+        data = _request_json(
+            url,
+            params={"search": query_text, "per-page": max_items},
+            timeout=timeout,
+        )
+    if not isinstance(data, dict):
+        return []
+    items = data.get("results") or []
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def _choose_best_plausible_candidate(
+    *,
+    candidates: List[Dict[str, Any]],
+    requested_title: Optional[str],
+    author: Optional[str],
+    year: Optional[int],
+) -> Optional[Dict[str, Any]]:
+    """Select the best plausible OpenAlex match from a candidate list.
+
+    Args:
+        candidates (List[Dict[str, Any]]): Candidate OpenAlex rows.
+        requested_title (Optional[str]): Requested paper title.
+        author (Optional[str]): Requested author text.
+        year (Optional[int]): Requested publication year.
+
+    Returns:
+        Optional[Dict[str, Any]]: Best plausible candidate, if any.
+    """
+    plausible = [
+        item
+        for item in candidates
+        if _is_plausible_match(title=requested_title, author=author, year=year, meta=item)
+    ]
+    if not plausible:
+        return None
+    requested_key = _title_key(str(requested_title or ""))
+
+    def _score(item: Dict[str, Any]) -> tuple:
+        candidate_title = str(item.get("display_name") or item.get("title") or "")
+        candidate_key = _title_key(candidate_title)
+        similarity = SequenceMatcher(a=requested_key, b=candidate_key).ratio() if requested_key and candidate_key else 0.0
+        if year is None:
+            year_delta = 0
+        else:
+            try:
+                year_delta = abs(int(item.get("publication_year")) - int(year))
+            except Exception:
+                year_delta = 9999
+        try:
+            cited = int(item.get("cited_by_count") or 0)
+        except Exception:
+            cited = 0
+        stable_key = str(item.get("id") or candidate_title or "")
+        return (-similarity, year_delta, -cited, stable_key)
+
+    plausible.sort(key=_score)
+    return plausible[0]
 
 
 def is_economics_work(meta: Optional[Dict[str, Any]]) -> bool:
@@ -1136,30 +1314,31 @@ def fetch_openalex_metadata(
     """Fetch OpenAlex metadata for a paper, using DOI when possible.
 
     Args:
-        title (Optional[str]): Description.
-        author (Optional[str]): Description.
-        year (Optional[int]): Description.
-        doi (Optional[str]): Description.
-        cache_path (Path): Description.
-        timeout (int): Description.
+        title (Optional[str]): Paper title text.
+        author (Optional[str]): Author name text.
+        year (Optional[int]): Publication year.
+        doi (Optional[str]): Digital Object Identifier value.
+        cache_path (Path): Path to the cache file.
+        timeout (int): Timeout in seconds.
 
     Returns:
-        Optional[Dict[str, Any]]: Description.
+        Optional[Dict[str, Any]]: Computed result, or `None` when unavailable.
     """
     if os.environ.get("OPENALEX_DISABLE", "").strip() == "1":
         return None
 
+    author_for_search = _normalize_author_for_search(author)
     override_work_id = _title_override_work_id(title, cache_path=cache_path)
     cache_key = make_cache_key(doi=doi, title=title, author=author, year=year)
     cached = get_cached_metadata(cache_path, cache_key)
     if cached:
-        if doi and _is_plausible_match(title=title, author=author, year=year, meta=cached):
+        if doi and _is_plausible_match(title=title, author=author_for_search, year=year, meta=cached):
             return cached
         if override_work_id:
             cached_id = _normalize_openalex_work_id(str(cached.get("id") or ""))
             if cached_id and cached_id == override_work_id:
                 return cached
-        if not override_work_id and _is_plausible_match(title=title, author=author, year=year, meta=cached):
+        if not override_work_id and _is_plausible_match(title=title, author=author_for_search, year=year, meta=cached):
             return cached
 
     data = None
@@ -1181,40 +1360,79 @@ def fetch_openalex_metadata(
     if not data and title:
         # Prefer exact title lookup first; then broaden search with author/year.
         clean_title = _sanitize_title_for_lookup(title)
+        lookup_title = clean_title or str(title or "").strip()
         if clean_title:
             candidate = search_work_by_title(clean_title, timeout=timeout)
-            if _is_plausible_match(title=clean_title, author=author, year=year, meta=candidate):
+            if _is_plausible_match(title=clean_title, author=author_for_search, year=year, meta=candidate):
                 data = candidate
         if not data and clean_title:
             candidate = search_work_by_title_author_year(
                 title=clean_title,
-                author=author,
+                author=author_for_search,
                 year=year,
                 timeout=timeout,
             )
-            if _is_plausible_match(title=clean_title, author=author, year=year, meta=candidate):
+            if _is_plausible_match(title=clean_title, author=author_for_search, year=year, meta=candidate):
                 data = candidate
         if not data and clean_title and year is not None:
             candidate = search_work_by_title_author_year(
                 title=clean_title,
-                author=author,
+                author=author_for_search,
                 year=None,
                 timeout=timeout,
             )
-            if _is_plausible_match(title=clean_title, author=author, year=None, meta=candidate):
+            if _is_plausible_match(title=clean_title, author=author_for_search, year=None, meta=candidate):
                 data = candidate
-        if not data:
+        if not data and (clean_title or title):
             candidate = search_work_by_title_author_year(
                 title=clean_title or title,
-                author=author,
+                author=author_for_search,
                 year=year,
                 timeout=timeout,
             )
-            if _is_plausible_match(title=clean_title or title, author=author, year=year, meta=candidate):
+            if _is_plausible_match(title=clean_title or title, author=author_for_search, year=year, meta=candidate):
                 data = candidate
+        if not data and lookup_title:
+            variants = _build_title_lookup_variants(lookup_title)
+            candidates: List[Dict[str, Any]] = []
+            seen_candidates = set()
+            for variant in variants:
+                query_shapes: List[str] = [f'"{variant}"']
+                if author_for_search and year is not None:
+                    query_shapes.append(f"{variant} {author_for_search} {year}")
+                if author_for_search:
+                    query_shapes.append(f"{variant} {author_for_search}")
+                if year is not None:
+                    query_shapes.append(f"{variant} {year}")
+                query_shapes.append(variant)
+                for query in query_shapes:
+                    results = _search_work_results(
+                        query,
+                        limit=_LOOKUP_CANDIDATE_LIMIT,
+                        select=DEFAULT_SELECT,
+                        timeout=timeout,
+                    )
+                    for meta in results:
+                        normalized_id = _normalize_openalex_work_id(str(meta.get("id") or ""))
+                        fallback_key = normalized_id or (
+                            f"no-id::{_title_key(str(meta.get('display_name') or meta.get('title') or ''))}"
+                            f"::{meta.get('publication_year')}::{meta.get('cited_by_count')}"
+                        )
+                        if fallback_key in seen_candidates:
+                            continue
+                        seen_candidates.add(fallback_key)
+                        candidates.append(meta)
+            chosen = _choose_best_plausible_candidate(
+                candidates=candidates,
+                requested_title=lookup_title,
+                author=author_for_search,
+                year=year,
+            )
+            if chosen:
+                data = chosen
         work_id = data.get("id") if isinstance(data, dict) else None
 
-    if data and (doi or used_title_override or _is_plausible_match(title=title, author=author, year=year, meta=data)):
+    if data and (doi or used_title_override or _is_plausible_match(title=title, author=author_for_search, year=year, meta=data)):
         set_cached_metadata(
             cache_path,
             cache_key=cache_key,
@@ -1229,10 +1447,10 @@ def _abstract_from_inverted_index(inv: Optional[Dict[str, Any]]) -> str:
     """Abstract from inverted index.
 
     Args:
-        inv (Optional[Dict[str, Any]]): Description.
+        inv (Optional[Dict[str, Any]]): Mapping containing inv.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not inv or not isinstance(inv, dict):
         return ""
@@ -1257,10 +1475,10 @@ def _get_venue(meta: Dict[str, Any]) -> Optional[str]:
     """Get venue.
 
     Args:
-        meta (Dict[str, Any]): Description.
+        meta (Dict[str, Any]): Additional metadata dictionary.
 
     Returns:
-        Optional[str]: Description.
+        Optional[str]: Computed result, or `None` when unavailable.
     """
     primary = meta.get("primary_location") or {}
     source = primary.get("source") or {}
@@ -1280,12 +1498,12 @@ def format_openalex_context(
     """Format OpenAlex metadata into a compact context block.
 
     Args:
-        meta (Optional[Dict[str, Any]]): Description.
-        max_abstract_chars (int): Description.
-        max_authors (int): Description.
+        meta (Optional[Dict[str, Any]]): Additional metadata dictionary.
+        max_abstract_chars (int): Input value for max abstract chars.
+        max_authors (int): Input value for max authors.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     if not meta:
         return ""

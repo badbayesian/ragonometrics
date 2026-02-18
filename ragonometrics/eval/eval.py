@@ -32,10 +32,10 @@ def load_golden_set(path: Path) -> List[GoldenExample]:
     """Load a golden set from a JSON list file.
 
     Args:
-        path (Path): Description.
+        path (Path): Filesystem path value.
 
     Returns:
-        List[GoldenExample]: Description.
+        List[GoldenExample]: List result produced by the operation.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     out: List[GoldenExample] = []
@@ -56,12 +56,12 @@ def recall_at_k(retrieved_ids: List[str], expected_ids: List[str], k: int) -> fl
     """Compute recall@k.
 
     Args:
-        retrieved_ids (List[str]): Description.
-        expected_ids (List[str]): Description.
-        k (int): Description.
+        retrieved_ids (List[str]): Collection of retrieved ids.
+        expected_ids (List[str]): Collection of expected ids.
+        k (int): Input value for k.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     if not expected_ids or k <= 0:
         return 0.0
@@ -74,12 +74,12 @@ def mrr_at_k(retrieved_ids: List[str], expected_ids: List[str], k: int) -> float
     """Compute mean reciprocal rank at k.
 
     Args:
-        retrieved_ids (List[str]): Description.
-        expected_ids (List[str]): Description.
-        k (int): Description.
+        retrieved_ids (List[str]): Collection of retrieved ids.
+        expected_ids (List[str]): Collection of expected ids.
+        k (int): Input value for k.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     if not expected_ids or k <= 0:
         return 0.0
@@ -99,13 +99,13 @@ def evaluate_retrieval(
     """Compute retrieval metrics from retrieved chunk metadata.
 
     Args:
-        retrieved_meta (List[Dict]): Description.
-        expected_pages (List[int]): Description.
-        expected_chunk_ids (Optional[List[str]]): Description.
-        k (int): Description.
+        retrieved_meta (List[Dict]): Mapping containing retrieved meta.
+        expected_pages (List[int]): Collection of expected pages.
+        expected_chunk_ids (Optional[List[str]]): Collection of expected chunk ids.
+        k (int): Input value for k.
 
     Returns:
-        Dict[str, float]: Description.
+        Dict[str, float]: Dictionary containing the computed result payload.
     """
     retrieved_page_ids = [str(m.get("page")) for m in retrieved_meta if m.get("page") is not None]
     expected_page_ids = [str(p) for p in expected_pages]
@@ -132,10 +132,10 @@ def answer_has_citation(answer: str) -> bool:
     """Return True if the answer appears to contain a provenance citation.
 
     Args:
-        answer (str): Description.
+        answer (str): Input value for answer.
 
     Returns:
-        bool: Description.
+        bool: True when the operation succeeds; otherwise False.
     """
     return any(p.search(answer or "") for p in _CITATION_PATTERNS)
 
@@ -144,10 +144,10 @@ def normalize_answer(text: str) -> str:
     """Normalize an answer for comparison.
 
     Args:
-        text (str): Description.
+        text (str): Input text value.
 
     Returns:
-        str: Description.
+        str: Computed string result.
     """
     return re.sub(r"\s+", " ", (text or "").strip().lower())
 
@@ -156,10 +156,10 @@ def self_consistency_rate(answers: Iterable[str]) -> float:
     """Compute a simple self-consistency rate.
 
     Args:
-        answers (Iterable[str]): Description.
+        answers (Iterable[str]): Input value for answers.
 
     Returns:
-        float: Description.
+        float: Computed numeric result.
     """
     answers_list = [normalize_answer(a) for a in answers if a]
     if not answers_list:
@@ -174,10 +174,10 @@ def evaluate_answers(answers: Iterable[str]) -> Dict[str, float]:
     """Compute answer-quality proxy metrics.
 
     Args:
-        answers (Iterable[str]): Description.
+        answers (Iterable[str]): Input value for answers.
 
     Returns:
-        Dict[str, float]: Description.
+        Dict[str, float]: Dictionary containing the computed result payload.
     """
     answers_list = [a for a in answers if a is not None]
     if not answers_list:

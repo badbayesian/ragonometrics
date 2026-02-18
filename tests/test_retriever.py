@@ -74,3 +74,70 @@ def test_hybrid_search_creates_hits(tmp_path, monkeypatch):
     hits = retriever.hybrid_search("test query", client=fake_client, db_url="dummy", top_k=2, bm25_weight=0.5)
     # hits should be a list (possibly empty if scoring ties)
     assert isinstance(hits, list)
+
+
+def test_hybrid_search_disables_faiss_fallback_when_paper_scoped(monkeypatch):
+    import ragonometrics.indexing.retriever as retriever
+
+    monkeypatch.setattr(retriever, "_load_texts_for_shards", lambda db_url, paper_path=None: (["scoped text"], [101]))
+    monkeypatch.setattr(retriever, "_embed_query", lambda **kwargs: [0.1] * 8)
+    monkeypatch.setattr(retriever, "_embedding_search_pg", lambda db_url, vec, top_k, paper_path=None: [])
+
+    calls = {"faiss": 0}
+
+    def _fake_faiss(*args, **kwargs):
+        calls["faiss"] += 1
+        return [(101, 0.9)]
+
+    monkeypatch.setattr(retriever, "_embedding_search_faiss", _fake_faiss)
+
+    scoped_hits = retriever.hybrid_search(
+        "test query",
+        db_url="dummy",
+        embedding_client=object(),
+        embedding_model="e",
+        bm25_weight=0.0,
+        paper_path="/app/papers/target.pdf",
+    )
+    assert scoped_hits == []
+    assert calls["faiss"] == 0
+
+    unscoped_hits = retriever.hybrid_search(
+        "test query",
+        db_url="dummy",
+        embedding_client=object(),
+        embedding_model="e",
+        bm25_weight=0.0,
+    )
+    assert unscoped_hits and unscoped_hits[0][0] == 101
+    assert calls["faiss"] == 1
+
+
+def test_hybrid_search_normalizes_scoped_paper_path(monkeypatch):
+    import ragonometrics.indexing.retriever as retriever
+
+    seen = {"load_path": None, "pg_path": None}
+
+    def _fake_load(db_url, paper_path=None):
+        seen["load_path"] = paper_path
+        return ["target"], [7]
+
+    def _fake_pg(db_url, vec, top_k, paper_path=None):
+        seen["pg_path"] = paper_path
+        return [(7, 1.0)]
+
+    monkeypatch.setattr(retriever, "_load_texts_for_shards", _fake_load)
+    monkeypatch.setattr(retriever, "_embed_query", lambda **kwargs: [0.2] * 8)
+    monkeypatch.setattr(retriever, "_embedding_search_pg", _fake_pg)
+
+    hits = retriever.hybrid_search(
+        "target",
+        db_url="dummy",
+        embedding_client=object(),
+        embedding_model="e",
+        bm25_weight=0.0,
+        paper_path=r"C:\papers\Target.pdf",
+    )
+    assert hits and hits[0][0] == 7
+    assert seen["load_path"] == "C:/papers/Target.pdf"
+    assert seen["pg_path"] == "C:/papers/Target.pdf"
