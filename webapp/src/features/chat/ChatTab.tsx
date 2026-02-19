@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { api } from "../../shared/api";
 import { ChatHistoryItem, ChatSuggestionPayload, CitationChunk, ProvenanceScore } from "../../shared/types";
 import { Spinner } from "../../shared/Spinner";
@@ -36,6 +36,13 @@ type ChatMessage = {
   provenance?: ProvenanceScore | null;
 };
 
+type InsightKind = "provenance" | "freshness" | "cache-layer" | "model";
+
+type ExpandedInsight = {
+  messageId: string;
+  kind: InsightKind;
+};
+
 type QueuedPrompt = {
   id: string;
   prompt: string;
@@ -69,6 +76,59 @@ function shortTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatProvenanceLabel(provenance: ProvenanceScore | null | undefined): string {
+  if (!provenance) return "";
+  return `Prov ${Math.round((Number(provenance.score || 0) * 1000) / 10)}% (${provenance.status})`;
+}
+
+function answerSourceLabel(message: ChatMessage): string {
+  if (typeof message.cacheHit !== "boolean") return "Unknown";
+  return message.cacheHit ? "Cache hit" : "Fresh";
+}
+
+function retrievalMethodLabel(message: ChatMessage): string {
+  const stats = (message.retrievalStats || {}) as Record<string, unknown>;
+  const method = String(stats.method || "").trim();
+  return method || "unknown";
+}
+
+function provenanceStatusMeaning(status: string): string {
+  const clean = String(status || "").trim().toLowerCase();
+  if (clean === "high") return "High means the answer appears strongly grounded in cited evidence.";
+  if (clean === "medium") return "Medium means the answer is partially grounded but has some uncertainty.";
+  return "Low means limited evidence grounding or weak citation support.";
+}
+
+function insightHeading(kind: InsightKind): string {
+  if (kind === "provenance") return "What Prov Means";
+  if (kind === "freshness") return "What Fresh/Cache Means";
+  if (kind === "cache-layer") return "What Cache Layer Means";
+  return "What Model Means";
+}
+
+function insightExplanation(kind: InsightKind, message: ChatMessage): string {
+  if (kind === "provenance") {
+    const provenance = message.provenance;
+    const score = Math.round((Number(provenance?.score || 0) * 1000) / 10);
+    const status = String(provenance?.status || "low");
+    const warningCount = Array.isArray(provenance?.warnings) ? provenance.warnings.length : 0;
+    return `Provenance score estimates evidence grounding using citation coverage, lexical overlap, and anchor validity. This answer is ${score}% (${status}). ${provenanceStatusMeaning(status)}${warningCount > 0 ? ` ${warningCount} warning(s) were detected.` : ""}`;
+  }
+  if (kind === "freshness") {
+    if (message.cacheHit === true) {
+      return "Cache hit means this answer was reused from stored results for a matching query/context.";
+    }
+    if (message.cacheHit === false) {
+      return "Fresh means this answer was generated in this request, not reused from cache.";
+    }
+    return "Freshness is unknown for this answer because cache metadata was not provided.";
+  }
+  if (kind === "cache-layer") {
+    return `Cache layer indicates where a cache hit came from. This answer used layer '${String(message.cacheHitLayer || "unknown")}'.`;
+  }
+  return `Model shows which LLM generated this answer. This answer used '${String(message.model || "unknown")}'.`;
 }
 
 function historyToMessages(rows: ChatHistoryItem[]): ChatMessage[] {
@@ -119,6 +179,8 @@ export function ChatTab(props: Props) {
   const [queuedPrompts, setQueuedPrompts] = useState<QueuedPrompt[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
+  const [expandedInsight, setExpandedInsight] = useState<ExpandedInsight | null>(null);
   const [isAsking, setIsAsking] = useState(false);
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -151,14 +213,10 @@ export function ChatTab(props: Props) {
     if (!props.queuedQuestion) return;
     const incoming = props.queuedQuestion.trim();
     if (incoming) {
-      if (isAsking) {
-        enqueuePrompt(incoming, false);
-      } else {
-        setQuestion(incoming);
-      }
+      enqueuePrompt(incoming, false);
     }
     props.onQuestionConsumed();
-  }, [props.queuedQuestion, props.onQuestionConsumed, isAsking]);
+  }, [props.queuedQuestion]);
 
   useEffect(() => {
     async function bootstrap() {
@@ -175,6 +233,8 @@ export function ChatTab(props: Props) {
       } else {
         setMessages([]);
       }
+      setExpandedMessageId(null);
+      setExpandedInsight(null);
       if (suggestionsOut.ok && Array.isArray(suggestionsOut.data?.questions)) {
         setSuggestions(suggestionsOut.data?.questions || []);
       } else {
@@ -404,11 +464,7 @@ export function ChatTab(props: Props) {
     const prompt = question.trim();
     if (!props.paperId || !prompt) return;
     setQuestion("");
-    if (isAsking || queuedPrompts.length > 0) {
-      enqueuePrompt(prompt, stream);
-      return;
-    }
-    void runPrompt(prompt, stream);
+    enqueuePrompt(prompt, stream);
   }
 
   useEffect(() => {
@@ -417,6 +473,38 @@ export function ChatTab(props: Props) {
     setQueuedPrompts(rest);
     void runPrompt(next.prompt, next.stream);
   }, [queuedPrompts, isAsking, props.paperId]);
+
+  useEffect(() => {
+    setExpandedMessageId((previous) => {
+      if (!previous) return previous;
+      return messages.some((item) => item.id === previous) ? previous : null;
+    });
+    setExpandedInsight((previous) => {
+      if (!previous) return previous;
+      return messages.some((item) => item.id === previous.messageId) ? previous : null;
+    });
+  }, [messages]);
+
+  function toggleMessageDetails(messageId: string) {
+    setExpandedMessageId((previous) => {
+      const next = previous === messageId ? null : messageId;
+      setExpandedInsight((info) => {
+        if (!next) return null;
+        if (!info) return null;
+        return info.messageId === next ? info : null;
+      });
+      return next;
+    });
+  }
+
+  function openInsight(event: MouseEvent, messageId: string, kind: InsightKind) {
+    event.stopPropagation();
+    setExpandedMessageId(messageId);
+    setExpandedInsight((previous) => {
+      if (previous && previous.messageId === messageId && previous.kind === kind) return null;
+      return { messageId, kind };
+    });
+  }
 
   async function clearHistory() {
     if (!props.paperId || isAsking || queuedPrompts.length > 0) return;
@@ -498,38 +586,108 @@ export function ChatTab(props: Props) {
         {messages.length === 0 ? (
           <div className={css.emptyState}>No messages yet. Start with a suggested question or ask your own.</div>
         ) : (
-          messages.map((message) => (
+          messages.map((message) => {
+            const isAssistant = message.role === "assistant";
+            const isExpanded = isAssistant && expandedMessageId === message.id;
+            const provenanceLabel = formatProvenanceLabel(message.provenance);
+            const activeInsight = isExpanded && expandedInsight?.messageId === message.id ? expandedInsight.kind : null;
+            return (
             <div key={message.id} className={`${css.messageRow} ${message.role === "user" ? css.userRow : css.assistantRow}`}>
-              {message.role === "assistant" && (
+              {isAssistant && (
                 <img src={robotAvatar} alt="Assistant robot avatar" className={css.avatar} />
               )}
-              <article className={`${css.messageBubble} ${message.role === "user" ? css.userBubble : css.assistantBubble}`}>
+              <article
+                data-testid={isAssistant ? "assistant-message-bubble" : undefined}
+                className={`${css.messageBubble} ${message.role === "user" ? css.userBubble : css.assistantBubble} ${isAssistant ? css.assistantBubbleClickable : ""} ${isExpanded ? css.assistantBubbleExpanded : ""}`}
+                role={isAssistant ? "button" : undefined}
+                tabIndex={isAssistant ? 0 : undefined}
+                aria-expanded={isAssistant ? isExpanded : undefined}
+                onClick={
+                  isAssistant
+                    ? () => toggleMessageDetails(message.id)
+                    : undefined
+                }
+                onKeyDown={
+                  isAssistant
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          toggleMessageDetails(message.id);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 <div className={css.messageMeta}>
                   <span>{message.role === "user" ? "You" : "Assistant"}</span>
                   <span>{shortTime(message.createdAt)}</span>
                 </div>
                 <p className={css.messageText}>{message.text || (message.isStreaming ? "..." : "")}</p>
-                {message.role === "assistant" && (
+                {isAssistant && (
                   <div className={css.answerMeta}>
                     {typeof message.cacheHit === "boolean" && (
-                      <span className={css.metaBadge}>{message.cacheHit ? "Cache hit" : "Fresh"}</span>
+                      <button
+                        type="button"
+                        className={`${css.metaBadge} ${css.metaBadgeButton}`}
+                        onClick={(event) => openInsight(event, message.id, "freshness")}
+                      >
+                        {message.cacheHit ? "Cache hit" : "Fresh"}
+                      </button>
                     )}
-                    {message.cacheHitLayer && <span className={css.metaBadge}>layer={message.cacheHitLayer}</span>}
-                    {message.model && <span className={css.metaBadge}>{message.model}</span>}
+                    {message.cacheHitLayer && (
+                      <button
+                        type="button"
+                        className={`${css.metaBadge} ${css.metaBadgeButton}`}
+                        onClick={(event) => openInsight(event, message.id, "cache-layer")}
+                      >
+                        layer={message.cacheHitLayer}
+                      </button>
+                    )}
+                    {message.model && (
+                      <button
+                        type="button"
+                        className={`${css.metaBadge} ${css.metaBadgeButton}`}
+                        onClick={(event) => openInsight(event, message.id, "model")}
+                      >
+                        {message.model}
+                      </button>
+                    )}
                     {message.provenance && (
-                      <span className={css.metaBadge}>
-                        Prov {Math.round((Number(message.provenance.score || 0) * 1000) / 10)}% ({message.provenance.status})
-                      </span>
+                      <button
+                        type="button"
+                        className={`${css.metaBadge} ${css.metaBadgeButton}`}
+                        onClick={(event) => openInsight(event, message.id, "provenance")}
+                      >
+                        {provenanceLabel}
+                      </button>
                     )}
                     {message.provenance && Array.isArray(message.provenance.warnings) && message.provenance.warnings.length > 0 && (
                       <span className={css.metaWarning}>{message.provenance.warnings.length} warning(s)</span>
                     )}
                     {message.isStreaming && <span className={css.streaming}>Streaming...</span>}
+                    <span className={css.metaHint}>{isExpanded ? "Hide details" : "Click for details"}</span>
                   </div>
                 )}
-                {message.role === "assistant" && (
-                  <details className={css.details}>
-                    <summary>Evidence</summary>
+                {isAssistant && isExpanded && (
+                  <div className={css.detailsPanel}>
+                    {activeInsight && (
+                      <div className={css.insightCallout}>
+                        <strong>{insightHeading(activeInsight)}</strong>
+                        <p className={css.insightText}>{insightExplanation(activeInsight, message)}</p>
+                      </div>
+                    )}
+                    <div className={css.provenanceBlock}>
+                      <strong>About this answer</strong>
+                      <ul className={css.aboutList}>
+                        <li>Response source: {answerSourceLabel(message)}</li>
+                        <li>Retrieval method: {retrievalMethodLabel(message)}</li>
+                        <li>Citation chunks: {Array.isArray(message.citations) ? message.citations.length : 0}</li>
+                        {message.model && <li>Model: {message.model}</li>}
+                        {message.cacheHitLayer && <li>Cache layer: {message.cacheHitLayer}</li>}
+                        {message.cacheMissReason && <li>Cache miss reason: {message.cacheMissReason}</li>}
+                        {message.provenance && <li>Provenance: {provenanceLabel}</li>}
+                      </ul>
+                    </div>
                     {Array.isArray(message.citations) && message.citations.length > 0 ? (
                       <ul className={css.citationList}>
                         {message.citations.slice(0, 3).map((c, idx) => (
@@ -541,15 +699,16 @@ export function ChatTab(props: Props) {
                             {c.text && <p className={css.citationText}>{String(c.text).slice(0, 220)}</p>}
                             <button
                               className={css.citationLink}
-                              onClick={() =>
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 props.onOpenViewer({
                                   page: c.page,
                                   terms: citationTerms(c),
                                   excerpt: String(c.text || ""),
                                   startWord: typeof c.start_word === "number" ? c.start_word : null,
                                   endWord: typeof c.end_word === "number" ? c.end_word : null,
-                                })
-                              }
+                                });
+                              }}
                             >
                               Open in Paper Viewer
                             </button>
@@ -562,7 +721,7 @@ export function ChatTab(props: Props) {
                     {message.provenance && (
                       <div className={css.provenanceBlock}>
                         <strong>Provenance score:</strong>{" "}
-                        {Math.round((Number(message.provenance.score || 0) * 1000) / 10)}% ({message.provenance.status})
+                        {provenanceLabel.replace("Prov ", "")}
                         {Array.isArray(message.provenance.warnings) && message.provenance.warnings.length > 0 && (
                           <ul className={css.warningList}>
                             {message.provenance.warnings.map((warn, idx) => (
@@ -575,11 +734,12 @@ export function ChatTab(props: Props) {
                       </div>
                     )}
                     <pre className={css.stats}>{JSON.stringify(message.retrievalStats || {}, null, 2)}</pre>
-                  </details>
+                  </div>
                 )}
               </article>
             </div>
-          ))
+          );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -598,10 +758,10 @@ export function ChatTab(props: Props) {
             onClick={() => submitPrompt(false)}
             disabled={!question.trim()}
           >
-            {isAsking ? "Queue Ask" : "Ask"}
+            Queue Ask
           </button>
           <button className={css.secondaryButton} onClick={() => submitPrompt(true)} disabled={!question.trim()}>
-            {isAsking ? "Queue Stream" : "Ask (Stream)"}
+            Queue Stream
           </button>
           {isAsking && <Spinner label="Running..." small />}
         </div>

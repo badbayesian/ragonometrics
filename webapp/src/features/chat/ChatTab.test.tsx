@@ -76,12 +76,23 @@ describe("ChatTab", () => {
     });
 
     await userEvent.click(screen.getByRole("button", { name: "What is the main research question?" }));
-    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    await userEvent.click(screen.getByRole("button", { name: "Queue Ask" }));
 
     await waitFor(() => {
       expect(screen.getByText("This paper studies structural breaks.")).toBeInTheDocument();
       expect(screen.getByText("Prov 82% (high)")).toBeInTheDocument();
     });
+
+    const assistantBubbles = screen.getAllByTestId("assistant-message-bubble");
+    const newestAssistantBubble = assistantBubbles[assistantBubbles.length - 1];
+    expect(newestAssistantBubble).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(screen.getByRole("button", { name: "Prov 82% (high)" }));
+    expect(newestAssistantBubble).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("About this answer")).toBeInTheDocument();
+    expect(screen.getByText("What Prov Means")).toBeInTheDocument();
+    expect(screen.getByText(/Provenance score estimates evidence grounding/i)).toBeInTheDocument();
+    expect(screen.getByText("Response source: Fresh")).toBeInTheDocument();
 
     expect(screen.getAllByText("What is the main research question?").length).toBeGreaterThanOrEqual(1);
   });
@@ -162,7 +173,7 @@ describe("ChatTab", () => {
 
     const textarea = await screen.findByPlaceholderText("Ask a question about this paper");
     await userEvent.type(textarea, "First question");
-    await userEvent.click(screen.getByRole("button", { name: "Ask" }));
+    await userEvent.click(screen.getByRole("button", { name: "Queue Ask" }));
 
     await waitFor(() => {
       expect(turnCalls).toBe(1);

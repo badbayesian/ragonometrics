@@ -184,6 +184,25 @@
   background: var(--surface-1);
 }
 
+.assistantBubbleClickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.assistantBubbleClickable:hover {
+  border-color: var(--accent-500);
+}
+
+.assistantBubbleClickable:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+.assistantBubbleExpanded {
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 1px var(--accent-300) inset;
+}
+
 .messageMeta {
   font-size: 0.78rem;
   display: flex;
@@ -212,9 +231,28 @@
   font-size: 0.75rem;
 }
 
+.metaBadgeButton {
+  cursor: pointer;
+}
+
+.metaBadgeButton:hover {
+  border-color: var(--accent-500);
+  color: var(--text);
+}
+
+.metaBadgeButton:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 1px;
+}
+
 .streaming {
   color: var(--accent-600);
   font-size: 0.78rem;
+}
+
+.metaHint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 .metaWarning {
@@ -229,6 +267,33 @@
 .details {
   border-top: 1px dashed var(--border-2);
   padding-top: 8px;
+}
+
+.detailsPanel {
+  border-top: 1px dashed var(--border-2);
+  padding-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.insightCallout {
+  border: 1px solid var(--accent-300);
+  background: color-mix(in oklab, var(--accent-100) 65%, white 35%);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
+
+.insightText {
+  margin: 6px 0 0;
+  color: var(--text);
+}
+
+.aboutList {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 2px;
 }
 
 .citationList {
