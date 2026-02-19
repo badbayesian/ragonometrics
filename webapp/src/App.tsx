@@ -55,7 +55,13 @@ function dedupePapersByFinderLabel(rows: PaperRow[]): PaperRow[] {
   return Array.from(unique.values());
 }
 
+function envFlagEnabled(value: string | undefined): boolean {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+}
+
 export function App() {
+  const registrationEnabled = envFlagEnabled(import.meta.env.VITE_WEB_REGISTRATION_ENABLED);
   const [user, setUser] = useState<string>("");
   const [csrfToken, setCsrfToken] = useState<string>("");
   const [loginUser, setLoginUser] = useState<string>("");
@@ -337,6 +343,10 @@ export function App() {
 
   async function onRegister(e: FormEvent) {
     e.preventDefault();
+    if (!registrationEnabled) {
+      setStatus("Account registration is currently disabled.");
+      return;
+    }
     setStatus("Creating account...");
     const out = await api<{ created: boolean; username: string; alert_email_sent?: boolean }>("/api/v1/auth/register", {
       method: "POST",
@@ -375,6 +385,7 @@ export function App() {
     return (
       <main className={css.page}>
         <LoginView
+          registrationEnabled={registrationEnabled}
           loginUser={loginUser}
           loginPass={loginPass}
           registerUsername={registerUsername}

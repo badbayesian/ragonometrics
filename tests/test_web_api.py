@@ -216,6 +216,7 @@ def test_auth_login_by_email_and_forgot_reset_flow(monkeypatch) -> None:
 
 def test_auth_register_creates_user_and_sends_alert(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
+    monkeypatch.setenv("WEB_REGISTRATION_ENABLED", "1")
     monkeypatch.setenv("WEB_REGISTER_RATE_LIMIT", "20")
     monkeypatch.setenv("WEB_REGISTER_RATE_WINDOW_SECONDS", "60")
     monkeypatch.setattr("ragonometrics.web.api._send_new_account_alert_email", lambda **kwargs: True)
@@ -248,6 +249,21 @@ def test_auth_register_creates_user_and_sends_alert(monkeypatch) -> None:
         duplicate_payload = duplicate.get_json()
         assert duplicate_payload["ok"] is False
         assert duplicate_payload["error"]["code"] == "username_taken"
+
+
+def test_auth_register_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "dummy")
+    monkeypatch.delenv("WEB_REGISTRATION_ENABLED", raising=False)
+    app = create_app()
+    with app.test_client() as client:
+        out = client.post(
+            "/api/v1/auth/register",
+            json={"username": "blocked", "email": "blocked@example.com", "password": "blocked123"},
+        )
+        assert out.status_code == 403
+        payload = out.get_json()
+        assert payload["ok"] is False
+        assert payload["error"]["code"] == "registration_disabled"
 
 
 def test_login_rate_limit(monkeypatch) -> None:

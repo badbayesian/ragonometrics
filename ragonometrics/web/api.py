@@ -231,6 +231,12 @@ def _cookie_samesite() -> str:
     return value
 
 
+def _registration_enabled() -> bool:
+    """Internal helper for registration enabled."""
+    raw = str(os.getenv("WEB_REGISTRATION_ENABLED", "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _set_auth_cookies(response: Response, *, session_id: str, csrf_token: str) -> None:
     """Internal helper for set auth cookies."""
     max_age = int(current_app.config.get("WEB_SESSION_MAX_AGE_SECONDS", 60 * 60 * 12))
@@ -389,6 +395,12 @@ def login():
 @api_bp.route("/auth/register", methods=["POST"])
 def register():
     """Create a user account and return an authenticated session for the new user."""
+    if not _registration_enabled():
+        return _err(
+            "registration_disabled",
+            "Account registration is currently disabled. Contact an administrator.",
+            status=403,
+        )
     try:
         payload = parse_model(RegisterRequest, request.get_json(silent=True))
     except ValidationError as exc:

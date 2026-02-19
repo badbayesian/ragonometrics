@@ -2,6 +2,7 @@ import { FormEvent } from "react";
 import css from "./LoginView.module.css";
 
 type Props = {
+  registrationEnabled: boolean;
   loginUser: string;
   loginPass: string;
   registerUsername: string;
@@ -49,39 +50,46 @@ export function LoginView(props: Props) {
         </button>
       </form>
 
-      <details className={css.helpPanel}>
-        <summary>Create account</summary>
-        <form className={css.form} onSubmit={props.onRegister}>
-          <label className={css.label}>
-            Username
-            <input
-              className={css.input}
-              value={props.registerUsername}
-              onChange={(e) => props.onChangeRegisterUsername(e.target.value)}
-            />
-          </label>
-          <label className={css.label}>
-            Email
-            <input
-              className={css.input}
-              value={props.registerEmail}
-              onChange={(e) => props.onChangeRegisterEmail(e.target.value)}
-            />
-          </label>
-          <label className={css.label}>
-            Password
-            <input
-              className={css.input}
-              type="password"
-              value={props.registerPassword}
-              onChange={(e) => props.onChangeRegisterPassword(e.target.value)}
-            />
-          </label>
-          <button className={css.button} type="submit">
-            Create Account
-          </button>
-        </form>
-      </details>
+      {props.registrationEnabled ? (
+        <details className={css.helpPanel}>
+          <summary>Create account</summary>
+          <form className={css.form} onSubmit={props.onRegister}>
+            <label className={css.label}>
+              Username
+              <input
+                className={css.input}
+                value={props.registerUsername}
+                onChange={(e) => props.onChangeRegisterUsername(e.target.value)}
+              />
+            </label>
+            <label className={css.label}>
+              Email
+              <input
+                className={css.input}
+                value={props.registerEmail}
+                onChange={(e) => props.onChangeRegisterEmail(e.target.value)}
+              />
+            </label>
+            <label className={css.label}>
+              Password
+              <input
+                className={css.input}
+                type="password"
+                value={props.registerPassword}
+                onChange={(e) => props.onChangeRegisterPassword(e.target.value)}
+              />
+            </label>
+            <button className={css.button} type="submit">
+              Create Account
+            </button>
+          </form>
+        </details>
+      ) : (
+        <div className={css.helpPanel}>
+          <strong>Account creation disabled</strong>
+          <p className={css.note}>New account registration is temporarily disabled.</p>
+        </div>
+      )}
 
       <details className={css.helpPanel}>
         <summary>Forgot password?</summary>

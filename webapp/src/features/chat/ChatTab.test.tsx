@@ -179,6 +179,9 @@ describe("ChatTab", () => {
       expect(turnCalls).toBe(1);
     });
 
+    expect(screen.getByRole("button", { name: "Queue Ask" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Queue Stream" })).toBeEnabled();
+
     await userEvent.type(textarea, "Second question");
     await userEvent.click(screen.getByRole("button", { name: "Queue Ask" }));
 
@@ -203,6 +206,78 @@ describe("ChatTab", () => {
     });
     await waitFor(() => {
       expect(screen.getByText("Second answer complete.")).toBeInTheDocument();
+    });
+  });
+
+  it("renders markdown LaTeX math in assistant answers", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/v1/chat/history")) {
+        return jsonResponse({ ok: true, data: { rows: [], count: 0 } });
+      }
+      if (url.includes("/api/v1/chat/suggestions")) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            paper_id: "p1",
+            paper_title_hint: "Paper",
+            questions: ["How is the model specified?"],
+          },
+        });
+      }
+      if (url.includes("/api/v1/chat/turn")) {
+        expect(init?.method).toBe("POST");
+        return jsonResponse({
+          ok: true,
+          data: {
+            answer: "Model form: $y_i = \\alpha + \\beta x_i + \\varepsilon_i$ with objective $$\\min_{\\beta} \\sum_i \\varepsilon_i^2$$.",
+            citations: [],
+            retrieval_stats: { method: "local" },
+            cache_hit: false,
+            model: "gpt-5-nano",
+          },
+        });
+      }
+      if (url.includes("/api/v1/chat/provenance-score")) {
+        return jsonResponse({
+          ok: true,
+          data: {
+            paper_id: "p1",
+            question: "How is the model specified?",
+            score: 0.74,
+            status: "medium",
+            warnings: [],
+          },
+        });
+      }
+      return jsonResponse({ ok: false, error: { code: "not_found", message: "not found" } }, 404);
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = render(
+      <ChatTab
+        csrfToken="csrf"
+        paperId="p1"
+        paperName="Paper.pdf"
+        paperPath="/app/papers/Paper.pdf"
+        model="gpt-5-nano"
+        queuedQuestion=""
+        onQuestionConsumed={() => undefined}
+        onStatus={() => undefined}
+        onOpenViewer={() => undefined}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "How is the model specified?" })).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "How is the model specified?" }));
+    await userEvent.click(screen.getByRole("button", { name: "Queue Ask" }));
+
+    await waitFor(() => {
+      expect(container.querySelector(".katex")).toBeTruthy();
     });
   });
 });

@@ -57,3 +57,8 @@
   display: grid;
   gap: 10px;
 }
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+}

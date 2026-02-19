@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import rehypeKatex from "rehype-katex";
+import ReactMarkdown from "react-markdown";
+import remarkBreaks from "remark-breaks";
+import remarkMath from "remark-math";
 import { api } from "../../shared/api";
 import { ChatHistoryItem, ChatSuggestionPayload, CitationChunk, ProvenanceScore } from "../../shared/types";
 import { Spinner } from "../../shared/Spinner";
 import robotAvatar from "../../assets/robot-avatar.svg";
 import css from "./ChatTab.module.css";
+import "katex/dist/katex.min.css";
 
 type ChatTurnData = {
   answer?: string;
@@ -160,6 +165,20 @@ function historyToMessages(rows: ChatHistoryItem[]): ChatMessage[] {
   return out;
 }
 
+function ChatMessageText(props: { text: string; isStreaming: boolean }) {
+  const content = props.text || (props.isStreaming ? "..." : "");
+  return (
+    <ReactMarkdown
+      className={css.messageText}
+      remarkPlugins={[remarkMath, remarkBreaks]}
+      rehypePlugins={[rehypeKatex]}
+      skipHtml
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
 function messagesToHistory(messages: ChatMessage[], paperPath: string): ChatHistoryItem[] {
   const out: ChatHistoryItem[] = [];
   for (let i = 0; i < messages.length; i += 1) {
@@ -185,6 +204,7 @@ export function ChatTab(props: Props) {
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scoredMessageIdsRef = useRef<Set<string>>(new Set());
+  const queueButtonsDisabled = !props.paperId;
 
   useEffect(() => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === "function") {
@@ -622,7 +642,7 @@ export function ChatTab(props: Props) {
                   <span>{message.role === "user" ? "You" : "Assistant"}</span>
                   <span>{shortTime(message.createdAt)}</span>
                 </div>
-                <p className={css.messageText}>{message.text || (message.isStreaming ? "..." : "")}</p>
+                <ChatMessageText text={message.text} isStreaming={Boolean(message.isStreaming)} />
                 {isAssistant && (
                   <div className={css.answerMeta}>
                     {typeof message.cacheHit === "boolean" && (
@@ -756,14 +776,15 @@ export function ChatTab(props: Props) {
           <button
             className={css.primaryButton}
             onClick={() => submitPrompt(false)}
-            disabled={!question.trim()}
+            disabled={queueButtonsDisabled}
           >
             Queue Ask
           </button>
-          <button className={css.secondaryButton} onClick={() => submitPrompt(true)} disabled={!question.trim()}>
+          <button className={css.secondaryButton} onClick={() => submitPrompt(true)} disabled={queueButtonsDisabled}>
             Queue Stream
           </button>
           {isAsking && <Spinner label="Running..." small />}
+          {isAsking && <span className={css.queueHint}>You can queue more questions while this is running.</span>}
         </div>
       </div>
     </section>
