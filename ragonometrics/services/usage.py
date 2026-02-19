@@ -18,6 +18,39 @@ def _database_url() -> str:
     return db_url
 
 
+def _fetch_one(sql: str, params: List[Any]) -> Any:
+    """Execute one query and return a single row."""
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        return cur.fetchone()
+
+
+def _fetch_all(sql: str, params: List[Any]) -> List[Any]:
+    """Execute one query and return all rows."""
+    with pooled_connection(_database_url(), require_migrated=True) as conn:
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        return cur.fetchall()
+
+
+def _recent_usage_row_payload(row: Any) -> Dict[str, Any]:
+    """Normalize one recent-usage row for API responses."""
+    return {
+        "created_at": row[0].isoformat() if hasattr(row[0], "isoformat") else row[0],
+        "model": row[1],
+        "operation": row[2],
+        "step": row[3],
+        "question_id": row[4],
+        "input_tokens": int(row[5] or 0),
+        "output_tokens": int(row[6] or 0),
+        "total_tokens": int(row[7] or 0),
+        "session_id": row[8],
+        "request_id": row[9],
+        "run_id": row[10],
+    }
+
+
 def _where_sql(
     *,
     session_id: Optional[str],
@@ -89,21 +122,18 @@ def usage_summary(
         account_username=account_username,
         project_id=project_id,
     )
-    with pooled_connection(_database_url(), require_migrated=True) as conn:
-        cur = conn.cursor()
-        cur.execute(
-            f"""
-            SELECT
-                COUNT(*),
-                COALESCE(SUM(u.input_tokens), 0),
-                COALESCE(SUM(u.output_tokens), 0),
-                COALESCE(SUM(u.total_tokens), 0)
-            FROM observability.token_usage u
-            {where_sql}
-            """,
-            params,
-        )
-        row = cur.fetchone() or [0, 0, 0, 0]
+    row = _fetch_one(
+        f"""
+        SELECT
+            COUNT(*),
+            COALESCE(SUM(u.input_tokens), 0),
+            COALESCE(SUM(u.output_tokens), 0),
+            COALESCE(SUM(u.total_tokens), 0)
+        FROM observability.token_usage u
+        {where_sql}
+        """,
+        params,
+    ) or [0, 0, 0, 0]
     return {
         "calls": int(row[0] or 0),
         "input_tokens": int(row[1] or 0),
@@ -130,22 +160,19 @@ def usage_by_model(
         account_username=account_username,
         project_id=project_id,
     )
-    with pooled_connection(_database_url(), require_migrated=True) as conn:
-        cur = conn.cursor()
-        cur.execute(
-            f"""
-            SELECT
-                u.model,
-                COUNT(*) AS calls,
-                COALESCE(SUM(u.total_tokens), 0) AS total_tokens
-            FROM observability.token_usage u
-            {where_sql}
-            GROUP BY u.model
-            ORDER BY total_tokens DESC
-            """,
-            params,
-        )
-        rows = cur.fetchall()
+    rows = _fetch_all(
+        f"""
+        SELECT
+            u.model,
+            COUNT(*) AS calls,
+            COALESCE(SUM(u.total_tokens), 0) AS total_tokens
+        FROM observability.token_usage u
+        {where_sql}
+        GROUP BY u.model
+        ORDER BY total_tokens DESC
+        """,
+        params,
+    )
     return [{"model": row[0], "calls": int(row[1] or 0), "total_tokens": int(row[2] or 0)} for row in rows]
 
 
@@ -168,43 +195,25 @@ def recent_usage(
         project_id=project_id,
     )
     params_with_limit = [*params, int(limit)]
-    with pooled_connection(_database_url(), require_migrated=True) as conn:
-        cur = conn.cursor()
-        cur.execute(
-            f"""
-            SELECT
-                u.created_at,
-                u.model,
-                u.operation,
-                u.step,
-                u.question_id,
-                u.input_tokens,
-                u.output_tokens,
-                u.total_tokens,
-                u.session_id,
-                u.request_id,
-                u.run_id
-            FROM observability.token_usage u
-            {where_sql}
-            ORDER BY u.created_at DESC
-            LIMIT %s
-            """,
-            params_with_limit,
-        )
-        rows = cur.fetchall()
-    return [
-        {
-            "created_at": row[0].isoformat() if hasattr(row[0], "isoformat") else row[0],
-            "model": row[1],
-            "operation": row[2],
-            "step": row[3],
-            "question_id": row[4],
-            "input_tokens": int(row[5] or 0),
-            "output_tokens": int(row[6] or 0),
-            "total_tokens": int(row[7] or 0),
-            "session_id": row[8],
-            "request_id": row[9],
-            "run_id": row[10],
-        }
-        for row in rows
-    ]
+    rows = _fetch_all(
+        f"""
+        SELECT
+            u.created_at,
+            u.model,
+            u.operation,
+            u.step,
+            u.question_id,
+            u.input_tokens,
+            u.output_tokens,
+            u.total_tokens,
+            u.session_id,
+            u.request_id,
+            u.run_id
+        FROM observability.token_usage u
+        {where_sql}
+        ORDER BY u.created_at DESC
+        LIMIT %s
+        """,
+        params_with_limit,
+    )
+    return [_recent_usage_row_payload(row) for row in rows]
