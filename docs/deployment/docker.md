@@ -1,4 +1,4 @@
-﻿# Docker Deployment Guide
+# Docker Deployment Guide
 
 This is the canonical Docker runbook for Ragonometrics web deployment.
 
@@ -11,8 +11,9 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
 Notes:
+
 - `PAPERS_HOST_DIR` is mounted to `/app/papers`.
-- `CONTAINER_DATABASE_URL` is for container-to-container connectivity and should use host `postgres`.
+- `CONTAINER_DATABASE_URL` should use host `postgres` for container-to-container connectivity.
 
 ## Start Services
 
@@ -29,6 +30,7 @@ docker compose --profile web up -d --build postgres web rq-worker pgadmin
 ```
 
 Open the app:
+
 - `http://localhost:8590`
 
 ## Workflow Runs
@@ -101,3 +103,9 @@ Tail worker logs:
 ```bash
 docker compose logs -f rq-worker
 ```
+
+## Related Documents
+
+- [UI guide](../guides/ui.md)
+- [Workflow guide](../guides/workflow.md)
+- [System architecture](../architecture/architecture.md)

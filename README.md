@@ -1,16 +1,15 @@
-﻿Ragonometrics
-=============
+# Ragonometrics
 
-Ragonometrics is a web-first research app for paper Q&A, structured extraction, and agentic analysis over a local paper corpus.
+Ragonometrics is a web app for paper Q&A, structured extraction, and agentic analysis over a local PDF corpus.
 
-It provides:
-- Flask API + React web app (`http://localhost:8590`)
-- Postgres-backed workflow and cache storage
-- Structured and agentic workflow execution
+## What You Get
+
+- Flask API + React web app at `http://localhost:8590`
+- Postgres-backed auth, project scope, workflow lineage, and cache state
+- Structured and agentic workflows
 - OpenAlex metadata and citation enrichment
 
-Quick Start
------------
+## Quick Start
 
 1. Create `.env`:
 
@@ -26,23 +25,17 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 docker compose run --rm migrate
 ```
 
-3. Start the web stack:
+3. Start services:
 
 ```bash
 docker compose --profile web up -d --build postgres web rq-worker pgadmin
 ```
 
 4. Open the app:
+
 - `http://localhost:8590`
 
-Structured + Agentic Workflow
------------------------------
-
-The workflow combines two modes:
-- `Structured`: answers a fixed canonical question set for consistent outputs across papers.
-- `Agentic`: decomposes complex prompts into sub-questions, retrieves evidence, and synthesizes final answers.
-
-Canonical command (both enabled):
+## Workflow Run (Structured + Agentic)
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -53,22 +46,21 @@ docker compose --profile batch run --rm workflow \
   --report-question-set both
 ```
 
-Useful Commands
----------------
+## Common Commands
 
-Run frontend tests:
+Frontend tests:
 
 ```bash
 python tools/run_frontend_tests.py
 ```
 
-Rebuild web container:
+Rebuild the web container:
 
 ```bash
 docker compose --profile web up -d --build web
 ```
 
-Run workflow for a single paper:
+Single-paper workflow run:
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -88,9 +80,11 @@ python tools/manual_openalex_link.py \
   --db-url "$DATABASE_URL"
 ```
 
-Core Docs
----------
-- `docs/deployment/docker.md`
-- `docs/guides/ui.md`
-- `docs/guides/workflow.md`
-- `docs/architecture/architecture.md`
+## Documentation
+
+- [Docker deployment](docs/deployment/docker.md)
+- [UI guide](docs/guides/ui.md)
+- [Workflow guide](docs/guides/workflow.md)
+- [System architecture](docs/architecture/architecture.md)
+- [Workflow architecture](docs/architecture/workflow_architecture.md)
+- [Postgres ERD](docs/architecture/data-model-erd.md)

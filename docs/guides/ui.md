@@ -1,71 +1,73 @@
-﻿# UI Guide
+# UI Guide
 
 This guide covers the web app at `http://localhost:8590`.
 
 ## Access and Session
 
-- Login supports `email or username`.
-- Account actions available from login view:
+- Login supports either email or username.
+- Account actions from login:
   - register
   - forgot password
   - reset password
-- Header controls may include:
-  - project selector
-  - persona selector
-  - debug mode toggle
-  - theme toggle
-  - help modal
+- Header controls may include project and persona selectors.
 
-## Paper Finder
+## Paper Selection
 
-- `Find paper` is type-to-search.
+- `Find paper` supports type-to-search.
 - Suggestions are deduped by normalized title.
-- Filters:
-  - author
-  - venue
-  - year
-- Behavior:
-  - `Enter` selects top match
-  - double-click opens the current filtered list
+- Filters include author, venue, and year.
 
-## Tabs
+## Main Tabs
 
 ### Chat
-- Ask and Ask (Stream) modes.
-- Suggested questions.
-- In-flight queue for additional prompts.
-- Evidence panel with top citation snippets and viewer jump.
-- Provenance badge and warnings.
+
+- `Ask` and `Ask (Stream)` modes
+- Suggested prompts
+- In-flight queue for additional prompts while prior asks are running
+- Evidence panel with citations and PDF viewer jumps
+- Provenance badge with score details
 
 ### Paper Viewer
-- In-app PDF viewing.
-- Highlighting and notes tied to paper context.
+
+- In-app PDF viewing
+- Highlights and notes scoped to the selected paper
 
 ### Structured Workstream
-- Refresh cached structured answers.
-- Generate missing answers.
-- Export in compact or full formats (JSON/PDF).
+
+- Refresh cached structured answers
+- Generate only missing answers
+- Export compact or full output in JSON/PDF
 
 ### OpenAlex Metadata
-- View linked paper metadata and entities.
-- Apply manual OpenAlex link override when needed.
+
+- View linked metadata and entities
+- Apply manual OpenAlex link override if needed
 
 ### Citation Network
-- Interactive citation graph.
-- Controls for max references, max citing, and hops.
-- Debounced auto-reload and reset behavior.
+
+- Interactive citation graph
+- Controls for references, citing count, and hop depth
 
 ### Usage
-- Summary, by-model, and recent usage tables.
-- Optional session-only scope toggle.
+
+- Summary, by-model, and recent usage tables
+- Optional session-only scope
 
 ### Compare
-- Cache-first multi-paper matrix.
-- Fill missing cells.
-- Export JSON/CSV.
+
+- Cache-first multi-paper comparison matrix
+- Fill missing cells
+- Export JSON/CSV
 
 ## API Envelope
 
-All `/api/v1` responses use:
+All `/api/v1` responses use a typed envelope:
+
 - success: `{"ok": true, "data": ..., "request_id": "..."}`
 - error: `{"ok": false, "error": {"code": "...", "message": "..."}, "request_id": "..."}`
+
+## Related Documents
+
+- [Workflow guide](workflow.md)
+- [System architecture](../architecture/architecture.md)
+- [Docker deployment](../deployment/docker.md)

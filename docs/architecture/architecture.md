@@ -1,70 +1,44 @@
-﻿# Ragonometrics Architecture
+# System Architecture
 
-This document is the single architecture source of truth for the web-first Ragonometrics system.
+This document is the architecture source of truth for the Ragonometrics web app.
 
 ## Runtime Components
 
-- Web app: Flask API + React SPA (`ragonometrics/web`, `webapp/`).
-- Workflow engine: `ragonometrics workflow` for prep, ingest, enrich, agentic, index, evaluate, report.
-- Queue worker: `rq-worker` consumes async workflow/chat refresh jobs from Postgres-backed queues.
-- Data store: Postgres for auth/session, workflow lineage, retrieval cache, usage telemetry, and enrichment caches.
-- Paper corpus: local mounted PDF directory (`/app/papers`).
+| Component | Purpose | Location |
+| --- | --- | --- |
+| Web API | Auth, project scoping, chat, workflow and export routes | `ragonometrics/web/` |
+| Web UI | Browser client for chat, viewer, structured workflow, compare, usage | `webapp/` |
+| Workflow runtime | Batch and async workflow execution (prep, ingest, enrich, agentic, evaluate, report) | `ragonometrics/` |
+| Queue worker | Processes async jobs and refresh tasks | `rq-worker` container |
+| Postgres | System of record for users, projects, cache, workflow lineage, enrichment, usage | `postgres` container |
+| Papers directory | Source PDF corpus mounted into containers | `/app/papers` |
 
-## Data Flow
+## Request Lifecycle (Chat)
 
-1. User selects a paper and asks a question in the web UI.
-2. API resolves paper scope and loads retrieval context.
-3. Query cache is checked before generation.
-4. LLM generates answer with citations/provenance metadata.
-5. Response, usage, and cache artifacts are persisted.
-6. Structured and agentic workflow runs write stage outputs and reports to Postgres and `reports/`.
+1. User sends a question from the web UI.
+2. API authenticates session and enforces project/paper scope.
+3. Retrieval and cache services resolve evidence and candidate answers.
+4. LLM response is generated (or served from cache).
+5. Response, provenance metadata, and usage telemetry are persisted.
+6. UI receives final answer and citations via JSON or NDJSON stream.
 
-## Workflow Summary
+## Workflow Lifecycle
 
-Main workflow stages:
-1. `prep`
-2. `ingest`
-3. `enrich`
-4. `agentic` (optional)
-5. `index` (optional)
-6. `evaluate`
-7. `report`
+1. A workflow run is started from CLI, API, or queue.
+2. Stage records are written to `workflow.run_records`.
+3. Structured answers and agentic outputs are persisted as run artifacts.
+4. Reports are written to `reports/` and linked back to run records.
 
-Each stage writes run-linked records keyed by `run_id` in `workflow.run_records`.
+## Data Boundaries
 
-## Data Model Summary (Inline)
+- Postgres is authoritative for runtime state.
+- Filesystem stores source PDFs and generated report files.
+- Cache layers are scoped by paper, project, and model context.
 
-Primary tables by responsibility:
-- Auth/session:
-  - `auth` user table
-  - `auth` session table
-  - `auth.request_rate_limits`
-- Workflow lineage:
-  - `workflow.run_records`
-  - `workflow.async_jobs`
-- Retrieval and usage:
-  - `retrieval.query_cache`
-  - `observability.token_usage`
-  - `observability.request_failures`
-- Enrichment:
-  - `enrichment.openalex_http_cache`
-  - `enrichment.paper_openalex_metadata`
-  - `enrichment.openalex_citation_graph_cache`
-  - `enrichment.citec_cache`
-- Indexing/ingestion:
-  - `ingestion.documents`, `ingestion.paper_metadata`
-  - `indexing.vectors`, `indexing.index_shards`, `indexing.index_versions`
+## Related Documents
 
-## Cache Layers and Boundaries
-
-- Query/answer cache (`retrieval.query_cache`): first stop for repeated chat/structured prompts.
-- OpenAlex HTTP cache (`enrichment.openalex_http_cache`): upstream API response cache.
-- Citation graph derived cache (`enrichment.openalex_citation_graph_cache`): n-hop graph snapshots with freshness metadata.
-- Structured workflow cache: canonical structured answers read from `workflow.run_records` question payloads.
-
-## Operational Boundaries and Tradeoffs
-
-- Postgres is the system of record for runtime state and lineage.
-- Local filesystem stores reports and optional index artifacts; database stores authoritative metadata.
-- Structured mode is more deterministic and cache-friendly; agentic mode is richer but higher latency/cost.
-- Multi-user web usage requires strict paper scoping and session-aware access checks in API routes.
+- [Workflow architecture](workflow_architecture.md)
+- [Postgres ERD](data-model-erd.md)
+- [UI guide](../guides/ui.md)
+- [Workflow guide](../guides/workflow.md)
+- [Deployment guide](../deployment/docker.md)

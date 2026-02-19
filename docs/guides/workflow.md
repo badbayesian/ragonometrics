@@ -1,25 +1,26 @@
-﻿# Workflow Guide
+# Workflow Guide
 
 This guide covers `ragonometrics workflow` execution and outputs.
 
 ## Workflow Stages
 
 A standard run executes:
-1. `prep`: corpus validation and manifest inputs
-2. `ingest`: PDF extraction and chunking
-3. `enrich`: OpenAlex/CitEc metadata enrichment
-4. `agentic`: optional decomposition + synthesis
+
+1. `prep`: validate corpus and build run inputs
+2. `ingest`: extract text and chunk paper content
+3. `enrich`: fetch and store metadata enrichment
+4. `agentic`: optional decomposition and synthesis
 5. `index`: optional index writes
-6. `evaluate`: run-level quality/usage accounting
-7. `report`: workflow report artifacts
+6. `evaluate`: run-level quality and usage accounting
+7. `report`: persist report artifacts
 
 Run lineage is persisted in `workflow.run_records`.
 
 ## Structured vs Agentic
 
-- `Structured` focuses on canonical fixed questions for comparability and caching.
-- `Agentic` handles open-ended reasoning by planning sub-questions and synthesizing evidence-backed answers.
-- Recommended production runs use both via `--report-question-set both` with `--agentic`.
+- `Structured`: fixed canonical questions for comparability and cache reuse.
+- `Agentic`: open-ended reasoning through planning, retrieval, and synthesis.
+- Common production mode: `--report-question-set both` with `--agentic`.
 
 ## Core Commands
 
@@ -74,12 +75,20 @@ docker compose --profile batch run --rm workflow \
 ## Outputs
 
 Filesystem:
+
 - `reports/workflow-report-<run_id>.json`
 - `reports/prep-manifest-<run_id>.json`
-- optional audit artifacts under `reports/`
+- optional artifacts under `reports/`
 
 Postgres:
+
 - `workflow.run_records`
 - `retrieval.query_cache`
 - `observability.token_usage`
-- indexing/ingestion tables when indexing is enabled
+- ingestion and indexing tables when indexing is enabled
+
+## Related Documents
+
+- [UI guide](ui.md)
+- [Workflow architecture](../architecture/workflow_architecture.md)
+- [Postgres ERD](../architecture/data-model-erd.md)
