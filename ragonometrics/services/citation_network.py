@@ -22,6 +22,7 @@ _DEFAULT_GRAPH_CACHE_ALGO_VERSION = "v1"
 
 
 def _openalex_work_id(value: Any) -> str:
+    """Internal helper for openalex work id."""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -38,11 +39,13 @@ def _openalex_work_id(value: Any) -> str:
 
 
 def _openalex_work_url(value: Any) -> str:
+    """Internal helper for openalex work url."""
     work_id = _openalex_work_id(value)
     return f"https://openalex.org/{work_id}" if work_id else ""
 
 
 def _openalex_work_summary(work_id: str, *, include_references: bool = False) -> Optional[Dict[str, Any]]:
+    """Internal helper for openalex work summary."""
     key = _openalex_work_id(work_id)
     if not key:
         return None
@@ -55,6 +58,7 @@ def _openalex_work_summary(work_id: str, *, include_references: bool = False) ->
 
 
 def _openalex_citing_works(work_id: str, *, limit: int) -> List[Dict[str, Any]]:
+    """Internal helper for openalex citing works."""
     key = _openalex_work_id(work_id)
     if not key or limit <= 0:
         return []
@@ -75,10 +79,12 @@ def _openalex_citing_works(work_id: str, *, limit: int) -> List[Dict[str, Any]]:
 
 
 def _work_title(work: Dict[str, Any]) -> str:
+    """Internal helper for work title."""
     return str(work.get("display_name") or work.get("title") or work.get("id") or "Unknown paper")
 
 
 def _sort_works_desc(works: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Internal helper for sort works desc."""
     return sorted(
         works,
         key=lambda w: (-(int(w.get("cited_by_count") or 0)), _work_title(w).lower()),
@@ -86,6 +92,7 @@ def _sort_works_desc(works: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def _work_row(work: Dict[str, Any], group: str, *, hop: Optional[int] = None) -> Dict[str, Any]:
+    """Internal helper for work row."""
     out = {
         "id": str(work.get("id") or ""),
         "openalex_url": _openalex_work_url(work.get("id")),
@@ -101,6 +108,7 @@ def _work_row(work: Dict[str, Any], group: str, *, hop: Optional[int] = None) ->
 
 
 def _bounded_int_env(name: str, default: int, *, low: int, high: int) -> int:
+    """Internal helper for bounded int env."""
     raw = str(os.environ.get(name) or "").strip()
     if not raw:
         return default
@@ -112,10 +120,12 @@ def _bounded_int_env(name: str, default: int, *, low: int, high: int) -> int:
 
 
 def _graph_cache_disabled() -> bool:
+    """Internal helper for graph cache disabled."""
     return str(os.environ.get("OPENALEX_NETWORK_GRAPH_CACHE_DISABLE") or "").strip() == "1"
 
 
 def _graph_cache_ttl_seconds() -> int:
+    """Internal helper for graph cache ttl seconds."""
     return _bounded_int_env(
         "OPENALEX_NETWORK_GRAPH_CACHE_TTL_SECONDS",
         _DEFAULT_GRAPH_CACHE_TTL_SECONDS,
@@ -125,6 +135,7 @@ def _graph_cache_ttl_seconds() -> int:
 
 
 def _graph_cache_stale_seconds() -> int:
+    """Internal helper for graph cache stale seconds."""
     return _bounded_int_env(
         "OPENALEX_NETWORK_GRAPH_CACHE_STALE_SECONDS",
         _DEFAULT_GRAPH_CACHE_STALE_SECONDS,
@@ -134,18 +145,22 @@ def _graph_cache_stale_seconds() -> int:
 
 
 def _graph_cache_algo_version() -> str:
+    """Internal helper for graph cache algo version."""
     return str(os.environ.get("OPENALEX_NETWORK_GRAPH_CACHE_ALGO_VERSION") or _DEFAULT_GRAPH_CACHE_ALGO_VERSION).strip()
 
 
 def _db_url() -> str:
+    """Internal helper for db url."""
     return str(os.environ.get("DATABASE_URL") or "").strip()
 
 
 def _now_utc() -> datetime:
+    """Internal helper for now utc."""
     return datetime.now(timezone.utc)
 
 
 def _normalize_json_dict(value: Any) -> Dict[str, Any]:
+    """Internal helper for normalize json dict."""
     if isinstance(value, dict):
         return value
     if isinstance(value, str):
@@ -161,6 +176,7 @@ def _normalize_json_dict(value: Any) -> Dict[str, Any]:
 
 
 def _parse_db_ts(value: Any) -> Optional[datetime]:
+    """Internal helper for parse db ts."""
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -189,6 +205,7 @@ def _graph_cache_key(
     max_nodes: int,
     algo_version: str,
 ) -> str:
+    """Internal helper for graph cache key."""
     payload = {
         "center_work_id": _openalex_work_id(center_work_id),
         "n_hops": int(n_hops),
@@ -202,11 +219,13 @@ def _graph_cache_key(
 
 
 def _advisory_lock_key(cache_key: str) -> int:
+    """Internal helper for advisory lock key."""
     raw = int(hashlib.sha256(str(cache_key or "").encode("utf-8")).hexdigest()[:16], 16)
     return raw - (1 << 64) if raw >= (1 << 63) else raw
 
 
 def _try_advisory_lock(cache_key: str, *, db_url: Optional[str] = None) -> bool:
+    """Internal helper for try advisory lock."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved:
         return True
@@ -223,6 +242,7 @@ def _try_advisory_lock(cache_key: str, *, db_url: Optional[str] = None) -> bool:
 
 
 def _release_advisory_lock(cache_key: str, *, db_url: Optional[str] = None) -> None:
+    """Internal helper for release advisory lock."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved:
         return
@@ -236,6 +256,7 @@ def _release_advisory_lock(cache_key: str, *, db_url: Optional[str] = None) -> N
 
 
 def _read_graph_cache(cache_key: str, *, db_url: Optional[str] = None) -> Dict[str, Any]:
+    """Internal helper for read graph cache."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved or not cache_key:
         return {}
@@ -291,6 +312,7 @@ def _read_graph_cache(cache_key: str, *, db_url: Optional[str] = None) -> Dict[s
 
 
 def _touch_graph_cache(cache_key: str, *, db_url: Optional[str] = None) -> None:
+    """Internal helper for touch graph cache."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved or not cache_key:
         return
@@ -312,6 +334,7 @@ def _touch_graph_cache(cache_key: str, *, db_url: Optional[str] = None) -> None:
 
 
 def _set_refresh_job_id(cache_key: str, job_id: str, *, db_url: Optional[str] = None) -> None:
+    """Internal helper for set refresh job id."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved or not cache_key:
         return
@@ -333,6 +356,7 @@ def _set_refresh_job_id(cache_key: str, job_id: str, *, db_url: Optional[str] = 
 
 
 def mark_cached_citation_refresh_failure(*, cache_key: str, db_url: Optional[str] = None) -> None:
+    """Increment refresh-failure metadata for a cached citation graph entry."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved or not cache_key:
         return
@@ -369,6 +393,7 @@ def _upsert_graph_cache(
     generated_at: Optional[datetime] = None,
     db_url: Optional[str] = None,
 ) -> None:
+    """Internal helper for upsert graph cache."""
     resolved = str(db_url or _db_url() or "").strip()
     if not resolved or not cache_key:
         return
@@ -457,6 +482,7 @@ def _enqueue_graph_refresh_job(
     existing_refresh_job_id: str,
     db_url: Optional[str] = None,
 ) -> bool:
+    """Internal helper for enqueue graph refresh job."""
     if str(existing_refresh_job_id or "").strip():
         return True
     try:
@@ -488,6 +514,7 @@ def _attach_cache_metadata(
     stale_until: Optional[datetime],
     refresh_enqueued: bool,
 ) -> Dict[str, Any]:
+    """Internal helper for attach cache metadata."""
     out = dict(payload or {})
     out["cache"] = {
         "status": str(status or _GRAPH_CACHE_STATUS_MISS),
@@ -508,6 +535,7 @@ def _compute_citation_network(
     n_hops: int,
     max_nodes: int,
 ) -> Dict[str, Any]:
+    """Internal helper for compute citation network."""
     center_work_id = _openalex_work_id(center_id)
     if not center_work_id:
         return {
@@ -526,6 +554,7 @@ def _compute_citation_network(
     summary_cache: Dict[str, Dict[str, Any]] = {}
 
     def load_summary(work_id: str, *, include_references: bool) -> Optional[Dict[str, Any]]:
+        """Handle load summary."""
         key = _openalex_work_id(work_id)
         if not key:
             return None
@@ -685,6 +714,7 @@ def _compute_and_upsert_graph(
     algo_version: str,
     db_url: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """Internal helper for compute and upsert graph."""
     computed = _compute_citation_network(
         center_work_id,
         max_references=max_references,
@@ -728,6 +758,7 @@ def _compute_and_upsert_graph(
 
 
 def refresh_cached_citation_graph(*, payload: Dict[str, Any], db_url: Optional[str] = None) -> Dict[str, Any]:
+    """Recompute and persist one cached citation graph payload from queued parameters."""
     center_work_id = _openalex_work_id(payload.get("center_work_id"))
     if not center_work_id:
         raise ValueError("center_work_id is required for openalex_network_refresh.")

@@ -1,1 +1,1 @@
-"""User interfaces for Ragonometrics, including the Streamlit app."""
+"""UI package placeholder for Ragonometrics."""

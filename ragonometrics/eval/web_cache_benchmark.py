@@ -19,6 +19,7 @@ SessionFactory = Callable[[], requests.Session]
 
 
 def _percentile(values: Sequence[float], p: float) -> float:
+    """Internal helper for percentile."""
     if not values:
         return 0.0
     sorted_values = sorted(float(v) for v in values)
@@ -34,6 +35,7 @@ def _percentile(values: Sequence[float], p: float) -> float:
 
 
 def _latency_summary(samples: Sequence[float]) -> Dict[str, float]:
+    """Internal helper for latency summary."""
     vals = [float(v) for v in samples]
     if not vals:
         return {"avg": 0.0, "p50": 0.0, "p95": 0.0, "max": 0.0}
@@ -52,6 +54,7 @@ def _load_credentials(
     credentials_file: Optional[str],
     users: int,
 ) -> List[Tuple[str, str]]:
+    """Internal helper for load credentials."""
     pairs: List[Tuple[str, str]] = []
     if credentials_file:
         path = Path(credentials_file)
@@ -90,6 +93,7 @@ def _request_json(
     json_payload: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
+    """Internal helper for request json."""
     start = time.perf_counter()
     try:
         resp = session.request(
@@ -159,6 +163,7 @@ def _select_paper_id(
     paper_id: Optional[str],
     paper_name: Optional[str],
 ) -> Dict[str, Any]:
+    """Internal helper for select paper id."""
     if str(paper_id or "").strip():
         return {"ok": True, "paper_id": str(paper_id or "").strip(), "elapsed_ms": 0.0, "status": 200}
 
@@ -227,6 +232,7 @@ def _login_session(
     identifier: str,
     password: str,
 ) -> Dict[str, Any]:
+    """Internal helper for login session."""
     out = _request_json(
         session,
         method="POST",
@@ -247,6 +253,7 @@ def _build_endpoint_metrics(
     endpoint_success: Dict[str, int],
     endpoint_total: Dict[str, int],
 ) -> Dict[str, Any]:
+    """Internal helper for build endpoint metrics."""
     metrics: Dict[str, Any] = {}
     for endpoint in endpoint_samples:
         total_count = int(endpoint_total.get(endpoint) or 0)
@@ -370,6 +377,7 @@ def benchmark_web_cached_structured_questions(
     think_time = max(0, int(think_time_ms)) / 1000.0
 
     def _worker(worker_idx: int) -> Dict[str, Any]:
+        """Internal helper for worker."""
         worker_errors: List[Dict[str, Any]] = []
         worker_samples: Dict[str, List[float]] = {k: [] for k in endpoint_samples}
         worker_success: Dict[str, int] = {k: 0 for k in endpoint_samples}
@@ -734,6 +742,7 @@ def benchmark_web_tabs(
     think_time = max(0, int(think_time_ms)) / 1000.0
 
     def _worker(worker_idx: int) -> Dict[str, Any]:
+        """Internal helper for worker."""
         worker_errors: List[Dict[str, Any]] = []
         worker_samples: Dict[str, List[float]] = {name: [] for name in endpoint_list}
         worker_success: Dict[str, int] = {name: 0 for name in endpoint_list}
@@ -743,6 +752,7 @@ def benchmark_web_tabs(
         session = session_factory()
 
         def _record(endpoint: str, out: Dict[str, Any], iteration_idx: int) -> bool:
+            """Internal helper for record."""
             worker_total[endpoint] += 1
             worker_samples[endpoint].append(float(out.get("elapsed_ms") or 0.0))
             if out.get("ok"):
@@ -1078,6 +1088,7 @@ def benchmark_web_chat_turns(
     think_time = max(0, int(think_time_ms)) / 1000.0
 
     def _worker(worker_idx: int) -> Dict[str, Any]:
+        """Internal helper for worker."""
         worker_errors: List[Dict[str, Any]] = []
         worker_samples: Dict[str, List[float]] = {k: [] for k in endpoint_samples}
         worker_success: Dict[str, int] = {k: 0 for k in endpoint_samples}
@@ -1090,6 +1101,7 @@ def benchmark_web_chat_turns(
         session = session_factory()
 
         def _record(endpoint: str, out: Dict[str, Any], iteration_idx: int) -> bool:
+            """Internal helper for record."""
             worker_total[endpoint] += 1
             worker_samples[endpoint].append(float(out.get("elapsed_ms") or 0.0))
             if out.get("ok"):

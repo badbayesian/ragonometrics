@@ -25,10 +25,12 @@ DEFAULT_SUGGESTION_LIMIT = 20
 
 
 def _db_url() -> str:
+    """Internal helper for db url."""
     return str(os.environ.get("DATABASE_URL") or "").strip()
 
 
 def _to_iso(value: Any) -> str:
+    """Internal helper for to iso."""
     if value is None:
         return ""
     if hasattr(value, "isoformat"):
@@ -40,6 +42,7 @@ def _to_iso(value: Any) -> str:
 
 
 def _json_obj(value: Any) -> Dict[str, Any]:
+    """Internal helper for json obj."""
     if isinstance(value, dict):
         return value
     if isinstance(value, str):
@@ -52,6 +55,7 @@ def _json_obj(value: Any) -> Dict[str, Any]:
 
 
 def _json_list(value: Any) -> List[Any]:
+    """Internal helper for json list."""
     if isinstance(value, list):
         return value
     if isinstance(value, str):
@@ -64,10 +68,12 @@ def _json_list(value: Any) -> List[Any]:
 
 
 def _tokenize(text: str) -> List[str]:
+    """Internal helper for tokenize."""
     return [item for item in re.sub(r"[^a-z0-9\s]+", " ", str(text or "").lower()).split() if item]
 
 
 def _keyword_overlap(seed_text: str, candidate_text: str) -> float:
+    """Internal helper for keyword overlap."""
     seed_tokens = set(_tokenize(seed_text))
     cand_tokens = set(_tokenize(candidate_text))
     if not seed_tokens or not cand_tokens:
@@ -79,6 +85,7 @@ def _keyword_overlap(seed_text: str, candidate_text: str) -> float:
 
 
 def _weighted_jaccard(left: Dict[str, float], right: Dict[str, float]) -> float:
+    """Internal helper for weighted jaccard."""
     keys = set(left) | set(right)
     if not keys:
         return 0.0
@@ -95,6 +102,7 @@ def _weighted_jaccard(left: Dict[str, float], right: Dict[str, float]) -> float:
 
 
 def _extract_topic_signature(meta: Dict[str, Any]) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, float]]:
+    """Internal helper for extract topic signature."""
     topics: Dict[str, float] = {}
     concepts: Dict[str, float] = {}
     for item in _json_list(meta.get("topics")):
@@ -128,6 +136,7 @@ def _extract_topic_signature(meta: Dict[str, Any]) -> Tuple[Dict[str, float], Di
 
 
 def _openalex_by_path() -> Dict[str, Dict[str, Any]]:
+    """Internal helper for openalex by path."""
     db_url = _db_url()
     if not db_url:
         return {}
@@ -157,6 +166,7 @@ def _match_openalex_meta(
     *,
     by_path: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Any]:
+    """Internal helper for match openalex meta."""
     normalized = papers_service.normalize_paper_path(ref.path).lower()
     direct = by_path.get(normalized)
     if isinstance(direct, dict) and direct:
@@ -171,6 +181,7 @@ def _match_openalex_meta(
 
 
 def _paper_ref_map(*, project_id: Optional[str] = None) -> Dict[str, papers_service.PaperRef]:
+    """Internal helper for paper ref map."""
     settings = load_settings()
     refs = papers_service.list_papers(settings=settings)
     scoped_project = str(project_id or "").strip()
@@ -190,6 +201,7 @@ def _paper_ref_map_scoped(project_id: Optional[str]) -> Dict[str, papers_service
 
 
 def _project_paper_ids(project_id: str) -> List[str]:
+    """Internal helper for project paper ids."""
     db_url = _db_url()
     if not db_url:
         return []
@@ -213,6 +225,7 @@ def _project_paper_ids(project_id: str) -> List[str]:
 
 
 def _overview_map(refs: Sequence[papers_service.PaperRef]) -> Dict[str, Dict[str, Any]]:
+    """Internal helper for overview map."""
     out: Dict[str, Dict[str, Any]] = {}
     for ref in refs:
         out[ref.paper_id] = papers_service.paper_overview(ref)
@@ -286,6 +299,7 @@ def suggest_similar_papers(
 
 
 def _normalize_questions(questions: Sequence[str]) -> List[Dict[str, str]]:
+    """Internal helper for normalize questions."""
     rows: List[Dict[str, str]] = []
     seen = set()
     for raw in questions:
@@ -307,6 +321,7 @@ def _latest_cache_rows(
     normalized_questions: Sequence[str],
     project_id: Optional[str] = None,
 ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    """Internal helper for latest cache rows."""
     db_url = _db_url()
     if not db_url or not paper_paths or not normalized_questions:
         return {}
@@ -384,6 +399,7 @@ def _latest_cache_rows(
 
 
 def _canonical_structured_map() -> Dict[str, Dict[str, str]]:
+    """Internal helper for canonical structured map."""
     out: Dict[str, Dict[str, str]] = {}
     for item in structured_service.structured_report_questions():
         question = str(item.get("question") or "")
@@ -399,6 +415,7 @@ def _canonical_structured_map() -> Dict[str, Dict[str, str]]:
 
 
 def _structured_fields_from_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Internal helper for structured fields from record."""
     payload = record.get("output_json") if isinstance(record.get("output_json"), dict) else {}
     if not payload:
         payload = record.get("payload_json") if isinstance(record.get("payload_json"), dict) else {}
@@ -413,6 +430,7 @@ def _structured_fields_from_record(record: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _build_summary(cells: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """Internal helper for build summary."""
     total = len(cells)
     counts = {"cached": 0, "missing": 0, "generated": 0, "failed": 0}
     for row in cells:
@@ -444,6 +462,7 @@ def _persist_comparison(
     project_id: Optional[str],
     persona_id: Optional[str],
 ) -> None:
+    """Internal helper for persist comparison."""
     db_url = _db_url()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required.")
@@ -530,6 +549,7 @@ def _validate_paper_ids(
     paper_ids: Sequence[str],
     project_id: Optional[str],
 ) -> Tuple[List[papers_service.PaperRef], Optional[str]]:
+    """Internal helper for validate paper ids."""
     refs_by_id = _paper_ref_map_scoped(project_id)
     ordered_ids: List[str] = []
     seen = set()
@@ -724,6 +744,7 @@ def list_comparison_runs(
 
 
 def _comparison_run_row(comparison_id: str, *, project_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Internal helper for comparison run row."""
     db_url = _db_url()
     if not db_url:
         return None
@@ -779,6 +800,7 @@ def _comparison_run_row(comparison_id: str, *, project_id: Optional[str] = None)
 
 
 def _comparison_cells(comparison_id: str, *, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Internal helper for comparison cells."""
     db_url = _db_url()
     if not db_url:
         return []
@@ -831,6 +853,7 @@ def _comparison_cells(comparison_id: str, *, project_id: Optional[str] = None) -
 
 
 def _overviews_for_ids(paper_ids: Sequence[str]) -> List[Dict[str, Any]]:
+    """Internal helper for overviews for ids."""
     refs = _paper_ref_map()
     rows: List[Dict[str, Any]] = []
     for pid in paper_ids:
@@ -902,6 +925,7 @@ def _update_cell(
     structured_fields: Optional[Dict[str, Any]],
     error_text: Optional[str],
 ) -> None:
+    """Internal helper for update cell."""
     db_url = _db_url()
     if not db_url:
         return
@@ -938,6 +962,7 @@ def _update_cell(
 
 
 def _refresh_run_summary(comparison_id: str) -> Dict[str, Any]:
+    """Internal helper for refresh run summary."""
     db_url = _db_url()
     if not db_url:
         return {}
@@ -986,6 +1011,7 @@ def _structured_fields_for_paper_question(
     model: str,
     question_normalized: str,
 ) -> Dict[str, Any]:
+    """Internal helper for structured fields for paper question."""
     canonical = _canonical_structured_map()
     canonical_item = canonical.get(question_normalized) or {}
     if not canonical_item:

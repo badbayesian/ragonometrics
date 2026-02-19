@@ -9,12 +9,14 @@ from ragonometrics.services.papers import PaperRef, load_prepared
 
 
 def _tokens(text: Any) -> Set[str]:
+    """Internal helper for tokens."""
     raw = str(text or "").lower()
     vals = re.findall(r"[a-z0-9]+", raw)
     return {item for item in vals if len(item) >= 4}
 
 
 def _safe_int(value: Any) -> Optional[int]:
+    """Internal helper for safe int."""
     try:
         return int(value)
     except Exception:
@@ -22,6 +24,7 @@ def _safe_int(value: Any) -> Optional[int]:
 
 
 def _chunk_meta(chunk: Any) -> Tuple[Optional[int], Optional[int], Optional[int], str]:
+    """Internal helper for chunk meta."""
     if not isinstance(chunk, dict):
         return None, None, None, str(chunk or "")
     page = _safe_int(chunk.get("page"))
@@ -32,6 +35,7 @@ def _chunk_meta(chunk: Any) -> Tuple[Optional[int], Optional[int], Optional[int]
 
 
 def _ranges_overlap(start_a: Optional[int], end_a: Optional[int], start_b: Optional[int], end_b: Optional[int]) -> bool:
+    """Internal helper for ranges overlap."""
     if start_a is None or end_a is None or start_b is None or end_b is None:
         return False
     if start_a > end_a or start_b > end_b:
@@ -40,6 +44,7 @@ def _ranges_overlap(start_a: Optional[int], end_a: Optional[int], start_b: Optio
 
 
 def _warning(code: str, message: str) -> Dict[str, str]:
+    """Internal helper for warning."""
     return {"code": str(code or ""), "message": str(message or "")}
 
 

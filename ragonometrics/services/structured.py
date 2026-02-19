@@ -48,7 +48,8 @@ def is_valid_structured_question_text(value: Any) -> bool:
     return not any(p.search(text) for p in _INVALID_STRUCTURED_QUESTION_PATTERNS)
 
 
-def _streamlit_confidence_from_retrieval_stats(stats: Dict[str, Any]) -> Tuple[str, float, str]:
+def _confidence_from_retrieval_stats(stats: Dict[str, Any]) -> Tuple[str, float, str]:
+    """Internal helper for confidence from retrieval stats."""
     method = str(stats.get("method") or "unknown")
     raw_score = stats.get("score_mean_norm")
     if not isinstance(raw_score, (int, float)):
@@ -77,7 +78,7 @@ def structured_fields_from_context(
 ) -> Dict[str, Any]:
     """Build structured fields payload for generated answers."""
     parsed_chunks = parse_context_chunks(context)
-    confidence, confidence_score, retrieval_method = _streamlit_confidence_from_retrieval_stats(retrieval_stats)
+    confidence, confidence_score, retrieval_method = _confidence_from_retrieval_stats(retrieval_stats)
     anchors = []
     for chunk in parsed_chunks[: max(1, int(top_k))]:
         anchors.append(
@@ -108,11 +109,13 @@ def structured_fields_from_context(
 
 
 def _structured_run_id(*, paper_path: str, model: str) -> str:
+    """Internal helper for structured run id."""
     key = f"{paper_path}||{model}"
     return f"flask-structured-{hashlib.sha256(key.encode('utf-8')).hexdigest()[:24]}"
 
 
 def _input_hash(*, paper_path: str, model: str, question_id: str, question: str) -> str:
+    """Internal helper for input hash."""
     payload = f"{paper_path}||{model}||{question_id}||{normalize_question_key(question)}"
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
@@ -124,6 +127,7 @@ def _existing_idempotent_answer(
     question_id: str,
     idempotency_key: str,
 ) -> Optional[Dict[str, Any]]:
+    """Internal helper for existing idempotent answer."""
     if not idempotency_key:
         return None
     with pooled_connection(db_url) as conn:
@@ -448,6 +452,7 @@ def db_workflow_question_records_for_paper(
 
 
 def _payload_has_full_structured_fields(payload: Optional[Dict[str, Any]]) -> bool:
+    """Internal helper for payload has full structured fields."""
     if not isinstance(payload, dict):
         return False
     return (
@@ -458,6 +463,7 @@ def _payload_has_full_structured_fields(payload: Optional[Dict[str, Any]]) -> bo
 
 
 def _structured_payload_from_question_record(record: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Internal helper for structured payload from question record."""
     if not isinstance(record, dict):
         return {}
     output_obj = record.get("output_json") if isinstance(record.get("output_json"), dict) else {}
@@ -707,9 +713,11 @@ def structured_workstream_pdf_bytes(bundle: Dict[str, Any]) -> Optional[bytes]:
         return None
 
     def _pdf_safe_text(value: Any) -> str:
+        """Internal helper for pdf safe text."""
         return str(value or "").encode("latin-1", "replace").decode("latin-1")
 
     def _pdf_force_wrap_text(pdf: Any, text: Any, width: float) -> str:
+        """Internal helper for pdf force wrap text."""
         safe_text = _pdf_safe_text(text).replace("\r\n", "\n").replace("\r", "\n")
         if not safe_text:
             return ""
@@ -753,6 +761,7 @@ def structured_workstream_pdf_bytes(bundle: Dict[str, Any]) -> Optional[bytes]:
         return "\n".join(out_lines)
 
     def _pdf_write_wrapped(pdf: Any, *, line_height: float, text: Any) -> None:
+        """Internal helper for pdf write wrapped."""
         printable_width = float(getattr(pdf, "w", 0.0)) - float(getattr(pdf, "l_margin", 0.0)) - float(
             getattr(pdf, "r_margin", 0.0)
         )

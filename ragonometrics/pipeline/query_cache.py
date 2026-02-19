@@ -77,6 +77,7 @@ def profile_hash(value: str) -> str:
 
 
 def _is_nonempty_answer(value: Any) -> bool:
+    """Internal helper for is nonempty answer."""
     return bool(str(value or "").strip())
 
 
@@ -89,6 +90,7 @@ def _legacy_upsert_sql_params(
     context: str,
     answer: str,
 ) -> tuple[str, tuple[Any, ...]]:
+    """Internal helper for legacy upsert sql params."""
     sql = """
         INSERT INTO retrieval.query_cache
         (cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at)
@@ -115,6 +117,7 @@ def _legacy_upsert_sql_params(
 
 
 def _guardrail_where_sql() -> str:
+    """Internal helper for guardrail where sql."""
     return (
         "COALESCE(paper_fingerprint, '') = %s "
         "AND COALESCE(prompt_profile_hash, '') = %s "
@@ -275,6 +278,7 @@ def get_cached_answer_hybrid(
 
 
 def _is_canonical_share_question(query: str) -> bool:
+    """Internal helper for is canonical share question."""
     normalized = normalize_query_for_cache(query)
     if not normalized:
         return False

@@ -16,6 +16,7 @@ from ragonometrics.web.api import api_bp
 
 
 def _record_request_failure(component: str, error: str, context: dict[str, Any]) -> None:
+    """Internal helper for record request failure."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         return
@@ -41,16 +42,19 @@ def create_app() -> Flask:
 
     @app.before_request
     def attach_request_id():
+        """Handle attach request id."""
         req_id = str(request.headers.get("X-Request-Id") or "").strip() or uuid4().hex
         g.request_id = req_id
 
     @app.after_request
     def attach_headers(response):
+        """Handle attach headers."""
         response.headers["X-Request-Id"] = str(getattr(g, "request_id", "") or "")
         return response
 
     @app.errorhandler(ValidationError)
     def handle_validation_error(exc: ValidationError):
+        """Handle handle validation error."""
         _record_request_failure(
             "web_api_validation",
             str(exc),
@@ -67,6 +71,7 @@ def create_app() -> Flask:
 
     @app.errorhandler(Exception)
     def handle_unexpected_error(exc: Exception):
+        """Handle handle unexpected error."""
         _record_request_failure(
             "web_api",
             str(exc),
@@ -90,10 +95,12 @@ def create_app() -> Flask:
 
     @app.get("/healthz")
     def healthz():
+        """Handle healthz."""
         return {"ok": True, "status": "healthy"}
 
     @app.get("/")
     def index():
+        """Handle index."""
         index_path = static_dir / "index.html"
         if index_path.exists():
             return send_from_directory(static_dir, "index.html")
@@ -104,6 +111,7 @@ def create_app() -> Flask:
 
     @app.get("/<path:path>")
     def spa(path: str):
+        """Handle spa."""
         if path.startswith("api/"):
             return {"ok": False, "error": {"code": "not_found", "message": "Not found"}}, 404
         file_path = static_dir / path

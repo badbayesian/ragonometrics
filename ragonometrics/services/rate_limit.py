@@ -9,6 +9,7 @@ from ragonometrics.db.connection import pooled_connection
 
 
 def _window_start(now: datetime, window_seconds: int) -> datetime:
+    """Internal helper for window start."""
     epoch = int(now.timestamp())
     floored = epoch - (epoch % max(1, int(window_seconds)))
     return datetime.fromtimestamp(floored, tz=timezone.utc)

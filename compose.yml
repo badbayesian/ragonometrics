@@ -1,9 +1,6 @@
 x-app-env: &app_env
   OPENAI_API_KEY: ${OPENAI_API_KEY}
   OPENAI_MODEL: ${OPENAI_MODEL}
-  STREAMLIT_USERS_JSON: ${STREAMLIT_USERS_JSON}
-  STREAMLIT_USERNAME: ${STREAMLIT_USERNAME}
-  STREAMLIT_PASSWORD: ${STREAMLIT_PASSWORD}
   OPENALEX_API_KEY: ${OPENALEX_API_KEY}
   OPENALEX_MAILTO: ${OPENALEX_MAILTO}
   # Use an internal container-safe DB URL by default so host env overrides
@@ -60,20 +57,6 @@ services:
     profiles: ["ops"]
     command: >
       sh -lc "echo frontend tests passed"
-
-  streamlit:
-    build: .
-    command: >
-      sh -lc "alembic -c /app/alembic.ini -x db_url=$${DATABASE_URL} upgrade head &&
-      streamlit run ragonometrics/ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0"
-    ports:
-      - "8585:8501"
-    environment:
-      <<: *app_env
-      PAPERS_DIR: /app/papers
-    volumes:
-      - ${PAPERS_HOST_DIR}:/app/papers:rw
-    restart: unless-stopped
 
   worker:
     build: .

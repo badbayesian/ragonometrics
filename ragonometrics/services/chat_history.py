@@ -12,10 +12,12 @@ MAX_HISTORY_LIMIT = 200
 
 
 def _clean_username(username: Optional[str]) -> str:
+    """Internal helper for clean username."""
     return str(username or "").strip()
 
 
 def _history_scope_sql(*, user_id: Optional[int], username: str) -> tuple[str, List[Any]]:
+    """Internal helper for history scope sql."""
     if user_id is not None:
         return (
             "(user_id = %s OR (user_id IS NULL AND lower(username) = lower(%s)))",

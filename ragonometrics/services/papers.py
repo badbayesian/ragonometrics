@@ -24,11 +24,13 @@ class PaperRef:
 
 
 def _fallback_title_from_name(name: str) -> str:
+    """Internal helper for fallback title from name."""
     stem = Path(str(name or "")).stem
     return " ".join(stem.replace("_", " ").split())
 
 
 def _openalex_work_url(value: Any) -> str:
+    """Internal helper for openalex work url."""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -37,6 +39,7 @@ def _openalex_work_url(value: Any) -> str:
 
 
 def _openalex_author_names(meta: Dict[str, Any]) -> List[str]:
+    """Internal helper for openalex author names."""
     names: List[str] = []
     seen = set()
     for authorship in meta.get("authorships") or []:
@@ -55,6 +58,7 @@ def _openalex_author_names(meta: Dict[str, Any]) -> List[str]:
 
 
 def _openalex_author_items(meta: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Internal helper for openalex author items."""
     items: List[Dict[str, str]] = []
     seen = set()
     for authorship in meta.get("authorships") or []:
@@ -86,6 +90,7 @@ def _openalex_author_items(meta: Dict[str, Any]) -> List[Dict[str, str]]:
 
 
 def _abstract_from_inverted_index(inv: Any) -> str:
+    """Internal helper for abstract from inverted index."""
     if not isinstance(inv, dict):
         return ""
     positions: List[int] = []

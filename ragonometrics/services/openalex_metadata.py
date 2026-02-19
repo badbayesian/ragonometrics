@@ -14,6 +14,7 @@ from ragonometrics.services.papers import PaperRef, load_prepared
 
 
 def _openalex_work_id(value: Any) -> str:
+    """Internal helper for openalex work id."""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -30,11 +31,13 @@ def _openalex_work_id(value: Any) -> str:
 
 
 def _openalex_work_url(value: Any) -> str:
+    """Internal helper for openalex work url."""
     work_id = _openalex_work_id(value)
     return f"https://openalex.org/{work_id}" if work_id else ""
 
 
 def _normalize_openalex_api_url(value: str) -> str:
+    """Internal helper for normalize openalex api url."""
     text = str(value or "").strip()
     if not text:
         return ""
@@ -55,6 +58,7 @@ def _normalize_openalex_api_url(value: str) -> str:
 
 
 def _author_names(meta: Dict[str, Any]) -> List[str]:
+    """Internal helper for author names."""
     out: List[str] = []
     seen = set()
     for authorship in meta.get("authorships") or []:
@@ -73,10 +77,12 @@ def _author_names(meta: Dict[str, Any]) -> List[str]:
 
 
 def _normalize_path_text(path_text: str) -> str:
+    """Internal helper for normalize path text."""
     return str(path_text or "").replace("\\", "/").strip()
 
 
 def _alias_paths_for_paper(*, paper_path: str, existing_paths: List[str]) -> List[str]:
+    """Internal helper for alias paths for paper."""
     filename = Path(str(paper_path or "")).name
     aliases = set()
     if paper_path:
@@ -98,6 +104,7 @@ def _upsert_openalex_metadata_rows(
     alias_paths: List[str],
     openalex_meta: Dict[str, Any],
 ) -> int:
+    """Internal helper for upsert openalex metadata rows."""
     if not alias_paths:
         return 0
     title = str(openalex_meta.get("display_name") or openalex_meta.get("title") or "").strip()
@@ -219,6 +226,7 @@ def manual_link_openalex_for_paper(
 
 
 def _openalex_author_names(meta: Dict[str, Any]) -> List[str]:
+    """Internal helper for openalex author names."""
     names: List[str] = []
     for authorship in meta.get("authorships") or []:
         if not isinstance(authorship, dict):
@@ -258,6 +266,7 @@ def _openalex_author_items(meta: Dict[str, Any]) -> List[Dict[str, str]]:
 
 
 def _abstract_from_inverted_index(inv: Any) -> str:
+    """Internal helper for abstract from inverted index."""
     if not isinstance(inv, dict):
         return ""
     positions: List[int] = []
@@ -278,6 +287,7 @@ def _abstract_from_inverted_index(inv: Any) -> str:
 
 
 def _work_or_entity_url(raw_id: str) -> str:
+    """Internal helper for work or entity url."""
     value = str(raw_id or "").strip()
     if not value:
         return ""
@@ -286,6 +296,7 @@ def _work_or_entity_url(raw_id: str) -> str:
 
 
 def _openalex_venue(meta: Dict[str, Any]) -> str:
+    """Internal helper for openalex venue."""
     primary = meta.get("primary_location") or {}
     source = primary.get("source") or {}
     venue = str(source.get("display_name") or "").strip()

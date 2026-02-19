@@ -41,6 +41,7 @@ class AnthropicProvider:
         self._client = Anthropic(api_key=key)
 
     def _payload(self, request: GenerateRequest) -> dict[str, Any]:
+        """Internal helper for payload."""
         max_tokens = int(request.max_output_tokens or 1024)
         payload: dict[str, Any] = {
             "model": request.model,

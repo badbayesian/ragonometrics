@@ -36,6 +36,7 @@ _INVALID_CHAT_ANSWER_PATTERNS = (
 
 
 def _is_valid_chat_answer(value: Any) -> bool:
+    """Internal helper for is valid chat answer."""
     text = str(value or "").strip()
     if not text:
         return False
@@ -126,6 +127,7 @@ def suggested_paper_questions(*, paper_title: Optional[str] = None) -> List[str]
 
 
 def _resolve_chat_endpoint(runtime_or_client: Any, usage_context: str) -> Any:
+    """Internal helper for resolve chat endpoint."""
     if not hasattr(runtime_or_client, "chat"):
         return runtime_or_client
     usage = (usage_context or "").strip().lower()
@@ -217,6 +219,7 @@ def _chat_user_input(
     citec_context: str,
     history_context: str,
 ) -> str:
+    """Internal helper for chat user input."""
     parts: List[str] = []
     if history_context:
         parts.append(
@@ -537,9 +540,11 @@ def stream_chat_turn(
     stream_result: Dict[str, Any] = {"answer": "", "error": None}
 
     def _on_delta(text: str) -> None:
+        """Internal helper for on delta."""
         delta_queue.put(str(text or ""))
 
     def _run_stream() -> None:
+        """Internal helper for run stream."""
         try:
             stream_result["answer"] = stream_llm_answer(
                 client=runtime,

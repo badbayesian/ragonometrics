@@ -53,14 +53,17 @@ api_bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 
 def _request_id() -> str:
+    """Internal helper for request id."""
     return str(getattr(g, "request_id", "") or uuid4().hex)
 
 
 def _ok(data: Any, *, status: int = 200):
+    """Internal helper for ok."""
     return jsonify({"ok": True, "data": data, "request_id": _request_id()}), status
 
 
 def _err(code: str, message: str, *, status: int = 400):
+    """Internal helper for err."""
     return jsonify({"ok": False, "error": {"code": code, "message": message}, "request_id": _request_id()}), status
 
 
@@ -88,10 +91,12 @@ def _log_mutation(event: str, *, paper_id: Optional[str] = None, extra: Optional
 
 
 def _db_url() -> str:
+    """Internal helper for db url."""
     return (os.environ.get("DATABASE_URL") or "").strip()
 
 
 def _current_project_context() -> projects_service.ProjectContext:
+    """Internal helper for current project context."""
     context = getattr(g, "project_context", None)
     if isinstance(context, projects_service.ProjectContext):
         return context
@@ -203,19 +208,23 @@ def _send_new_account_alert_email(
 
 
 def _session_cookie_name() -> str:
+    """Internal helper for session cookie name."""
     return str(current_app.config.get("WEB_SESSION_COOKIE_NAME", "rag_session"))
 
 
 def _csrf_cookie_name() -> str:
+    """Internal helper for csrf cookie name."""
     return str(current_app.config.get("WEB_CSRF_COOKIE_NAME", "rag_csrf"))
 
 
 def _cookie_secure() -> bool:
+    """Internal helper for cookie secure."""
     raw = str(current_app.config.get("WEB_COOKIE_SECURE", "1")).strip().lower()
     return raw in {"1", "true", "yes", "on"}
 
 
 def _cookie_samesite() -> str:
+    """Internal helper for cookie samesite."""
     value = str(current_app.config.get("WEB_COOKIE_SAMESITE", "Lax")).strip() or "Lax"
     if value.lower() not in {"lax", "strict", "none"}:
         return "Lax"
@@ -223,6 +232,7 @@ def _cookie_samesite() -> str:
 
 
 def _set_auth_cookies(response: Response, *, session_id: str, csrf_token: str) -> None:
+    """Internal helper for set auth cookies."""
     max_age = int(current_app.config.get("WEB_SESSION_MAX_AGE_SECONDS", 60 * 60 * 12))
     cookie_kwargs = {
         "max_age": max_age,
@@ -244,11 +254,13 @@ def _set_auth_cookies(response: Response, *, session_id: str, csrf_token: str) -
 
 
 def _clear_auth_cookies(response: Response) -> None:
+    """Internal helper for clear auth cookies."""
     response.delete_cookie(_session_cookie_name(), path="/")
     response.delete_cookie(_csrf_cookie_name(), path="/")
 
 
 def _rate_limit(*, subject_key: str, route: str, limit_env: str, window_env: str) -> Optional[tuple]:
+    """Internal helper for rate limit."""
     db_url = _db_url()
     limit_count = int(os.getenv(limit_env, "10"))
     window_seconds = int(os.getenv(window_env, "60"))
@@ -269,6 +281,7 @@ def _rate_limit(*, subject_key: str, route: str, limit_env: str, window_env: str
 
 
 def _csrf_valid() -> bool:
+    """Internal helper for csrf valid."""
     expected = str(request.cookies.get(_csrf_cookie_name()) or "")
     provided = str(request.headers.get("X-CSRF-Token") or "")
     return bool(expected and provided and expected == provided)
@@ -279,6 +292,7 @@ def require_auth(fn):
 
     @wraps(fn)
     def wrapper(*args, **kwargs):
+        """Handle wrapper."""
         sid = str(request.cookies.get(_session_cookie_name()) or "").strip()
         user = auth_service.get_session_user(_db_url(), session_id=sid)
         if not user:
@@ -304,6 +318,7 @@ def require_auth(fn):
 
 @api_bp.route("/auth/login", methods=["POST"])
 def login():
+    """Authenticate a user and establish an authenticated web session."""
     try:
         payload = parse_model(LoginRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -373,6 +388,7 @@ def login():
 
 @api_bp.route("/auth/register", methods=["POST"])
 def register():
+    """Create a user account and return an authenticated session for the new user."""
     try:
         payload = parse_model(RegisterRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -430,6 +446,7 @@ def register():
 @api_bp.route("/auth/logout", methods=["POST"])
 @require_auth
 def logout():
+    """Invalidate the current authenticated session and clear auth cookies."""
     sid = str(getattr(g, "session_id", "") or "")
     if sid:
         auth_service.revoke_session(_db_url(), session_id=sid)
@@ -441,6 +458,7 @@ def logout():
 
 @api_bp.route("/auth/forgot-password", methods=["POST"])
 def forgot_password():
+    """Start a password reset flow and send reset instructions when possible."""
     try:
         payload = parse_model(ForgotPasswordRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -478,6 +496,7 @@ def forgot_password():
 
 @api_bp.route("/auth/reset-password", methods=["POST"])
 def reset_password():
+    """Complete a password reset using a valid reset token."""
     try:
         payload = parse_model(ResetPasswordRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -497,6 +516,7 @@ def reset_password():
 @api_bp.route("/auth/me", methods=["GET"])
 @require_auth
 def me():
+    """Return the authenticated user profile and current project/persona context."""
     user = dict(getattr(g, "current_user", {}) or {})
     sid = str(getattr(g, "session_id", "") or "")
     context = _current_project_context()
@@ -535,6 +555,7 @@ def me():
 
 
 def _user_project_map() -> Dict[str, Dict[str, Any]]:
+    """Internal helper for user project map."""
     user = dict(getattr(g, "current_user", {}) or {})
     rows = projects_service.list_user_projects(
         _db_url(),
@@ -545,6 +566,7 @@ def _user_project_map() -> Dict[str, Dict[str, Any]]:
 
 
 def _ensure_project_access_or_404(project_id: str) -> Optional[tuple]:
+    """Internal helper for ensure project access or 404."""
     wanted = str(project_id or "").strip()
     projects = _user_project_map()
     if not wanted or wanted not in projects:
@@ -555,6 +577,7 @@ def _ensure_project_access_or_404(project_id: str) -> Optional[tuple]:
 @api_bp.route("/projects", methods=["GET"])
 @require_auth
 def projects_list():
+    """List projects visible to the authenticated user."""
     user = dict(getattr(g, "current_user", {}) or {})
     rows = projects_service.list_user_projects(
         _db_url(),
@@ -568,6 +591,7 @@ def projects_list():
 @api_bp.route("/projects", methods=["POST"])
 @require_auth
 def projects_create():
+    """Create a new project owned by the authenticated user."""
     payload = request.get_json(silent=True) or {}
     name = str((payload or {}).get("name") or "").strip()
     user = dict(getattr(g, "current_user", {}) or {})
@@ -587,6 +611,7 @@ def projects_create():
 @api_bp.route("/projects/current", methods=["GET"])
 @require_auth
 def projects_current():
+    """Return the currently selected project and persona context."""
     context = _current_project_context()
     personas = projects_service.list_project_personas(_db_url(), project_id=context.project_id)
     return _ok(
@@ -606,6 +631,7 @@ def projects_current():
 @api_bp.route("/projects/<project_id>/select", methods=["POST"])
 @require_auth
 def projects_select(project_id: str):
+    """Set the active project for the current authenticated session."""
     user = dict(getattr(g, "current_user", {}) or {})
     try:
         context = projects_service.select_project(
@@ -637,6 +663,7 @@ def projects_select(project_id: str):
 @api_bp.route("/projects/<project_id>/members", methods=["POST"])
 @require_auth
 def projects_add_member(project_id: str):
+    """Add a member to a project when the caller has sufficient permissions."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -665,6 +692,7 @@ def projects_add_member(project_id: str):
 @api_bp.route("/projects/<project_id>/papers", methods=["GET"])
 @require_auth
 def projects_list_papers(project_id: str):
+    """List papers currently attached to the selected project."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -675,6 +703,7 @@ def projects_list_papers(project_id: str):
 @api_bp.route("/projects/<project_id>/papers", methods=["POST"])
 @require_auth
 def projects_add_paper(project_id: str):
+    """Attach a paper to the selected project scope."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -703,6 +732,7 @@ def projects_add_paper(project_id: str):
 @api_bp.route("/projects/<project_id>/settings", methods=["PATCH"])
 @require_auth
 def projects_patch_settings(project_id: str):
+    """Update editable project-level settings for the selected project."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -732,6 +762,7 @@ def projects_patch_settings(project_id: str):
 @api_bp.route("/projects/<project_id>/personas", methods=["GET"])
 @require_auth
 def projects_personas(project_id: str):
+    """List personas available for the selected project."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -742,6 +773,7 @@ def projects_personas(project_id: str):
 @api_bp.route("/projects/<project_id>/personas/<persona_id>/select", methods=["POST"])
 @require_auth
 def projects_select_persona(project_id: str, persona_id: str):
+    """Set the active persona for the current authenticated session."""
     access_err = _ensure_project_access_or_404(project_id)
     if access_err is not None:
         return access_err
@@ -778,6 +810,7 @@ def projects_select_persona(project_id: str, persona_id: str):
 @api_bp.route("/papers", methods=["GET"])
 @require_auth
 def papers():
+    """List available papers for the current project context."""
     settings = load_settings()
     refs = papers_service.list_papers(settings=settings)
     context = _current_project_context()
@@ -793,6 +826,7 @@ def papers():
 @api_bp.route("/papers/<paper_id>", methods=["GET"])
 @require_auth
 def paper_detail(paper_id: str):
+    """Return detailed metadata for a single paper in scope."""
     ref, error = _resolve_paper_or_404(paper_id)
     if error is not None:
         return error
@@ -802,6 +836,7 @@ def paper_detail(paper_id: str):
 @api_bp.route("/papers/<paper_id>/overview", methods=["GET"])
 @require_auth
 def paper_overview(paper_id: str):
+    """Return overview content for a single paper."""
     ref, error = _resolve_paper_or_404(paper_id)
     if error is not None:
         return error
@@ -811,6 +846,7 @@ def paper_overview(paper_id: str):
 @api_bp.route("/papers/<paper_id>/content", methods=["GET"])
 @require_auth
 def paper_content(paper_id: str):
+    """Return normalized content payloads for a single paper."""
     ref, error = _resolve_paper_or_404(paper_id)
     if error is not None:
         return error
@@ -821,6 +857,7 @@ def paper_content(paper_id: str):
 
 
 def _resolve_paper_or_404(paper_id: str):
+    """Internal helper for resolve paper or 404."""
     ref = papers_service.resolve_paper(paper_id, settings=load_settings())
     if not ref:
         return None, _err("paper_not_found", "Unknown paper id.", status=404)
@@ -834,6 +871,7 @@ def _resolve_paper_or_404(paper_id: str):
 
 
 def _paper_title_hint(ref: papers_service.PaperRef) -> str:
+    """Internal helper for paper title hint."""
     overview = papers_service.paper_overview(ref)
     title = str(overview.get("display_title") or overview.get("title") or "").strip()
     if title:
@@ -845,6 +883,7 @@ def _paper_title_hint(ref: papers_service.PaperRef) -> str:
 @api_bp.route("/compare/similar-papers", methods=["GET"])
 @require_auth
 def compare_similar_papers():
+    """Return similar-paper suggestions for comparison workflows."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -875,6 +914,7 @@ def compare_similar_papers():
 @api_bp.route("/compare/runs", methods=["POST"])
 @require_auth
 def compare_create_run():
+    """Create and start a multi-paper comparison run."""
     try:
         payload = parse_model(CompareCreateRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -913,6 +953,7 @@ def compare_create_run():
 @api_bp.route("/compare/runs", methods=["GET"])
 @require_auth
 def compare_list_runs():
+    """List comparison runs for the current project and user context."""
     try:
         limit = int(request.args.get("limit") or 50)
     except Exception:
@@ -936,6 +977,7 @@ def compare_list_runs():
 @api_bp.route("/compare/runs/<comparison_id>", methods=["GET"])
 @require_auth
 def compare_get_run(comparison_id: str):
+    """Return detailed results for a specific comparison run."""
     context = _current_project_context()
     try:
         data = paper_compare_service.get_comparison_run(
@@ -952,6 +994,7 @@ def compare_get_run(comparison_id: str):
 @api_bp.route("/compare/runs/<comparison_id>/fill-missing", methods=["POST"])
 @require_auth
 def compare_fill_missing(comparison_id: str):
+    """Backfill missing comparison outputs for an existing run."""
     try:
         payload = parse_model(CompareFillMissingRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -987,6 +1030,7 @@ def compare_fill_missing(comparison_id: str):
 @api_bp.route("/compare/runs/<comparison_id>/export", methods=["POST"])
 @require_auth
 def compare_export(comparison_id: str):
+    """Export comparison results in the requested format."""
     try:
         payload = parse_model(CompareExportRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1016,6 +1060,7 @@ def compare_export(comparison_id: str):
 @api_bp.route("/workflow/runs", methods=["GET"])
 @require_auth
 def workflow_runs():
+    """List workflow runs for a paper under the current access scope."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1046,6 +1091,7 @@ def workflow_runs():
 @api_bp.route("/workflow/runs/<run_id>/steps", methods=["GET"])
 @require_auth
 def workflow_run_steps(run_id: str):
+    """Return step-level details for one workflow run."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1092,6 +1138,7 @@ def workflow_run_steps(run_id: str):
 @api_bp.route("/papers/<paper_id>/notes", methods=["GET"])
 @require_auth
 def paper_notes_list(paper_id: str):
+    """List viewer notes for a paper in the current user/project scope."""
     ref, error = _resolve_paper_or_404(paper_id)
     if error is not None:
         return error
@@ -1115,6 +1162,7 @@ def paper_notes_list(paper_id: str):
 @api_bp.route("/papers/<paper_id>/notes", methods=["POST"])
 @require_auth
 def paper_notes_create(paper_id: str):
+    """Create a new viewer note for a paper."""
     try:
         payload = parse_model(PaperNoteCreateRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1148,6 +1196,7 @@ def paper_notes_create(paper_id: str):
 @api_bp.route("/papers/<paper_id>/notes/<int:note_id>", methods=["PATCH"])
 @require_auth
 def paper_notes_update(paper_id: str, note_id: int):
+    """Update a viewer note owned by the current user."""
     try:
         payload = parse_model(PaperNoteUpdateRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1178,6 +1227,7 @@ def paper_notes_update(paper_id: str, note_id: int):
 @api_bp.route("/papers/<paper_id>/notes/<int:note_id>", methods=["DELETE"])
 @require_auth
 def paper_notes_delete(paper_id: str, note_id: int):
+    """Delete a viewer note owned by the current user."""
     ref, error = _resolve_paper_or_404(paper_id)
     if error is not None:
         return error
@@ -1210,6 +1260,7 @@ def paper_notes_delete(paper_id: str, note_id: int):
 @api_bp.route("/openalex/metadata", methods=["GET"])
 @require_auth
 def openalex_metadata():
+    """Return OpenAlex metadata for a selected paper."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1226,6 +1277,7 @@ def openalex_metadata():
 @api_bp.route("/openalex/metadata/manual-link", methods=["POST"])
 @require_auth
 def openalex_metadata_manual_link():
+    """Manually link a paper to a specific OpenAlex work record."""
     try:
         payload = parse_model(OpenAlexManualLinkRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1258,6 +1310,7 @@ def openalex_metadata_manual_link():
 @api_bp.route("/openalex/citation-network", methods=["GET"])
 @require_auth
 def openalex_citation_network():
+    """Return citation network data for a selected paper."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1291,6 +1344,7 @@ def openalex_citation_network():
 @api_bp.route("/cache/chat/inspect", methods=["GET"])
 @require_auth
 def cache_chat_inspect():
+    """Inspect cached chat entries for the current paper and context."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     question = str(request.args.get("question") or "").strip()
     if not paper_id:
@@ -1323,6 +1377,7 @@ def cache_chat_inspect():
 @api_bp.route("/cache/structured/inspect", methods=["GET"])
 @require_auth
 def cache_structured_inspect():
+    """Inspect cached structured-answer entries for the current paper and context."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1340,6 +1395,7 @@ def cache_structured_inspect():
 @api_bp.route("/chat/provenance-score", methods=["POST"])
 @require_auth
 def chat_provenance_score():
+    """Compute a provenance score for a candidate chat answer."""
     try:
         payload = parse_model(ChatProvenanceScoreRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1362,6 +1418,7 @@ def chat_provenance_score():
 @api_bp.route("/chat/turn", methods=["POST"])
 @require_auth
 def chat_turn():
+    """Execute one non-streaming chat turn and return the full response payload."""
     try:
         payload = parse_model(ChatTurnRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1432,6 +1489,7 @@ def chat_turn():
 @api_bp.route("/chat/turn-stream", methods=["POST"])
 @require_auth
 def chat_turn_stream():
+    """Execute one streaming chat turn and emit NDJSON events."""
     try:
         payload = parse_model(ChatTurnRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1456,6 +1514,7 @@ def chat_turn_stream():
     context = _current_project_context()
 
     def stream_rows() -> Iterable[str]:
+        """Handle stream rows."""
         persisted = False
         _log_mutation(
             "chat.turn_stream_start",
@@ -1535,6 +1594,7 @@ def chat_turn_stream():
 @api_bp.route("/chat/suggestions", methods=["GET"])
 @require_auth
 def chat_suggestions():
+    """Return suggested prompt starters for chat in the current context."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1554,6 +1614,7 @@ def chat_suggestions():
 @api_bp.route("/chat/history", methods=["GET"])
 @require_auth
 def chat_history_get():
+    """Return persisted chat history for the current user and context."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1580,6 +1641,7 @@ def chat_history_get():
 @api_bp.route("/chat/history", methods=["DELETE"])
 @require_auth
 def chat_history_delete():
+    """Delete persisted chat history for the current user and context."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1602,12 +1664,14 @@ def chat_history_delete():
 @api_bp.route("/structured/questions", methods=["GET"])
 @require_auth
 def structured_questions():
+    """Return the canonical structured question set for the current configuration."""
     return _ok({"questions": structured_service.structured_report_questions()})
 
 
 @api_bp.route("/structured/answers", methods=["GET"])
 @require_auth
 def structured_answers():
+    """Return cached structured answers for the selected paper."""
     paper_id = str(request.args.get("paper_id") or "").strip()
     if not paper_id:
         return _err("validation_error", "paper_id is required.", status=422)
@@ -1627,6 +1691,7 @@ def structured_answers():
 @api_bp.route("/structured/generate", methods=["POST"])
 @require_auth
 def structured_generate():
+    """Generate structured answers for requested papers and questions."""
     try:
         payload = parse_model(StructuredGenerateRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1663,6 +1728,7 @@ def structured_generate():
 @api_bp.route("/structured/generate-missing", methods=["POST"])
 @require_auth
 def structured_generate_missing():
+    """Generate only missing structured answers in the selected scope."""
     try:
         payload = parse_model(StructuredGenerateMissingRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1695,6 +1761,7 @@ def structured_generate_missing():
 @api_bp.route("/structured/export", methods=["POST"])
 @require_auth
 def structured_export():
+    """Export structured answers using the requested export format and scope."""
     try:
         payload = parse_model(StructuredExportRequest, request.get_json(silent=True))
     except ValidationError as exc:
@@ -1743,6 +1810,7 @@ def structured_export():
 @api_bp.route("/usage/summary", methods=["GET"])
 @require_auth
 def usage_summary():
+    """Return aggregate usage metrics for the current account scope."""
     since = str(request.args.get("since") or "").strip() or None
     session_only = str(request.args.get("session_only") or "0").strip().lower() not in {"0", "false", "no"}
     session_id = str(getattr(g, "session_id", "") or "") if session_only else None
@@ -1764,6 +1832,7 @@ def usage_summary():
 @api_bp.route("/usage/by-model", methods=["GET"])
 @require_auth
 def usage_by_model():
+    """Return usage metrics grouped by model for the current scope."""
     since = str(request.args.get("since") or "").strip() or None
     session_only = str(request.args.get("session_only") or "0").strip().lower() not in {"0", "false", "no"}
     session_id = str(getattr(g, "session_id", "") or "") if session_only else None
@@ -1785,6 +1854,7 @@ def usage_by_model():
 @api_bp.route("/usage/recent", methods=["GET"])
 @require_auth
 def usage_recent():
+    """Return recent usage events for the current account scope."""
     try:
         limit = int(request.args.get("limit") or 200)
     except Exception:

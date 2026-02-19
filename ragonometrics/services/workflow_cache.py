@@ -23,10 +23,12 @@ _STEP_ORDER_INDEX = {name: idx for idx, name in enumerate(_TOP_LEVEL_STEP_ORDER)
 
 
 def _db_url() -> str:
+    """Internal helper for db url."""
     return (os.environ.get("DATABASE_URL") or "").strip()
 
 
 def _to_iso(value: Any) -> str:
+    """Internal helper for to iso."""
     if value is None:
         return ""
     if hasattr(value, "isoformat"):
@@ -38,6 +40,7 @@ def _to_iso(value: Any) -> str:
 
 
 def _to_int(value: Any) -> int:
+    """Internal helper for to int."""
     try:
         return int(value or 0)
     except Exception:
@@ -45,6 +48,7 @@ def _to_int(value: Any) -> int:
 
 
 def _to_float(value: Any) -> float:
+    """Internal helper for to float."""
     try:
         return float(value or 0.0)
     except Exception:
@@ -52,6 +56,7 @@ def _to_float(value: Any) -> float:
 
 
 def _json_obj(value: Any) -> Dict[str, Any]:
+    """Internal helper for json obj."""
     if isinstance(value, dict):
         return value
     if isinstance(value, str):
@@ -64,6 +69,7 @@ def _json_obj(value: Any) -> Dict[str, Any]:
 
 
 def _json_list(value: Any) -> List[Any]:
+    """Internal helper for json list."""
     if isinstance(value, list):
         return value
     if isinstance(value, str):
@@ -94,6 +100,7 @@ def paper_match_predicates(paper_path: str) -> Dict[str, str]:
 
 
 def _match_kind_for_row(*, papers_dir: str, paper_path: str) -> Optional[str]:
+    """Internal helper for match kind for row."""
     predicates = paper_match_predicates(paper_path)
     run_path = normalize_path_for_match(papers_dir)
     if not run_path:
@@ -114,6 +121,7 @@ def run_belongs_to_paper(run_row: Dict[str, Any], paper_path: str) -> bool:
 
 
 def _run_row_payload(row: Any, *, paper_path: str) -> Dict[str, Any]:
+    """Internal helper for run row payload."""
     (
         run_id,
         status,
@@ -318,6 +326,7 @@ def list_steps_for_run(run_id: str, project_id: Optional[str] = None) -> List[Di
         return []
 
     def _sort_key(item: Dict[str, Any]) -> Any:
+        """Internal helper for sort key."""
         return (
             _STEP_ORDER_INDEX.get(str(item.get("step") or ""), 999),
             str(item.get("started_at") or item.get("created_at") or ""),
@@ -505,6 +514,7 @@ def summarize_usage_by_step(usage_rows: List[Dict[str, Any]]) -> Dict[str, Dict[
 
 
 def _aggregate_usage_for_steps(usage_rows: List[Dict[str, Any]], step_names: List[str]) -> Dict[str, Any]:
+    """Internal helper for aggregate usage for steps."""
     names = {str(name or "").strip() for name in step_names if str(name or "").strip()}
     filtered = [row for row in usage_rows if str(row.get("step") or "") in names]
     models = sorted({str(row.get("model") or "").strip() for row in filtered if str(row.get("model") or "").strip()})
@@ -545,6 +555,7 @@ def derive_agentic_internals(
             confidence_labels[confidence] = confidence_labels.get(confidence, 0) + 1
 
     def _status_from_presence(count: int) -> str:
+        """Internal helper for status from presence."""
         if count > 0:
             return "completed"
         if agentic_status in {"failed", "skipped"}:

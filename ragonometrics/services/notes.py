@@ -9,10 +9,12 @@ from ragonometrics.db.connection import pooled_connection
 
 
 def _clean_username(username: str) -> str:
+    """Internal helper for clean username."""
     return str(username or "").strip()
 
 
 def _scope_sql(*, user_id: Optional[int], username: str) -> tuple[str, List[Any]]:
+    """Internal helper for scope sql."""
     if user_id is not None:
         return (
             "(user_id = %s OR (user_id IS NULL AND lower(username) = lower(%s)))",
@@ -30,6 +32,7 @@ def list_notes(
     paper_id: str,
     page_number: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
+    """Return notes for a paper scoped to the requesting user and project."""
     clean_user = _clean_username(username)
     clean_project = str(project_id or "").strip()
     clean_paper = str(paper_id or "").strip()
@@ -98,6 +101,7 @@ def create_note(
     note_text: str,
     color: Optional[str] = None,
 ) -> Dict[str, Any]:
+    """Create a paper note and return the created note record."""
     clean_user = _clean_username(username)
     clean_project = str(project_id or "").strip()
     clean_paper = str(paper_id or "").strip()
@@ -155,6 +159,7 @@ def update_note(
     highlight_text: Optional[str] = None,
     highlight_terms: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
+    """Update a user-scoped paper note and return the latest stored record."""
     clean_user = _clean_username(username)
     clean_project = str(project_id or "").strip()
     if not db_url or not clean_user or int(note_id) <= 0:
@@ -213,6 +218,7 @@ def delete_note(
     username: str,
     project_id: Optional[str] = None,
 ) -> bool:
+    """Delete a user-scoped paper note and report whether deletion succeeded."""
     clean_user = _clean_username(username)
     clean_project = str(project_id or "").strip()
     if not db_url or not clean_user or int(note_id) <= 0:

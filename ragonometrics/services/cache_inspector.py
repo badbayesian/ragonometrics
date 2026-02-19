@@ -33,6 +33,7 @@ _INVALID_CHAT_ANSWER_PATTERNS = (
 
 
 def _is_valid_answer(value: Any) -> bool:
+    """Internal helper for is valid answer."""
     text = str(value or "").strip()
     if not text:
         return False
@@ -40,6 +41,7 @@ def _is_valid_answer(value: Any) -> bool:
 
 
 def _preview(value: Any, *, max_chars: int = 240) -> str:
+    """Internal helper for preview."""
     text = str(value or "").strip()
     if len(text) <= max_chars:
         return text
@@ -47,6 +49,7 @@ def _preview(value: Any, *, max_chars: int = 240) -> str:
 
 
 def _cache_row_by_key(cache_key: str) -> Dict[str, Any]:
+    """Internal helper for cache row by key."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url or not cache_key:
         return {}
@@ -81,6 +84,7 @@ def _cache_row_by_key(cache_key: str) -> Dict[str, Any]:
 
 
 def _cache_row_by_normalized_query(*, query_normalized: str, paper_path: str, model: str) -> Dict[str, Any]:
+    """Internal helper for cache row by normalized query."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url or not query_normalized:
         return {}

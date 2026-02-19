@@ -1,4 +1,4 @@
-"""Primary CLI entrypoints for indexing, querying, UI, and benchmarks. Wires top-level commands to core pipeline components."""
+"""Primary CLI entrypoints for indexing, querying, web runtime, and benchmarks."""
 
 from __future__ import annotations
 
@@ -236,23 +236,6 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_ui(args: argparse.Namespace) -> int:
-    """Launch the Streamlit UI.
-
-    Args:
-        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
-
-    Returns:
-        int: Computed integer result.
-    """
-    app_path = Path(__file__).resolve().parents[1] / "ui" / "streamlit_app.py"
-    try:
-        return subprocess.call([sys.executable, "-m", "streamlit", "run", str(app_path)])
-    except FileNotFoundError:
-        print("Streamlit is not installed.")
-        return 1
-
-
 def cmd_web(args: argparse.Namespace) -> int:
     """Launch the Flask web app (API + SPA static assets)."""
     app_target = "ragonometrics.web.app:create_app()"
@@ -318,8 +301,8 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 def cmd_benchmark_web_cache(args: argparse.Namespace) -> int:
     """Benchmark concurrent web access to cached structured questions."""
     base_url = str(args.base_url or "http://localhost:8590").strip()
-    identifier = str(args.identifier or os.getenv("STREAMLIT_USERNAME", "")).strip()
-    password = str(args.password or os.getenv("STREAMLIT_PASSWORD", "")).strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
     credentials_file = str(args.credentials_file or "").strip() or None
     if not credentials_file and (not identifier or not password):
         print("Provide --identifier/--password or --credentials-file.")
@@ -379,8 +362,8 @@ def cmd_benchmark_web_cache(args: argparse.Namespace) -> int:
 def cmd_benchmark_web_tabs(args: argparse.Namespace) -> int:
     """Benchmark web tab endpoint reads under concurrent users."""
     base_url = str(args.base_url or "http://localhost:8590").strip()
-    identifier = str(args.identifier or os.getenv("STREAMLIT_USERNAME", "")).strip()
-    password = str(args.password or os.getenv("STREAMLIT_PASSWORD", "")).strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
     credentials_file = str(args.credentials_file or "").strip() or None
     if not credentials_file and (not identifier or not password):
         print("Provide --identifier/--password or --credentials-file.")
@@ -434,8 +417,8 @@ def cmd_benchmark_web_tabs(args: argparse.Namespace) -> int:
 def cmd_benchmark_web_chat(args: argparse.Namespace) -> int:
     """Benchmark concurrent web chat turns and cache-hit behavior."""
     base_url = str(args.base_url or "http://localhost:8590").strip()
-    identifier = str(args.identifier or os.getenv("STREAMLIT_USERNAME", "")).strip()
-    password = str(args.password or os.getenv("STREAMLIT_PASSWORD", "")).strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
     credentials_file = str(args.credentials_file or "").strip() or None
     if not credentials_file and (not identifier or not password):
         print("Provide --identifier/--password or --credentials-file.")
@@ -791,9 +774,6 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--model", type=str, default=None)
     q.set_defaults(func=cmd_query)
 
-    u = sub.add_parser("ui", help="Launch the Streamlit UI")
-    u.set_defaults(func=cmd_ui)
-
     web = sub.add_parser("web", help="Launch Flask web API + SPA")
     web.add_argument("--host", type=str, default="0.0.0.0")
     web.add_argument("--port", type=int, default=8590)
@@ -830,8 +810,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     bw = sub.add_parser("benchmark-web-cache", help="Benchmark concurrent access to cached structured questions on web API")
     bw.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
-    bw.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", os.getenv("STREAMLIT_USERNAME", "")))
-    bw.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", os.getenv("STREAMLIT_PASSWORD", "")))
+    bw.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bw.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
     bw.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
     bw.add_argument("--users", type=int, default=20, help="Number of concurrent virtual users.")
     bw.add_argument("--iterations", type=int, default=5, help="Structured tab reads per user.")
@@ -859,8 +839,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     bt = sub.add_parser("benchmark-web-tabs", help="Benchmark tab-level web API endpoint reads")
     bt.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
-    bt.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", os.getenv("STREAMLIT_USERNAME", "")))
-    bt.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", os.getenv("STREAMLIT_PASSWORD", "")))
+    bt.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bt.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
     bt.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
     bt.add_argument("--users", type=int, default=20)
     bt.add_argument("--iterations", type=int, default=3)
@@ -890,8 +870,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     bc = sub.add_parser("benchmark-web-chat", help="Benchmark web chat turns and cache-hit behavior")
     bc.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
-    bc.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", os.getenv("STREAMLIT_USERNAME", "")))
-    bc.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", os.getenv("STREAMLIT_PASSWORD", "")))
+    bc.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bc.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
     bc.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
     bc.add_argument("--users", type=int, default=10)
     bc.add_argument("--iterations", type=int, default=3)

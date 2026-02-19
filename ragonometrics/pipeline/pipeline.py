@@ -175,6 +175,7 @@ def call_llm(
     max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
 
     def _resolve_chat_endpoint(runtime_or_client: Any) -> Any:
+        """Internal helper for resolve chat endpoint."""
         if not hasattr(runtime_or_client, "chat"):
             return runtime_or_client
         usage = (usage_context or "").strip().lower()

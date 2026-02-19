@@ -31,16 +31,19 @@ class ProjectContext:
 
 
 def _safe_username(value: Any) -> str:
+    """Internal helper for safe username."""
     return str(value or "").strip()
 
 
 def _slugify(value: str) -> str:
+    """Internal helper for slugify."""
     text = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower())
     text = text.strip("-")
     return text or "project"
 
 
 def _ensure_defaults(conn, *, user_id: Optional[int]) -> None:
+    """Internal helper for ensure defaults."""
     cur = conn.cursor()
     cur.execute(
         """
@@ -107,6 +110,7 @@ def _ensure_defaults(conn, *, user_id: Optional[int]) -> None:
 
 
 def _list_user_projects_conn(conn, *, user_id: Optional[int]) -> List[Dict[str, Any]]:
+    """Internal helper for list user projects conn."""
     if user_id is None:
         return [
             {
@@ -162,6 +166,7 @@ def _list_user_projects_conn(conn, *, user_id: Optional[int]) -> List[Dict[str, 
 
 
 def _list_project_personas_conn(conn, *, project_id: str) -> List[Dict[str, Any]]:
+    """Internal helper for list project personas conn."""
     cur = conn.cursor()
     cur.execute(
         """

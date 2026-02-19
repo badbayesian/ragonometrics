@@ -11,6 +11,7 @@ DEFAULT_PROJECT_ID = "default-shared"
 
 
 def _database_url() -> str:
+    """Internal helper for database url."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         raise RuntimeError("DATABASE_URL is required for usage queries.")
@@ -26,6 +27,7 @@ def _where_sql(
     account_username: Optional[str],
     project_id: Optional[str],
 ) -> tuple[str, List[Any]]:
+    """Internal helper for where sql."""
     clauses: List[str] = []
     params: List[Any] = []
     if session_id:
