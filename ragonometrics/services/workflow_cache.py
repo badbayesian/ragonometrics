@@ -27,6 +27,12 @@ def _db_url() -> str:
     return (os.environ.get("DATABASE_URL") or "").strip()
 
 
+def _project_scope_params(project_id: str) -> tuple[str, str, str]:
+    """Return repeated project-scope SQL parameters."""
+    scoped = str(project_id or "").strip()
+    return (scoped, scoped, scoped)
+
+
 def _to_iso(value: Any) -> str:
     """Internal helper for to iso."""
     if value is None:
@@ -155,6 +161,25 @@ def _run_row_payload(row: Any, *, paper_path: str) -> Dict[str, Any]:
     }
 
 
+def _usage_row_payload(row: Any) -> Dict[str, Any]:
+    """Normalize one token-usage row into API payload shape."""
+    return {
+        "step": str(row[0] or ""),
+        "model": str(row[1] or ""),
+        "question_id": str(row[2] or ""),
+        "call_count": _to_int(row[3]),
+        "input_tokens": _to_int(row[4]),
+        "output_tokens": _to_int(row[5]),
+        "total_tokens": _to_int(row[6]),
+        "cost_usd_total": _to_float(row[7]),
+    }
+
+
+def _usage_rows_payload(rows: List[Any]) -> List[Dict[str, Any]]:
+    """Normalize token-usage result rows into response payloads."""
+    return [_usage_row_payload(row) for row in rows]
+
+
 def list_runs_for_paper(paper_path: str, limit: int = 50, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return paper-scoped workflow runs ordered by recency."""
     db_url = _db_url()
@@ -163,6 +188,7 @@ def list_runs_for_paper(paper_path: str, limit: int = 50, project_id: Optional[s
     predicates = paper_match_predicates(paper_path)
     bounded_limit = max(1, min(200, int(limit or 50)))
     scoped_project = str(project_id or "").strip()
+    scope_params = _project_scope_params(scoped_project)
     out: List[Dict[str, Any]] = []
     try:
         with pooled_connection(db_url) as conn:
@@ -201,9 +227,7 @@ def list_runs_for_paper(paper_path: str, limit: int = 50, project_id: Optional[s
                 LIMIT %s
                 """,
                 (
-                    scoped_project,
-                    scoped_project,
-                    scoped_project,
+                    *scope_params,
                     predicates["paper_path"],
                     predicates["paper_dir"],
                     predicates["basename_like"],
@@ -224,6 +248,7 @@ def get_run_record(run_id: str, project_id: Optional[str] = None) -> Optional[Di
     db_url = _db_url()
     wanted = str(run_id or "").strip()
     scoped_project = str(project_id or "").strip()
+    scope_params = _project_scope_params(scoped_project)
     if not db_url or not wanted:
         return None
     try:
@@ -257,7 +282,7 @@ def get_run_record(run_id: str, project_id: Optional[str] = None) -> Optional[Di
                   AND r.run_id = %s
                 LIMIT 1
                 """,
-                (scoped_project, scoped_project, scoped_project, wanted),
+                (*scope_params, wanted),
             )
             row = cur.fetchone()
             if not row:
@@ -272,6 +297,7 @@ def list_steps_for_run(run_id: str, project_id: Optional[str] = None) -> List[Di
     db_url = _db_url()
     wanted = str(run_id or "").strip()
     scoped_project = str(project_id or "").strip()
+    scope_params = _project_scope_params(scoped_project)
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -303,7 +329,7 @@ def list_steps_for_run(run_id: str, project_id: Optional[str] = None) -> List[Di
                   AND record_kind = 'step'
                 ORDER BY COALESCE(started_at, created_at) ASC, step ASC
                 """,
-                (wanted, scoped_project, scoped_project, scoped_project),
+                (wanted, *scope_params),
             )
             for row in cur.fetchall():
                 step_name = str(row[0] or "")
@@ -341,6 +367,7 @@ def list_question_rows_for_run(run_id: str, project_id: Optional[str] = None) ->
     db_url = _db_url()
     wanted = str(run_id or "").strip()
     scoped_project = str(project_id or "").strip()
+    scope_params = _project_scope_params(scoped_project)
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -370,7 +397,7 @@ def list_question_rows_for_run(run_id: str, project_id: Optional[str] = None) ->
                   AND record_kind = 'question'
                 ORDER BY COALESCE(created_at, updated_at) DESC, question_id ASC
                 """,
-                (wanted, scoped_project, scoped_project, scoped_project),
+                (wanted, *scope_params),
             )
             for row in cur.fetchall():
                 out.append(
@@ -397,6 +424,7 @@ def usage_rollup_for_run(run_id: str, project_id: Optional[str] = None) -> List[
     db_url = _db_url()
     wanted = str(run_id or "").strip()
     scoped_project = str(project_id or "").strip()
+    scope_params = _project_scope_params(scoped_project)
     if not db_url or not wanted:
         return []
     out: List[Dict[str, Any]] = []
@@ -424,22 +452,10 @@ def usage_rollup_for_run(run_id: str, project_id: Optional[str] = None) -> List[
                       )
                     ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
                     """,
-                    (wanted, scoped_project, scoped_project, scoped_project),
+                    (wanted, *scope_params),
                 )
                 rows = cur.fetchall()
-                out = [
-                    {
-                        "step": str(row[0] or ""),
-                        "model": str(row[1] or ""),
-                        "question_id": str(row[2] or ""),
-                        "call_count": _to_int(row[3]),
-                        "input_tokens": _to_int(row[4]),
-                        "output_tokens": _to_int(row[5]),
-                        "total_tokens": _to_int(row[6]),
-                        "cost_usd_total": _to_float(row[7]),
-                    }
-                    for row in rows
-                ]
+                out = _usage_rows_payload(rows)
                 return out
             except Exception:
                 cur.execute(
@@ -463,22 +479,10 @@ def usage_rollup_for_run(run_id: str, project_id: Optional[str] = None) -> List[
                     GROUP BY COALESCE(step, ''), COALESCE(model, ''), COALESCE(question_id, '')
                     ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
                     """,
-                    (wanted, scoped_project, scoped_project, scoped_project),
+                    (wanted, *scope_params),
                 )
                 rows = cur.fetchall()
-                out = [
-                    {
-                        "step": str(row[0] or ""),
-                        "model": str(row[1] or ""),
-                        "question_id": str(row[2] or ""),
-                        "call_count": _to_int(row[3]),
-                        "input_tokens": _to_int(row[4]),
-                        "output_tokens": _to_int(row[5]),
-                        "total_tokens": _to_int(row[6]),
-                        "cost_usd_total": _to_float(row[7]),
-                    }
-                    for row in rows
-                ]
+                out = _usage_rows_payload(rows)
                 return out
     except Exception:
         return []

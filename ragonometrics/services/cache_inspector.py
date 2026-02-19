@@ -48,26 +48,22 @@ def _preview(value: Any, *, max_chars: int = 240) -> str:
     return text[: max(1, max_chars - 3)].rstrip() + "..."
 
 
-def _cache_row_by_key(cache_key: str) -> Dict[str, Any]:
-    """Internal helper for cache row by key."""
+def _fetch_cache_row(sql: str, params: tuple[Any, ...]) -> Any:
+    """Execute one cache-row query and return a single row."""
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
-    if not db_url or not cache_key:
-        return {}
+    if not db_url:
+        return None
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at
-                FROM retrieval.query_cache
-                WHERE cache_key = %s
-                LIMIT 1
-                """,
-                (cache_key,),
-            )
-            row = cur.fetchone()
+            cur.execute(sql, params)
+            return cur.fetchone()
     except Exception:
-        return {}
+        return None
+
+
+def _cache_row_payload(row: Any) -> Dict[str, Any]:
+    """Normalize a raw cache row into response payload shape."""
     if not row:
         return {}
     return {
@@ -81,44 +77,41 @@ def _cache_row_by_key(cache_key: str) -> Dict[str, Any]:
         "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7] or ""),
         "valid_answer": _is_valid_answer(row[6]),
     }
+
+
+def _cache_row_by_key(cache_key: str) -> Dict[str, Any]:
+    """Internal helper for cache row by key."""
+    if not cache_key:
+        return {}
+    row = _fetch_cache_row(
+        """
+        SELECT cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at
+        FROM retrieval.query_cache
+        WHERE cache_key = %s
+        LIMIT 1
+        """,
+        (cache_key,),
+    )
+    return _cache_row_payload(row)
 
 
 def _cache_row_by_normalized_query(*, query_normalized: str, paper_path: str, model: str) -> Dict[str, Any]:
     """Internal helper for cache row by normalized query."""
-    db_url = (os.environ.get("DATABASE_URL") or "").strip()
-    if not db_url or not query_normalized:
+    if not query_normalized:
         return {}
-    try:
-        with pooled_connection(db_url) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at
-                FROM retrieval.query_cache
-                WHERE query_normalized = %s
-                  AND paper_path = %s
-                  AND model = %s
-                ORDER BY created_at DESC
-                LIMIT 1
-                """,
-                (query_normalized, normalize_paper_path(paper_path), str(model or "")),
-            )
-            row = cur.fetchone()
-    except Exception:
-        return {}
-    if not row:
-        return {}
-    return {
-        "cache_key": str(row[0] or ""),
-        "query": str(row[1] or ""),
-        "query_normalized": str(row[2] or ""),
-        "paper_path": str(row[3] or ""),
-        "model": str(row[4] or ""),
-        "context_hash": str(row[5] or ""),
-        "answer_preview": _preview(row[6]),
-        "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7] or ""),
-        "valid_answer": _is_valid_answer(row[6]),
-    }
+    row = _fetch_cache_row(
+        """
+        SELECT cache_key, query, query_normalized, paper_path, model, context_hash, answer, created_at
+        FROM retrieval.query_cache
+        WHERE query_normalized = %s
+          AND paper_path = %s
+          AND model = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (query_normalized, normalize_paper_path(paper_path), str(model or "")),
+    )
+    return _cache_row_payload(row)
 
 
 def inspect_chat_cache(
