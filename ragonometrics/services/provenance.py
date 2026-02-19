@@ -48,6 +48,20 @@ def _warning(code: str, message: str) -> Dict[str, str]:
     return {"code": str(code or ""), "message": str(message or "")}
 
 
+def _anchor_is_valid(start_word: Optional[int], end_word: Optional[int]) -> bool:
+    """Return whether citation word anchors form a valid non-negative range."""
+    return start_word is not None and end_word is not None and start_word >= 0 and end_word >= 0 and start_word <= end_word
+
+
+def _status_for_score(score: float) -> str:
+    """Map provenance score to qualitative status label."""
+    if score >= 0.75:
+        return "high"
+    if score >= 0.45:
+        return "medium"
+    return "low"
+
+
 def score_answer_provenance(
     *,
     paper_ref: PaperRef,
@@ -86,7 +100,7 @@ def score_answer_provenance(
             with_page += 1
             if page_set and page not in page_set:
                 page_missing += 1
-        if start_word is not None and end_word is not None and start_word >= 0 and end_word >= 0 and start_word <= end_word:
+        if _anchor_is_valid(start_word, end_word):
             anchor_valid += 1
         elif start_word is not None or end_word is not None:
             anchor_invalid += 1
@@ -125,12 +139,7 @@ def score_answer_provenance(
 
     score = (0.45 * citation_coverage) + (0.35 * lexical_overlap_ratio) + (0.20 * anchor_ratio)
     score = max(0.0, min(1.0, round(score, 3)))
-    if score >= 0.75:
-        status = "high"
-    elif score >= 0.45:
-        status = "medium"
-    else:
-        status = "low"
+    status = _status_for_score(score)
 
     warnings: List[Dict[str, str]] = []
     if citation_count == 0:
