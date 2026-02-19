@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,18 @@ if str(ROOT) not in sys.path:
 from ragonometrics.db.connection import pooled_connection
 from ragonometrics.services import auth as auth_service
 from ragonometrics.web.app import create_app
+
+
+def _set_test_papers_dir(monkeypatch, *, paper_count: int = 2) -> list[Path]:
+    """Create deterministic temporary PDF fixtures and point PAPERS_DIR at them."""
+    papers_dir = Path(tempfile.mkdtemp(prefix="ragonometrics-webapi-papers-"))
+    created: list[Path] = []
+    for idx in range(max(1, int(paper_count))):
+        path = papers_dir / f"paper_{idx + 1}.pdf"
+        path.write_bytes(b"%PDF-1.1\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n")
+        created.append(path)
+    monkeypatch.setenv("PAPERS_DIR", str(papers_dir))
+    return created
 
 
 def _insert_user(username: str, password: str, email: str | None = None) -> None:
@@ -281,7 +294,7 @@ def test_login_rate_limit(monkeypatch) -> None:
 
 def test_paper_scope_and_structured_export(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("user1", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -331,7 +344,7 @@ def test_paper_scope_and_structured_export(monkeypatch) -> None:
 
 def test_chat_stream_emits_ndjson_and_error_event(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("streamer", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -365,7 +378,7 @@ def test_chat_stream_emits_ndjson_and_error_event(monkeypatch) -> None:
 
 def test_structured_export_pdf_render_failure_returns_typed_error(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("pdferr", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -401,7 +414,7 @@ def test_structured_export_pdf_render_failure_returns_typed_error(monkeypatch) -
 
 def test_paper_overview_and_notes_crud(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("notesuser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -459,7 +472,7 @@ def test_paper_overview_and_notes_crud(monkeypatch) -> None:
 
 def test_openalex_metadata_and_network_routes(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("oauser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -538,7 +551,7 @@ def test_openalex_metadata_and_network_routes(monkeypatch) -> None:
 
 def test_chat_suggestions_and_history_routes(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("histuser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -599,7 +612,7 @@ def test_chat_suggestions_and_history_routes(monkeypatch) -> None:
 
 def test_cache_inspector_and_provenance_routes(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("cacheinspector", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -674,7 +687,7 @@ def test_cache_inspector_and_provenance_routes(monkeypatch) -> None:
 
 def test_chat_stream_persists_done_turn(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("streamhist", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -718,7 +731,7 @@ def test_chat_stream_persists_done_turn(monkeypatch) -> None:
 
 def test_usage_routes_are_scoped_to_authenticated_account(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("usage_a", "pass123", email="usage_a@example.com")
     _insert_user("usage_b", "pass123", email="usage_b@example.com")
     app = create_app()
@@ -793,7 +806,7 @@ def test_usage_routes_are_scoped_to_authenticated_account(monkeypatch) -> None:
 
 def test_workflow_runs_lists_only_paper_scoped_runs(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfuser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -820,7 +833,7 @@ def test_workflow_runs_lists_only_paper_scoped_runs(monkeypatch) -> None:
 
 def test_workflow_runs_auto_selects_latest_run(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfauto", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -850,7 +863,7 @@ def test_workflow_runs_auto_selects_latest_run(monkeypatch) -> None:
 
 def test_workflow_steps_returns_top_level_steps_for_run(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfsteps", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -878,7 +891,7 @@ def test_workflow_steps_returns_top_level_steps_for_run(monkeypatch) -> None:
 
 def test_workflow_steps_rejects_scope_mismatch(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfscope", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -897,7 +910,7 @@ def test_workflow_steps_rejects_scope_mismatch(monkeypatch) -> None:
 
 def test_workflow_steps_derives_agentic_internals_from_cached_payload(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfinternal", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -942,7 +955,7 @@ def test_workflow_steps_derives_agentic_internals_from_cached_payload(monkeypatc
 
 def test_workflow_steps_handles_missing_agentic_details_gracefully(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfmissing", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -967,7 +980,7 @@ def test_workflow_steps_handles_missing_agentic_details_gracefully(monkeypatch) 
 
 def test_workflow_steps_include_reuse_metadata_when_present(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("wfreuse", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -997,7 +1010,7 @@ def test_workflow_steps_include_reuse_metadata_when_present(monkeypatch) -> None
 
 def test_compare_routes_create_list_get_fill_export(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("cmpuser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -1110,7 +1123,7 @@ def test_compare_routes_create_list_get_fill_export(monkeypatch) -> None:
 
 def test_projects_endpoints_create_select_and_persona(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("projuser", "pass123")
     app = create_app()
     with app.test_client() as client:
@@ -1158,7 +1171,7 @@ def test_projects_endpoints_create_select_and_persona(monkeypatch) -> None:
 
 def test_papers_route_scopes_to_selected_project_papers(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "dummy")
-    monkeypatch.setenv("PAPERS_DIR", "papers")
+    _set_test_papers_dir(monkeypatch)
     _insert_user("scopeuser", "pass123")
     app = create_app()
     with app.test_client() as client:
