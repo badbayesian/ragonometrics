@@ -1,23 +1,33 @@
 # Workflow Guide
 
-This page focuses on the end-to-end `ragonometrics workflow` command.
+This guide covers `ragonometrics workflow` execution and outputs.
 
-## What a workflow run does
+## Workflow Stages
 
-A run executes:
-1. `prep` (corpus/profile manifest)
-2. `ingest` (PDF extraction + chunking)
-3. `enrich` (OpenAlex/CitEc, when available)
-4. `agentic` (optional, with structured questions)
-5. `index` (optional metadata/index writes)
-6. `evaluate`
-7. `report` (JSON + optional audit artifacts)
+A standard run executes:
 
-All run lineage is persisted to `workflow.run_records` keyed by `run_id`.
+1. `prep`: validate corpus and build run inputs
+2. `ingest`: extract text and chunk paper content
+3. `enrich`: fetch and store metadata enrichment
+4. `agentic`: optional decomposition and synthesis
+5. `index`: optional index writes
+6. `evaluate`: run-level quality and usage accounting
+7. `report`: persist report artifacts
 
-## Docker-first usage
+Run lineage is persisted in `workflow.run_records`.
 
-All papers in mounted `/app/papers`:
+## Structured vs Agentic
+
+- `Structured`: fixed canonical questions for comparability and cache reuse.
+- `Agentic`: open-ended reasoning through planning, retrieval, and synthesis.
+- Common production mode: `--report-question-set both` with `--agentic`.
+
+## Core Commands
+
+Use these entrypoints to run the same workflow in full-corpus, single-paper, or queued mode.
+
+All papers:
+Runs one structured+agentic workflow pass for every paper in the mounted corpus.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -25,22 +35,23 @@ docker compose --profile batch run --rm workflow \
   --papers /app/papers \
   --agentic \
   --agentic-citations \
-  --report-question-set both \
-  --question "What are the paper's main contribution, identification strategy, key results, and limitations?"
+  --report-question-set both
 ```
 
 Single paper:
+Runs the workflow for one specific paper path to speed up targeted reruns.
 
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
-  --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
+  --papers "/app/papers/Your Paper.pdf" \
   --agentic \
   --agentic-citations \
   --report-question-set both
 ```
 
 Async enqueue:
+Creates a queued job so execution continues in a background worker.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -53,47 +64,43 @@ docker compose --profile batch run --rm workflow \
   --meta-db-url "$DATABASE_URL"
 ```
 
-`rq-worker` consumes jobs from `workflow.async_jobs`.
+## Important Flags
 
-## Important flags
-
-- `--papers <dir-or-file>`
-- `--agentic`
-- `--agentic-citations`
-- `--report-question-set structured|agentic|both|none`
-- `--question "<prompt>"`
-- `--workstream-id <id>`
-- `--arm <label>`
-- `--parent-run-id <run_id>`
-- `--trigger-source <label>`
-- `--async`
+| Flag | What it controls | Typical use |
+| --- | --- | --- |
+| `--papers <dir-or-file>` | Input scope for the run (one PDF or a directory of PDFs). | `--papers /app/papers` for full corpus, or a single file path for targeted reruns. |
+| `--agentic` | Enables agentic planning/sub-question synthesis stage. | Use when you want open-ended reasoning beyond fixed structured questions. |
+| `--question "<prompt>"` | Overrides the default main agentic question. | Use for focused investigations, for example one policy or method question. |
+| `--agentic-model <model>` | Model override used by the agentic step. | A/B model quality/cost on the same papers without changing global config. |
+| `--agentic-citations` | Enriches agentic context with citation API evidence. | Use when citation grounding quality matters more than runtime cost. |
+| `--report-question-set structured\|agentic\|both\|none` | Controls which report question bundles are emitted. | `both` for production comparability, `structured` for low-cost runs, `none` for minimal metadata-only runs. |
+| `--meta-db-url <postgres-url>` | Postgres URL for run metadata and workflow record writes. | Use to point a run at a specific DB (dev/staging/prod). |
+| `--queue-db-url <postgres-url>` | Postgres URL for async queue storage (falls back to `--meta-db-url` or `DATABASE_URL`). | Set explicitly when queue DB differs from metadata DB. |
+| `--async` | Enqueues a job instead of running immediately in the current process. | Use for non-blocking execution from CI, API-triggered jobs, or batch orchestration. |
+| `--workstream-id <id>` | Logical grouping key across related runs. | Group a campaign of runs (for example: `wk-2026-02-citation-refresh`). |
+| `--arm <label>` | Variant label for experimental branch/config/model. | Track comparisons like `baseline`, `gpt-5-nano`, `rerank-v2`. |
+| `--parent-run-id <run_id>` | Links a run to a baseline/parent run for lineage. | Use for reruns, remediation runs, or branch comparisons. |
+| `--trigger-source <label>` | Source tag for run initiation. | Standardize labels like `cli`, `api`, `queue`, `cron`, `ci`. |
 
 ## Outputs
 
-Filesystem:
-- `reports/workflow-report-<run_id>.json` (default path)
-- `reports/prep-manifest-<run_id>.json` (default path)
-- `reports/audit-workflow-report-<run_id>.md` (if enabled)
-- `reports/audit-workflow-report-<run_id>-latex.pdf` (if enabled)
+A completed run writes artifacts to both filesystem and Postgres.
 
-Optional organization:
-- You may move generated files into `reports/workflow/`, `reports/prep/`, and `reports/audit/` after runs.
+Filesystem:
+
+- `reports/workflow-report-<run_id>.json`
+- `reports/prep-manifest-<run_id>.json`
+- optional artifacts under `reports/`
 
 Postgres:
-- `workflow.run_records` (run/step/report/question/artifact lineage)
-- `observability.token_usage`
+
+- `workflow.run_records`
 - `retrieval.query_cache`
-- indexing and ingestion tables when indexing is enabled
+- `observability.token_usage`
+- ingestion and indexing tables when indexing is enabled
 
-Structured question payloads in `workflow.run_records` are the source for Streamlit
-`Full` structured exports. If older rows are compact-only, run:
+## Related Documents
 
-```bash
-python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
-```
-
-## Related docs
-
-- `docs/deployment/docker.md`
-- `docs/architecture/workflow_architecture.md`
-- `docs/architecture/data-model-erd.md`
+- [UI guide](ui.md)
+- [Workflow architecture](../architecture/workflow_architecture.md)
+- [Postgres ERD](../architecture/data-model-erd.md)

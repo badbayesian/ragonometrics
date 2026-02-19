@@ -1,14 +1,18 @@
-Ragonometrics
-=============
+# Ragonometrics
 
-Docker-first RAG workflow for economics papers with:
-- Streamlit chat + structured workstream UI
-- Agentic + structured workflow runs
-- OpenAlex/CitEc enrichment
-- Unified Postgres lineage (`workflow.run_records`)
+Ragonometrics is a web app for paper Q&A, structured extraction, and agentic analysis over a local PDF corpus.
 
-Quick Start (Docker)
---------------------
+## What You Get
+
+- Flask API + React web app at `http://localhost:8590`
+- Postgres-backed auth, project scope, workflow lineage, and cache state
+- Structured and agentic workflows
+- OpenAlex metadata and citation enrichment
+
+## Quick Start
+
+Use this path to bring up a working local stack from a cold start.
+
 1. Create `.env`:
 
 ```bash
@@ -17,38 +21,26 @@ PAPERS_HOST_DIR=./papers
 CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
-Optional Streamlit login bootstrap:
-
-```bash
-STREAMLIT_USERS_JSON={"admin":"REDACTED_STREAMLIT_PASSWORD","tester":"REDACTED_STREAMLIT_PASSWORD"}
-```
-
 2. Apply migrations:
 
 ```bash
 docker compose run --rm migrate
 ```
+This bootstraps an empty Postgres instance on cold start by creating the required schemas, tables, and indexes before the app serves requests.
 
-3. Start core services:
-
-```bash
-docker compose up -d --build
-```
-
-This starts: `postgres`, `streamlit`, `rq-worker`, `pgadmin`.
-
-4. Open UI:
-- `http://localhost:8585`
-
-5. Verify papers mount:
+3. Start services:
 
 ```bash
-docker compose exec -T streamlit ls -la /app/papers
+docker compose --profile web up -d --build postgres web rq-worker pgadmin
 ```
 
-Run Workflow
-------------
-All papers:
+4. Open the app:
+
+- `http://localhost:8590`
+
+## Workflow Run (Structured + Agentic)
+
+Use this when you want a full end-to-end analysis pass across the corpus: structured canonical questions plus agentic decomposition/synthesis.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -59,79 +51,51 @@ docker compose --profile batch run --rm workflow \
   --report-question-set both
 ```
 
-Single paper:
+## Common Commands
+
+Use these for routine validation, rebuilds, and targeted reruns.
+
+Frontend tests:
+Checks web UI behavior and catches regressions before deploys.
+
+```bash
+python tools/run_frontend_tests.py
+```
+
+Rebuild the web container:
+Rebuilds and restarts only the web app service after API/UI changes.
+
+```bash
+docker compose --profile web up -d --build web
+```
+
+Single-paper workflow run:
+Runs the same structured+agentic workflow for one target paper file.
 
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
-  --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
+  --papers "/app/papers/Your Paper.pdf" \
   --agentic \
   --agentic-citations \
   --report-question-set both
 ```
 
-Async enqueue:
+Optional manual OpenAlex link:
+Forces a known OpenAlex work mapping when automatic matching is wrong or missing.
 
 ```bash
-docker compose --profile batch run --rm workflow \
-  ragonometrics workflow \
-  --papers /app/papers \
-  --agentic \
-  --report-question-set both \
-  --async \
-  --queue-db-url "$DATABASE_URL" \
-  --meta-db-url "$DATABASE_URL"
+python tools/manual_openalex_link.py \
+  --paper "Your Paper.pdf" \
+  --openalex-api-url "https://api.openalex.org/W123" \
+  --db-url "$DATABASE_URL"
 ```
 
-Streamlit Structured Export
----------------------------
-In **Structured Workstream**:
-- `Compact` export: minimal Q/A view
-- `Full` export: includes confidence, retrieval method, citation anchors, and workflow metadata when available
+## Documentation
 
-If older rows are compact-only:
-- Use **Regenerate Missing Full Fields (Export Scope)** in Streamlit, or
-- Run:
-
-```bash
-python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
-```
-
-Useful Commands
----------------
-Migrate schema:
-
-```bash
-ragonometrics db migrate --db-url "$DATABASE_URL"
-```
-
-Backfill sqlite legacy data:
-
-```bash
-python tools/backfill_sqlite_to_postgres.py --db-url "$DATABASE_URL"
-python tools/validate_backfill_parity.py --db-url "$DATABASE_URL"
-```
-
-Usage rollup:
-
-```bash
-ragonometrics usage --db-url "$DATABASE_URL" --run-id "<run_id>"
-```
-
-OpenAlex metadata store pass:
-
-```bash
-ragonometrics store-openalex-metadata --papers-dir papers --meta-db-url "$DATABASE_URL"
-```
-
-Core Docs
----------
-- Architecture: `docs/architecture/architecture.md`
-- Data model ERD: `docs/architecture/data-model-erd.md`
-- Workflow architecture: `docs/architecture/workflow_architecture.md`
-- Config/env reference: `docs/configuration/configuration.md`
-- UI guide: `docs/guides/ui.md`
-- Workflow guide: `docs/guides/workflow.md`
-- Docker guide: `docs/deployment/docker.md`
-- Migrations/backfill: `docs/deployment/migrations.md`
-- Archived docs: `docs/archive/README.md`
+- [Docker deployment](docs/deployment/docker.md)
+- [UI guide](docs/guides/ui.md)
+- [Workflow guide](docs/guides/workflow.md)
+- [System architecture](docs/architecture/architecture.md)
+- [Workflow architecture](docs/architecture/workflow_architecture.md)
+- [Postgres ERD](docs/architecture/data-model-erd.md)

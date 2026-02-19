@@ -1,46 +1,73 @@
-# Streamlit UI Guide
+# UI Guide
 
-Run UI locally:
+This guide covers the web app at `http://localhost:8590`.
 
-```bash
-ragonometrics ui
-```
+## Access and Session
 
-Docker UI URL:
-- `http://localhost:8585`
+- Login supports either email or username.
+- Account actions from login:
+  - register
+  - forgot password
+  - reset password
+- Header controls may include project and persona selectors.
 
-Tabs
-----
-- `Chat`: retrieval + grounded answers with provenance snapshots.
-- `Structured Workstream`: cached structured questions, generation controls, export (`Compact`/`Full`).
-- `OpenAlex Metadata`: matched OpenAlex payload and bibliographic details.
-- `Citation Network`: OpenAlex citation neighborhood visualization.
-- `Usage`: token usage and model usage summaries.
+## Paper Selection
 
-Structured Workstream
----------------------
-The tab reads/writes structured answers in `workflow.run_records` and supports:
-- cache scope: `Selected model only` or `Any model`
-- export scope: filtered subset or full question set
-- export format:
-  - `Compact`: minimal row shape
-  - `Full`: includes structured fields such as `confidence_score`, `retrieval_method`, `citation_anchors`, and workflow-record metadata when present
+- `Find paper` supports type-to-search.
+- Suggestions are deduped by normalized title.
+- Filters include author, venue, and year.
 
-If a paper has compact-only history, use:
-- `Regenerate Missing Full Fields (Export Scope)` in the UI, or
-- `python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply`.
+## Main Tabs
 
-Authentication
---------------
-Credential precedence:
-1. active DB users in `auth.streamlit_users`
-2. env fallback (`STREAMLIT_USERS_JSON` or `STREAMLIT_USERNAME`/`STREAMLIT_PASSWORD`)
+### Chat
 
-If DB auth tables are empty, env credentials can auto-bootstrap when
-`STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV=1`.
+- `Ask` and `Ask (Stream)` modes
+- Suggested prompts
+- In-flight queue for additional prompts while prior asks are running
+- Evidence panel with citations and PDF viewer jumps
+- Provenance badge with score details
 
-Notes
------
-- Math/function formatting review pass can render Markdown-friendly LaTeX.
-- Optional page snapshots require `pdf2image` + Poppler; OCR highlighting uses `pytesseract`.
-- OpenAlex and CitEc metadata are injected as auxiliary answer context when available.
+### Paper Viewer
+
+- In-app PDF viewing
+- Highlights and notes scoped to the selected paper
+
+### Structured Workstream
+
+- Refresh cached structured answers
+- Generate only missing answers
+- Export compact or full output in JSON/PDF
+
+### OpenAlex Metadata
+
+- View linked metadata and entities
+- Apply manual OpenAlex link override if needed
+
+### Citation Network
+
+- Interactive citation graph
+- Controls for references, citing count, and hop depth
+
+### Usage
+
+- Summary, by-model, and recent usage tables
+- Optional session-only scope
+
+### Compare
+
+- Cache-first multi-paper comparison matrix
+- Fill missing cells
+- Export JSON/CSV
+
+## API Envelope
+
+All `/api/v1` responses use a typed envelope:
+
+- success: `{"ok": true, "data": ..., "request_id": "..."}`
+- error: `{"ok": false, "error": {"code": "...", "message": "..."}, "request_id": "..."}`
+
+## Related Documents
+
+- [Workflow guide](workflow.md)
+- [System architecture](../architecture/architecture.md)
+- [Docker deployment](../deployment/docker.md)

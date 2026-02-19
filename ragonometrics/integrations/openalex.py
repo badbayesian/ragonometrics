@@ -574,6 +574,7 @@ def _build_title_lookup_variants(title: str) -> List[str]:
     seen = set()
 
     def _add_variant(value: str) -> None:
+        """Internal helper for add variant."""
         cleaned = _sanitize_title_for_lookup(value)
         if not cleaned:
             return
@@ -584,7 +585,9 @@ def _build_title_lookup_variants(title: str) -> List[str]:
         out.append(cleaned)
 
     def _swap_token(text: str, pattern: str, replacement: str) -> str:
+        """Internal helper for swap token."""
         def _replace(match: re.Match[str]) -> str:
+            """Internal helper for replace."""
             token = str(match.group(0) or "")
             if token.isupper():
                 return replacement.upper()
@@ -951,6 +954,7 @@ def _choose_best_plausible_candidate(
     requested_key = _title_key(str(requested_title or ""))
 
     def _score(item: Dict[str, Any]) -> tuple:
+        """Internal helper for score."""
         candidate_title = str(item.get("display_name") or item.get("title") or "")
         candidate_key = _title_key(candidate_title)
         similarity = SequenceMatcher(a=requested_key, b=candidate_key).ratio() if requested_key and candidate_key else 0.0
@@ -993,6 +997,7 @@ def is_economics_work(meta: Optional[Dict[str, Any]]) -> bool:
     labels: List[str] = []
 
     def _add(value: Any) -> None:
+        """Internal helper for add."""
         text = str(value or "").strip()
         if text:
             labels.append(text.lower())

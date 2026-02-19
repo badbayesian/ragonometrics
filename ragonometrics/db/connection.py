@@ -13,7 +13,7 @@ from psycopg import connect as pg_connect
 from psycopg_pool import ConnectionPool
 
 
-EXPECTED_ALEMBIC_REVISION = "0006"
+EXPECTED_ALEMBIC_REVISION = "0014"
 _LEGACY_ALEMBIC_ALIASES = {
     "0001_unified_schema": "0001",
     "0002_migrate_workflow_legacy": "0002",
@@ -22,6 +22,14 @@ _LEGACY_ALEMBIC_ALIASES = {
     "0004_run_record_idempotency_usage": "0004",
     "0005_drop_legacy_openalex_cache": "0005",
     "0006_streamlit_auth_tables": "0006",
+    "0007_web_rate_limits": "0007",
+    "0008_web_chat_history": "0008",
+    "0009_web_ux_auth_upgrades": "0009",
+    "0010_paper_comparisons": "0010",
+    "0011_openalex_citation_graph_cache": "0011",
+    "0012_projects_core": "0012",
+    "0013_project_scope_existing_tables": "0013",
+    "0014_hybrid_query_cache": "0014",
 }
 _POOL_LOCK = threading.Lock()
 _POOLS: dict[str, ConnectionPool] = {}

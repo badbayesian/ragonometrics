@@ -1,0 +1,157 @@
+.card {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.caption {
+  color: var(--muted-text);
+  margin: 0.2rem 0 0;
+}
+
+.panel {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: var(--panel-elevated-bg);
+  display: grid;
+  gap: 0.6rem;
+}
+
+.selectionGrid {
+  display: grid;
+  gap: 0.35rem;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.checkboxRow {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.textarea {
+  width: 100%;
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.7rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.button,
+.buttonPrimary {
+  border-radius: 9px;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border-color);
+  background: var(--button-bg);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.buttonPrimary {
+  background: var(--accent-bg);
+  color: var(--accent-fg);
+  border-color: var(--accent-border);
+}
+
+.select {
+  background: var(--input-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  padding: 0.45rem 0.6rem;
+  min-width: 250px;
+}
+
+.error {
+  color: #b0182a;
+  background: #ffe9ec;
+  border: 1px solid #efb8c0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 9px;
+}
+
+.empty {
+  color: var(--muted-text);
+}
+
+.matrixWrap {
+  overflow: auto;
+}
+
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.matrix th,
+.matrix td {
+  border: 1px solid var(--border-color);
+  padding: 0.5rem;
+  vertical-align: top;
+}
+
+.questionCol {
+  min-width: 260px;
+}
+
+.cell {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-color);
+}
+
+.status_cached {
+  background: #e5f6ea;
+}
+
+.status_generated {
+  background: #e8f2ff;
+}
+
+.status_missing {
+  background: #f3f4f7;
+}
+
+.status_failed {
+  background: #fdebec;
+}
+
+.fields {
+  white-space: pre-wrap;
+  font-size: 0.72rem;
+  color: var(--muted-text);
+}

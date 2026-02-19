@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Optional
 
 from openai import OpenAI
@@ -11,21 +12,51 @@ from ragonometrics.llm.interfaces import ProviderCapabilities
 from ragonometrics.llm.types import EmbeddingRequest, EmbeddingResponse, GenerateRequest, GenerateResponse
 
 
+_INVALID_RESPONSE_TEXT_PATTERNS = (
+    re.compile(r"^\s*ResponseTextConfig\(", re.IGNORECASE),
+    re.compile(r"^\s*ResponseFormatText\(", re.IGNORECASE),
+)
+
+
+def _coerce_text_candidate(value: Any) -> str:
+    """Normalize a potential text payload while rejecting config-like objects."""
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple)):
+        parts = [_coerce_text_candidate(item) for item in value]
+        return "\n".join(part for part in parts if part).strip()
+    type_name = str(getattr(type(value), "__name__", "") or "").strip().lower()
+    if type_name in {"responsetextconfig", "responseformattext"}:
+        return ""
+    text = value if isinstance(value, str) else str(value)
+    text = str(text).strip()
+    if not text:
+        return ""
+    if any(pattern.search(text) for pattern in _INVALID_RESPONSE_TEXT_PATTERNS):
+        return ""
+    return text
+
+
 def _extract_text_from_openai_response(response: Any) -> str:
     """Extract text payload from an OpenAI Responses API object."""
-    output_text = getattr(response, "output_text", None) or getattr(response, "text", None)
-    if output_text:
-        return str(output_text).strip()
     parts: list[str] = []
     for item in getattr(response, "output", []) or []:
         if getattr(item, "type", None) != "message":
             continue
         for content in getattr(item, "content", []) or []:
             if getattr(content, "type", None) == "output_text":
-                text = getattr(content, "text", None)
+                text = _coerce_text_candidate(getattr(content, "text", None))
                 if text:
-                    parts.append(str(text))
-    return "\n".join(parts).strip()
+                    parts.append(text)
+    if parts:
+        return "\n".join(parts).strip()
+    output_text = _coerce_text_candidate(getattr(response, "output_text", None))
+    if output_text:
+        return output_text
+    fallback_text = _coerce_text_candidate(getattr(response, "text", None))
+    if fallback_text:
+        return fallback_text
+    return ""
 
 
 def _usage_counts(usage: Any) -> tuple[int, int, int]:
@@ -171,4 +202,3 @@ class OpenAICompatibleProvider(OpenAIProvider):
         if not str(base_url or "").strip():
             raise LLMCapabilityError("openai_compatible provider requires a non-empty base_url")
         super().__init__(api_key=api_key, base_url=base_url, provider_name=self.name)
-

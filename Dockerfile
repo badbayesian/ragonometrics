@@ -1,3 +1,19 @@
+FROM node:20-alpine AS web-build
+
+WORKDIR /webapp
+COPY webapp/package*.json ./
+RUN npm install
+COPY webapp/ ./
+RUN npm run build
+
+FROM node:20-alpine AS web-test
+
+WORKDIR /webapp
+COPY webapp/package*.json ./
+RUN npm install
+COPY webapp/ ./
+RUN npm run test
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -30,6 +46,9 @@ PY
 
 # Copy the project into the image.
 COPY . /app
+
+# Copy built SPA assets into Flask static directory.
+COPY --from=web-build /webapp/dist /app/ragonometrics/web/static
 
 # Install the local package without re-resolving dependencies.
 RUN pip install --no-cache-dir --no-deps -e .

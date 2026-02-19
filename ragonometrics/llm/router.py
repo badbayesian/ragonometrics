@@ -63,6 +63,7 @@ def build_provider_registry(settings: Any) -> Dict[str, Any]:
     registry: Dict[str, Any] = {}
 
     def _register(key: str) -> None:
+        """Internal helper for register."""
         provider_id = str(key or "").strip().lower()
         if not provider_id or provider_id in registry:
             return

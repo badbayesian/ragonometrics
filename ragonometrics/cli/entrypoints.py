@@ -1,8 +1,9 @@
-"""Primary CLI entrypoints for indexing, querying, UI, and benchmarks. Wires top-level commands to core pipeline components."""
+"""Primary CLI entrypoints for indexing, querying, web runtime, and benchmarks."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -10,6 +11,12 @@ from pathlib import Path
 
 from ragonometrics.db.connection import connect, normalize_alembic_version_marker
 from ragonometrics.eval.benchmark import bench_papers
+from ragonometrics.eval.web_cache_benchmark import (
+    benchmark_web_cached_structured_questions,
+    benchmark_web_chat_turns,
+    benchmark_web_tabs,
+    write_web_cache_benchmark_report,
+)
 from ragonometrics.llm.runtime import build_llm_runtime
 from ragonometrics.indexing.indexer import build_index
 from ragonometrics.indexing.paper_store import store_paper_metadata
@@ -29,6 +36,16 @@ from ragonometrics.pipeline.workflow import run_workflow
 from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
 from ragonometrics.integrations.openalex_store import store_openalex_metadata_by_title_author
+from ragonometrics.services import paper_compare as paper_compare_service
+
+
+def _env_int(name: str, default: int) -> int:
+    """Read an integer environment variable with fallback."""
+    raw = str(os.getenv(name, str(default)) or "").strip()
+    try:
+        return int(raw)
+    except Exception:
+        return int(default)
 
 
 def cmd_db_migrate(args: argparse.Namespace) -> int:
@@ -219,20 +236,43 @@ def cmd_query(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_ui(args: argparse.Namespace) -> int:
-    """Launch the Streamlit UI.
-
-    Args:
-        args (argparse.Namespace): Additional arguments forwarded to the underlying call.
-
-    Returns:
-        int: Computed integer result.
-    """
-    app_path = Path(__file__).resolve().parents[1] / "ui" / "streamlit_app.py"
+def cmd_web(args: argparse.Namespace) -> int:
+    """Launch the Flask web app (API + SPA static assets)."""
+    app_target = "ragonometrics.web.app:create_app()"
+    host = str(args.host or "0.0.0.0")
+    port = int(args.port or 8590)
+    workers = int(args.workers or 1)
+    timeout = int(args.timeout or _env_int("WEB_GUNICORN_TIMEOUT", 180))
+    graceful_timeout = int(args.graceful_timeout or _env_int("WEB_GUNICORN_GRACEFUL_TIMEOUT", 30))
+    keep_alive = int(args.keep_alive or _env_int("WEB_GUNICORN_KEEPALIVE", 5))
+    use_gunicorn = bool(args.gunicorn)
+    if use_gunicorn:
+        cmd = [
+            sys.executable,
+            "-m",
+            "gunicorn",
+            "--workers",
+            str(workers),
+            "--timeout",
+            str(timeout),
+            "--graceful-timeout",
+            str(graceful_timeout),
+            "--keep-alive",
+            str(keep_alive),
+            "--bind",
+            f"{host}:{port}",
+            app_target,
+        ]
+        return subprocess.call(cmd)
     try:
-        return subprocess.call([sys.executable, "-m", "streamlit", "run", str(app_path)])
-    except FileNotFoundError:
-        print("Streamlit is not installed.")
+        os.environ.setdefault("WEB_HOST", host)
+        os.environ.setdefault("WEB_PORT", str(port))
+        from ragonometrics.web.app import main as web_main
+
+        web_main()
+        return 0
+    except Exception as exc:
+        print(f"Failed to launch web app: {exc}")
         return 1
 
 
@@ -255,6 +295,184 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
         db_url=args.db_url,
         force_ocr=args.force_ocr,
     )
+    return 0
+
+
+def cmd_benchmark_web_cache(args: argparse.Namespace) -> int:
+    """Benchmark concurrent web access to cached structured questions."""
+    base_url = str(args.base_url or "http://localhost:8590").strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
+    credentials_file = str(args.credentials_file or "").strip() or None
+    if not credentials_file and (not identifier or not password):
+        print("Provide --identifier/--password or --credentials-file.")
+        return 1
+    try:
+        report = benchmark_web_cached_structured_questions(
+            base_url=base_url,
+            identifier=identifier,
+            password=password,
+            users=int(args.users or 20),
+            iterations=int(args.iterations or 5),
+            paper_id=str(args.paper_id or "").strip() or None,
+            paper_name=str(args.paper_name or "").strip() or None,
+            model=str(args.model or "").strip() or None,
+            timeout_seconds=float(args.timeout or 30.0),
+            auth_mode=str(args.auth_mode or "shared-session").strip(),
+            credentials_file=credentials_file,
+            think_time_ms=int(args.think_time_ms or 0),
+            verify_tls=not bool(args.insecure),
+        )
+    except Exception as exc:
+        print(f"Benchmark failed: {exc}")
+        return 1
+
+    out_path = write_web_cache_benchmark_report(report, str(args.out))
+    summary = report.get("summary") if isinstance(report, dict) else {}
+    coverage = report.get("cache_coverage") if isinstance(report, dict) else {}
+    config = report.get("config") if isinstance(report, dict) else {}
+    print(f"Wrote web cache benchmark report to {out_path}")
+    print(
+        "Summary: "
+        f"target={int(summary.get('target_iterations') or 0)}, "
+        f"successful={int(summary.get('successful_iterations') or 0)}, "
+        f"failed={int(summary.get('failed_iterations') or 0)}, "
+        f"throughput={float(summary.get('iterations_per_second') or 0.0):.2f} iter/s"
+    )
+    print(
+        "Cache coverage: "
+        f"avg_ratio={float(coverage.get('avg_ratio') or 0.0):.3f}, "
+        f"min_ratio={float(coverage.get('min_ratio') or 0.0):.3f}, "
+        f"max_ratio={float(coverage.get('max_ratio') or 0.0):.3f}, "
+        f"avg_cached={float(coverage.get('avg_cached_questions') or 0.0):.2f}/"
+        f"{float(coverage.get('avg_total_questions') or 0.0):.2f}"
+    )
+    print(f"Mode: auth_mode={config.get('auth_mode')}, users={config.get('users')}, base_url={config.get('base_url')}")
+
+    avg_ratio = float(coverage.get("avg_ratio") or 0.0)
+    min_ratio_required = float(args.min_cache_ratio or 0.0)
+    if min_ratio_required > 0.0 and avg_ratio < min_ratio_required:
+        print(f"Cache ratio gate failed: avg_ratio={avg_ratio:.3f} < min_required={min_ratio_required:.3f}")
+        return 2
+    if int(summary.get("successful_iterations") or 0) == 0:
+        return 1
+    return 0
+
+
+def cmd_benchmark_web_tabs(args: argparse.Namespace) -> int:
+    """Benchmark web tab endpoint reads under concurrent users."""
+    base_url = str(args.base_url or "http://localhost:8590").strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
+    credentials_file = str(args.credentials_file or "").strip() or None
+    if not credentials_file and (not identifier or not password):
+        print("Provide --identifier/--password or --credentials-file.")
+        return 1
+    try:
+        report = benchmark_web_tabs(
+            base_url=base_url,
+            identifier=identifier,
+            password=password,
+            users=int(args.users or 20),
+            iterations=int(args.iterations or 3),
+            paper_id=str(args.paper_id or "").strip() or None,
+            paper_name=str(args.paper_name or "").strip() or None,
+            model=str(args.model or "").strip() or None,
+            timeout_seconds=float(args.timeout or 30.0),
+            auth_mode=str(args.auth_mode or "shared-session").strip(),
+            credentials_file=credentials_file,
+            think_time_ms=int(args.think_time_ms or 0),
+            verify_tls=not bool(args.insecure),
+            include_chat=not bool(args.no_chat),
+            include_structured=not bool(args.no_structured),
+            include_openalex=not bool(args.no_openalex),
+            include_network=not bool(args.no_network),
+            include_usage=not bool(args.no_usage),
+            network_max_references=int(args.network_max_references or 10),
+            network_max_citing=int(args.network_max_citing or 10),
+            usage_recent_limit=int(args.usage_recent_limit or 200),
+            usage_session_only=bool(args.usage_session_only),
+        )
+    except Exception as exc:
+        print(f"Benchmark failed: {exc}")
+        return 1
+
+    out_path = write_web_cache_benchmark_report(report, str(args.out))
+    summary = report.get("summary") if isinstance(report, dict) else {}
+    config = report.get("config") if isinstance(report, dict) else {}
+    print(f"Wrote web tabs benchmark report to {out_path}")
+    print(
+        "Summary: "
+        f"target={int(summary.get('target_iterations') or 0)}, "
+        f"successful={int(summary.get('successful_iterations') or 0)}, "
+        f"failed={int(summary.get('failed_iterations') or 0)}, "
+        f"throughput={float(summary.get('iterations_per_second') or 0.0):.2f} iter/s"
+    )
+    print(f"Mode: auth_mode={config.get('auth_mode')}, users={config.get('users')}, base_url={config.get('base_url')}")
+    if int(summary.get("successful_iterations") or 0) == 0:
+        return 1
+    return 0
+
+
+def cmd_benchmark_web_chat(args: argparse.Namespace) -> int:
+    """Benchmark concurrent web chat turns and cache-hit behavior."""
+    base_url = str(args.base_url or "http://localhost:8590").strip()
+    identifier = str(args.identifier or os.getenv("WEB_BENCH_IDENTIFIER", "")).strip()
+    password = str(args.password or os.getenv("WEB_BENCH_PASSWORD", "")).strip()
+    credentials_file = str(args.credentials_file or "").strip() or None
+    if not credentials_file and (not identifier or not password):
+        print("Provide --identifier/--password or --credentials-file.")
+        return 1
+    try:
+        report = benchmark_web_chat_turns(
+            base_url=base_url,
+            identifier=identifier,
+            password=password,
+            users=int(args.users or 10),
+            iterations=int(args.iterations or 3),
+            question=str(args.question or "What is the main research question of this paper?").strip(),
+            paper_id=str(args.paper_id or "").strip() or None,
+            paper_name=str(args.paper_name or "").strip() or None,
+            model=str(args.model or "").strip() or None,
+            timeout_seconds=float(args.timeout or 60.0),
+            auth_mode=str(args.auth_mode or "shared-session").strip(),
+            credentials_file=credentials_file,
+            think_time_ms=int(args.think_time_ms or 0),
+            verify_tls=not bool(args.insecure),
+            variation_mode=bool(args.variation_mode),
+            top_k=int(args.top_k) if args.top_k is not None else None,
+        )
+    except Exception as exc:
+        print(f"Benchmark failed: {exc}")
+        return 1
+
+    out_path = write_web_cache_benchmark_report(report, str(args.out))
+    summary = report.get("summary") if isinstance(report, dict) else {}
+    cache = report.get("chat_cache") if isinstance(report, dict) else {}
+    config = report.get("config") if isinstance(report, dict) else {}
+    print(f"Wrote web chat benchmark report to {out_path}")
+    print(
+        "Summary: "
+        f"target={int(summary.get('target_iterations') or 0)}, "
+        f"successful={int(summary.get('successful_iterations') or 0)}, "
+        f"failed={int(summary.get('failed_iterations') or 0)}, "
+        f"throughput={float(summary.get('iterations_per_second') or 0.0):.2f} iter/s"
+    )
+    print(
+        "Chat cache: "
+        f"hit_ratio={float(cache.get('cache_hit_ratio') or 0.0):.3f}, "
+        f"hits={int(cache.get('hit_count') or 0)}/{int(cache.get('sample_count') or 0)}, "
+        f"layers={cache.get('layer_counts') or {}}"
+    )
+    print(f"Mode: auth_mode={config.get('auth_mode')}, users={config.get('users')}, base_url={config.get('base_url')}")
+
+    min_hit_ratio = float(args.min_cache_hit_ratio or 0.0)
+    actual_hit_ratio = float(cache.get("cache_hit_ratio") or 0.0)
+    if min_hit_ratio > 0.0 and actual_hit_ratio < min_hit_ratio:
+        print(f"Cache hit gate failed: hit_ratio={actual_hit_ratio:.3f} < min_required={min_hit_ratio:.3f}")
+        return 2
+    if int(summary.get("successful_iterations") or 0) == 0:
+        return 1
     return 0
 
 
@@ -397,6 +615,131 @@ def cmd_workflow(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare_suggest(args: argparse.Namespace) -> int:
+    """Suggest similar papers for a seed paper id."""
+    try:
+        try:
+            out = paper_compare_service.suggest_similar_papers(
+                str(args.paper_id or "").strip(),
+                limit=int(args.limit or 20),
+                project_id=str(args.project_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.suggest_similar_papers(
+                str(args.paper_id or "").strip(),
+                limit=int(args.limit or 20),
+            )
+    except Exception as exc:
+        print(f"Compare suggest failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_create(args: argparse.Namespace) -> int:
+    """Create one comparison run from paper ids and custom questions."""
+    paper_ids = [str(item or "").strip() for item in list(args.paper_id or []) if str(item or "").strip()]
+    questions = [str(item or "").strip() for item in list(args.question or []) if str(item or "").strip()]
+    try:
+        try:
+            out = paper_compare_service.create_comparison_run(
+                seed_paper_id=str(args.seed_paper_id or "").strip() or None,
+                paper_ids=paper_ids,
+                questions=questions,
+                model=str(args.model or "").strip() or None,
+                name=str(args.name or "").strip() or None,
+                created_by_user_id=None,
+                created_by_username=str(args.username or "cli"),
+                project_id=str(args.project_id or "").strip() or None,
+                persona_id=str(args.persona_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.create_comparison_run(
+                seed_paper_id=str(args.seed_paper_id or "").strip() or None,
+                paper_ids=paper_ids,
+                questions=questions,
+                model=str(args.model or "").strip() or None,
+                name=str(args.name or "").strip() or None,
+                created_by_user_id=None,
+                created_by_username=str(args.username or "cli"),
+            )
+    except Exception as exc:
+        print(f"Compare create failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_show(args: argparse.Namespace) -> int:
+    """Show one comparison run payload."""
+    try:
+        out = paper_compare_service.get_comparison_run(
+            str(args.comparison_id or "").strip(),
+            project_id=str(args.project_id or "").strip() or None,
+        )
+    except TypeError:
+        out = paper_compare_service.get_comparison_run(str(args.comparison_id or "").strip())
+    if not out:
+        print("Comparison run not found.")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_fill_missing(args: argparse.Namespace) -> int:
+    """Fill missing cells for one comparison run."""
+    paper_ids = [str(item or "").strip() for item in list(args.paper_id or []) if str(item or "").strip()]
+    question_ids = [str(item or "").strip() for item in list(args.question_id or []) if str(item or "").strip()]
+    try:
+        try:
+            out = paper_compare_service.fill_missing_cells(
+                comparison_id=str(args.comparison_id or "").strip(),
+                paper_ids=paper_ids,
+                question_ids=question_ids,
+                project_id=str(args.project_id or "").strip() or None,
+                persona_id=str(args.persona_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.fill_missing_cells(
+                comparison_id=str(args.comparison_id or "").strip(),
+                paper_ids=paper_ids,
+                question_ids=question_ids,
+            )
+    except Exception as exc:
+        print(f"Compare fill-missing failed: {exc}")
+        return 1
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_compare_export(args: argparse.Namespace) -> int:
+    """Export one comparison run to JSON or CSV."""
+    fmt = str(args.format or "json").strip().lower()
+    try:
+        try:
+            out = paper_compare_service.export_comparison(
+                str(args.comparison_id or "").strip(),
+                export_format=fmt,
+                project_id=str(args.project_id or "").strip() or None,
+            )
+        except TypeError:
+            out = paper_compare_service.export_comparison(
+                str(args.comparison_id or "").strip(),
+                export_format=fmt,
+            )
+    except Exception as exc:
+        print(f"Compare export failed: {exc}")
+        return 1
+    output_path = Path(args.out) if args.out else Path(out.get("filename") or f"comparison.{fmt}")
+    if fmt == "json":
+        payload = out.get("payload") if isinstance(out.get("payload"), dict) else {}
+        output_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        output_path.write_text(str(out.get("content") or ""), encoding="utf-8")
+    print(f"Wrote {fmt} export to {output_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the CLI argument parser.
 
@@ -431,8 +774,30 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--model", type=str, default=None)
     q.set_defaults(func=cmd_query)
 
-    u = sub.add_parser("ui", help="Launch the Streamlit UI")
-    u.set_defaults(func=cmd_ui)
+    web = sub.add_parser("web", help="Launch Flask web API + SPA")
+    web.add_argument("--host", type=str, default="0.0.0.0")
+    web.add_argument("--port", type=int, default=8590)
+    web.add_argument("--gunicorn", action="store_true", help="Run with gunicorn instead of Flask dev server.")
+    web.add_argument("--workers", type=int, default=2, help="Gunicorn worker count when --gunicorn is set.")
+    web.add_argument(
+        "--timeout",
+        type=int,
+        default=_env_int("WEB_GUNICORN_TIMEOUT", 180),
+        help="Gunicorn hard timeout in seconds.",
+    )
+    web.add_argument(
+        "--graceful-timeout",
+        type=int,
+        default=_env_int("WEB_GUNICORN_GRACEFUL_TIMEOUT", 30),
+        help="Gunicorn graceful worker shutdown timeout in seconds.",
+    )
+    web.add_argument(
+        "--keep-alive",
+        type=int,
+        default=_env_int("WEB_GUNICORN_KEEPALIVE", 5),
+        help="Gunicorn keep-alive duration in seconds.",
+    )
+    web.set_defaults(func=cmd_web)
 
     b = sub.add_parser("benchmark", help="Run benchmark suite")
     b.add_argument("--papers-dir", type=str, default=None)
@@ -442,6 +807,97 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--force-ocr", action="store_true")
     b.add_argument("--db-url", type=str, default=None)
     b.set_defaults(func=cmd_benchmark)
+
+    bw = sub.add_parser("benchmark-web-cache", help="Benchmark concurrent access to cached structured questions on web API")
+    bw.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
+    bw.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bw.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
+    bw.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
+    bw.add_argument("--users", type=int, default=20, help="Number of concurrent virtual users.")
+    bw.add_argument("--iterations", type=int, default=5, help="Structured tab reads per user.")
+    bw.add_argument("--paper-id", type=str, default=None)
+    bw.add_argument("--paper-name", type=str, default=None, help="Optional paper title/name substring match.")
+    bw.add_argument("--model", type=str, default=None, help="Optional model filter for cached structured answers.")
+    bw.add_argument("--timeout", type=float, default=30.0, help="Per-request timeout in seconds.")
+    bw.add_argument(
+        "--auth-mode",
+        type=str,
+        choices=["shared-session", "per-user-login"],
+        default="shared-session",
+        help="shared-session logs in once then fans out reads; per-user-login logs in each virtual user.",
+    )
+    bw.add_argument("--think-time-ms", type=int, default=0, help="Optional delay between iterations per user.")
+    bw.add_argument("--insecure", action="store_true", help="Disable TLS certificate verification.")
+    bw.add_argument("--out", type=str, default="bench/web-cache-benchmark.json")
+    bw.add_argument(
+        "--min-cache-ratio",
+        type=float,
+        default=0.0,
+        help="Optional gate: return non-zero when average cache ratio is below this value.",
+    )
+    bw.set_defaults(func=cmd_benchmark_web_cache)
+
+    bt = sub.add_parser("benchmark-web-tabs", help="Benchmark tab-level web API endpoint reads")
+    bt.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
+    bt.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bt.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
+    bt.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
+    bt.add_argument("--users", type=int, default=20)
+    bt.add_argument("--iterations", type=int, default=3)
+    bt.add_argument("--paper-id", type=str, default=None)
+    bt.add_argument("--paper-name", type=str, default=None)
+    bt.add_argument("--model", type=str, default=None)
+    bt.add_argument("--timeout", type=float, default=30.0)
+    bt.add_argument(
+        "--auth-mode",
+        type=str,
+        choices=["shared-session", "per-user-login"],
+        default="shared-session",
+    )
+    bt.add_argument("--think-time-ms", type=int, default=0)
+    bt.add_argument("--insecure", action="store_true")
+    bt.add_argument("--network-max-references", type=int, default=10)
+    bt.add_argument("--network-max-citing", type=int, default=10)
+    bt.add_argument("--usage-recent-limit", type=int, default=200)
+    bt.add_argument("--usage-session-only", action="store_true")
+    bt.add_argument("--no-chat", action="store_true")
+    bt.add_argument("--no-structured", action="store_true")
+    bt.add_argument("--no-openalex", action="store_true")
+    bt.add_argument("--no-network", action="store_true")
+    bt.add_argument("--no-usage", action="store_true")
+    bt.add_argument("--out", type=str, default="bench/web-tabs-benchmark.json")
+    bt.set_defaults(func=cmd_benchmark_web_tabs)
+
+    bc = sub.add_parser("benchmark-web-chat", help="Benchmark web chat turns and cache-hit behavior")
+    bc.add_argument("--base-url", type=str, default=os.getenv("WEB_BENCH_BASE_URL", "http://localhost:8590"))
+    bc.add_argument("--identifier", type=str, default=os.getenv("WEB_BENCH_IDENTIFIER", ""))
+    bc.add_argument("--password", type=str, default=os.getenv("WEB_BENCH_PASSWORD", ""))
+    bc.add_argument("--credentials-file", type=str, default=None, help="CSV with columns: identifier,password")
+    bc.add_argument("--users", type=int, default=10)
+    bc.add_argument("--iterations", type=int, default=3)
+    bc.add_argument("--paper-id", type=str, default=None)
+    bc.add_argument("--paper-name", type=str, default=None)
+    bc.add_argument("--question", type=str, default="What is the main research question of this paper?")
+    bc.add_argument("--model", type=str, default=None)
+    bc.add_argument("--top-k", type=int, default=None)
+    bc.add_argument("--variation-mode", action="store_true")
+    bc.add_argument("--timeout", type=float, default=60.0)
+    bc.add_argument(
+        "--auth-mode",
+        type=str,
+        choices=["shared-session", "per-user-login"],
+        default="shared-session",
+    )
+    bc.add_argument("--think-time-ms", type=int, default=0)
+    bc.add_argument("--insecure", action="store_true")
+    bc.add_argument("--out", type=str, default="bench/web-chat-benchmark.json")
+    bc.add_argument(
+        "--min-cache-hit-ratio",
+        type=float,
+        default=0.0,
+        help="Optional gate: return non-zero when chat cache-hit ratio is below this value.",
+    )
+    bc.set_defaults(func=cmd_benchmark_web_chat)
 
     pm = sub.add_parser("store-metadata", help="Store paper metadata (authors/DOIs/etc.) in Postgres")
     pm.add_argument("--papers-dir", type=str, default=None)
@@ -493,6 +949,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Report questions: structured|agentic|both|none (overrides WORKFLOW_REPORT_QUESTIONS_SET).",
     )
     w.set_defaults(func=cmd_workflow)
+
+    cmp_parser = sub.add_parser("compare", help="Multi-paper comparison workflows")
+    cmp_sub = cmp_parser.add_subparsers(dest="compare_cmd", required=True)
+
+    cmp_suggest = cmp_sub.add_parser("suggest", help="Suggest similar papers by topic/concept overlap")
+    cmp_suggest.add_argument("--paper-id", type=str, required=True)
+    cmp_suggest.add_argument("--limit", type=int, default=20)
+    cmp_suggest.add_argument("--project-id", type=str, default=None)
+    cmp_suggest.set_defaults(func=cmd_compare_suggest)
+
+    cmp_create = cmp_sub.add_parser("create", help="Create one cache-first comparison run")
+    cmp_create.add_argument("--seed-paper-id", type=str, default=None)
+    cmp_create.add_argument("--paper-id", action="append", required=True, help="Repeat --paper-id for multiple papers")
+    cmp_create.add_argument("--question", action="append", required=True, help="Repeat --question for multiple custom questions")
+    cmp_create.add_argument("--model", type=str, default=None)
+    cmp_create.add_argument("--name", type=str, default=None)
+    cmp_create.add_argument("--username", type=str, default="cli")
+    cmp_create.add_argument("--project-id", type=str, default=None)
+    cmp_create.add_argument("--persona-id", type=str, default=None)
+    cmp_create.set_defaults(func=cmd_compare_create)
+
+    cmp_show = cmp_sub.add_parser("show", help="Show a saved comparison run")
+    cmp_show.add_argument("--comparison-id", type=str, required=True)
+    cmp_show.add_argument("--project-id", type=str, default=None)
+    cmp_show.set_defaults(func=cmd_compare_show)
+
+    cmp_fill = cmp_sub.add_parser("fill-missing", help="Generate answers for missing comparison cells")
+    cmp_fill.add_argument("--comparison-id", type=str, required=True)
+    cmp_fill.add_argument("--paper-id", action="append", default=[], help="Optional paper-id filter, repeatable")
+    cmp_fill.add_argument("--question-id", action="append", default=[], help="Optional question-id filter, repeatable")
+    cmp_fill.add_argument("--project-id", type=str, default=None)
+    cmp_fill.add_argument("--persona-id", type=str, default=None)
+    cmp_fill.set_defaults(func=cmd_compare_fill_missing)
+
+    cmp_export = cmp_sub.add_parser("export", help="Export a saved comparison run")
+    cmp_export.add_argument("--comparison-id", type=str, required=True)
+    cmp_export.add_argument("--format", choices=["json", "csv"], default="json")
+    cmp_export.add_argument("--out", type=str, default=None)
+    cmp_export.add_argument("--project-id", type=str, default=None)
+    cmp_export.set_defaults(func=cmd_compare_export)
 
     return p
 

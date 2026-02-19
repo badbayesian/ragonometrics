@@ -29,10 +29,12 @@ class ChatCapabilityRuntime:
     fallback_provider: Optional[ChatProvider] = None
 
     def _ensure_chat_supported(self, provider: ChatProvider) -> None:
+        """Internal helper for ensure chat supported."""
         if not bool(getattr(provider, "capabilities", None) and provider.capabilities.supports_chat):
             raise LLMCapabilityError(f"Provider '{provider.name}' does not support chat capability '{self.capability}'")
 
     def _ensure_stream_supported(self, provider: ChatProvider) -> None:
+        """Internal helper for ensure stream supported."""
         if not bool(getattr(provider, "capabilities", None) and provider.capabilities.supports_streaming):
             raise LLMCapabilityError(
                 f"Provider '{provider.name}' does not support streaming capability '{self.capability}'"
@@ -140,6 +142,7 @@ class EmbeddingCapabilityRuntime:
     fallback_provider: Optional[EmbeddingProvider] = None
 
     def _ensure_embeddings_supported(self, provider: EmbeddingProvider) -> None:
+        """Internal helper for ensure embeddings supported."""
         if not bool(getattr(provider, "capabilities", None) and provider.capabilities.supports_embeddings):
             raise LLMCapabilityError(
                 f"Provider '{provider.name}' does not support embeddings capability '{self.capability}'"
@@ -212,6 +215,7 @@ def build_llm_runtime(settings: Any) -> LLMRuntime:
         query_expand_model = global_chat_model
 
     def _chat_runtime(capability: str, model: str) -> ChatCapabilityRuntime:
+        """Internal helper for chat runtime."""
         selection = resolve_provider_selection(settings, capability)
         primary = registry[selection.primary_provider]
         fallback = registry.get(selection.fallback_provider) if selection.fallback_provider else None
@@ -224,6 +228,7 @@ def build_llm_runtime(settings: Any) -> LLMRuntime:
         )
 
     def _embedding_runtime(capability: str, model: str) -> EmbeddingCapabilityRuntime:
+        """Internal helper for embedding runtime."""
         selection = resolve_provider_selection(settings, capability)
         primary = registry[selection.primary_provider]
         fallback = registry.get(selection.fallback_provider) if selection.fallback_provider else None

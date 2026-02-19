@@ -749,6 +749,7 @@ def embed_texts(
         List[List[float]]: List result produced by the operation.
     """
     def _usage_counts(usage_obj: Any) -> tuple[int, int, int]:
+        """Internal helper for usage counts."""
         if usage_obj is None:
             return 0, 0, 0
         if isinstance(usage_obj, dict):
@@ -765,6 +766,7 @@ def embed_texts(
 
     def _embed_batch(provider_obj: Any, batch_items: List[str]) -> tuple[List[List[float]], int, int, int, str | None]:
         # New provider runtime wrapper.
+        """Internal helper for embed batch."""
         if hasattr(provider_obj, "embed"):
             result = provider_obj.embed(texts=batch_items, model=model, metadata=meta or {})
             return (

@@ -13,7 +13,7 @@ import time
 from ragonometrics.core.io_loaders import load_pdf, load_text_file
 from ragonometrics.core.prompts import PIPELINE_CITATION_EXTRACT_INSTRUCTIONS
 from ragonometrics.db.connection import connect
-from ragonometrics.llm.providers.openai_provider import OpenAIProvider
+from ragonometrics.llm.providers.openai_provider import OpenAIProvider, _extract_text_from_openai_response
 from ragonometrics.llm.runtime import build_llm_runtime
 
 
@@ -23,6 +23,11 @@ try:
     DEFAULT_MAX_OUTPUT_TOKENS = int(_MAX_TOKENS_ENV) if _MAX_TOKENS_ENV else 800
 except ValueError:
     DEFAULT_MAX_OUTPUT_TOKENS = 800
+
+_INVALID_LLM_TEXT_PATTERNS = (
+    re.compile(r"^\s*ResponseTextConfig\(", re.IGNORECASE),
+    re.compile(r"^\s*ResponseFormatText\(", re.IGNORECASE),
+)
 
 
 @dataclass(frozen=True)
@@ -117,19 +122,10 @@ def response_text(response: Any) -> str:
     Raises:
         Exception: If an unexpected runtime error occurs.
     """
-    parts: List[str] = []
-    for item in getattr(response, "output", []) or []:
-        if getattr(item, "type", None) != "message":
-            continue
-        for content in getattr(item, "content", []) or []:
-            if getattr(content, "type", None) == "output_text":
-                parts.append(content.text)
-    if parts:
-        return "\n".join(parts).strip()
-
-    fallback = getattr(response, "output_text", None) or getattr(response, "text", None)
-    if fallback:
-        return str(fallback).strip()
+    text = _extract_text_from_openai_response(response)
+    text = str(text or "").strip()
+    if text and not any(pattern.search(text) for pattern in _INVALID_LLM_TEXT_PATTERNS):
+        return text
     raise ValueError("No text in OpenAI response.")
 
 
@@ -179,6 +175,7 @@ def call_llm(
     max_retries = int(os.environ.get("OPENAI_MAX_RETRIES", "2"))
 
     def _resolve_chat_endpoint(runtime_or_client: Any) -> Any:
+        """Internal helper for resolve chat endpoint."""
         if not hasattr(runtime_or_client, "chat"):
             return runtime_or_client
         usage = (usage_context or "").strip().lower()
@@ -260,6 +257,10 @@ def call_llm(
                         total_tokens = int(getattr(usage, "total_tokens", 0) or 0)
             else:
                 raise RuntimeError("Unsupported LLM client/provider interface")
+
+            text = str(text or "").strip()
+            if not text or any(pattern.search(text) for pattern in _INVALID_LLM_TEXT_PATTERNS):
+                raise ValueError("No valid text in LLM response.")
 
             latency_ms = int(max(0.0, (time.perf_counter() - t0) * 1000.0))
             try:

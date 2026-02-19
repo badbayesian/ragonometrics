@@ -231,6 +231,36 @@ def enqueue_workflow(
     )
 
 
+def enqueue_openalex_network_refresh(
+    *,
+    db_url: str | None = None,
+    cache_key: str,
+    center_work_id: str,
+    n_hops: int,
+    max_references: int,
+    max_citing: int,
+    max_nodes: int,
+    algo_version: str,
+    queue_name: str = DEFAULT_QUEUE_NAME,
+) -> EnqueuedJob:
+    """Enqueue async refresh for one cached OpenAlex citation graph."""
+    payload = {
+        "cache_key": str(cache_key or "").strip(),
+        "center_work_id": str(center_work_id or "").strip(),
+        "n_hops": int(n_hops),
+        "max_references": int(max_references),
+        "max_citing": int(max_citing),
+        "max_nodes": int(max_nodes),
+        "algo_version": str(algo_version or "").strip(),
+    }
+    return _enqueue_job(
+        db_url=db_url,
+        queue_name=queue_name,
+        job_type="openalex_network_refresh",
+        payload=payload,
+    )
+
+
 def _claim_next_job(conn, *, queue_name: str, worker_id: str) -> Optional[Dict[str, Any]]:
     """Claim next job.
 
@@ -403,6 +433,21 @@ def _execute_job(job: Dict[str, Any], *, default_meta_db_url: str | None = None)
             "papers_indexed": len(paper_paths),
             "index_path": str(index_path),
         }
+
+    if job_type == "openalex_network_refresh":
+        from ragonometrics.services import citation_network as citation_network_service
+
+        try:
+            return citation_network_service.refresh_cached_citation_graph(
+                payload=payload,
+                db_url=default_meta_db_url,
+            )
+        except Exception:
+            citation_network_service.mark_cached_citation_refresh_failure(
+                cache_key=str(payload.get("cache_key") or "").strip(),
+                db_url=default_meta_db_url,
+            )
+            raise
 
     raise RuntimeError(f"Unsupported job_type '{job_type}'.")
 

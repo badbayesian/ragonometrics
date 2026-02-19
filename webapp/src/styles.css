@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+
+  --surface-0: #eef3f9;
+  --surface-1: #ffffff;
+  --surface-2: #f6f9fd;
+  --surface-3: #eef4fb;
+
+  --border-1: #e5edf6;
+  --border-2: #d4e0ed;
+  --border-3: #b0c3da;
+
+  --accent-500: #2f7ebd;
+  --accent-600: #2469a1;
+  --accent-700: #184d79;
+
+  --danger-100: #fdeeed;
+  --danger-300: #e7b4ae;
+  --danger-700: #8d2f22;
+  --warning-100: #fff4dd;
+  --warning-300: #eac989;
+  --warning-700: #815f19;
+
+  --text-strong: #102233;
+  --text: #203648;
+  --text-muted: #5a6d81;
+
+  --shadow-sm: 0 8px 28px rgba(14, 35, 59, 0.08);
+
+  --page-bg-1: rgba(26, 123, 205, 0.16);
+  --page-bg-2: rgba(17, 144, 109, 0.14);
+  --page-bg-main-top: var(--surface-0);
+  --page-bg-main-bottom: #eff4fa;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-0: #0b1119;
+  --surface-1: #111a26;
+  --surface-2: #162131;
+  --surface-3: #1b2a3c;
+
+  --border-1: #243548;
+  --border-2: #2d4259;
+  --border-3: #3c5d7a;
+
+  --accent-500: #4ca5e6;
+  --accent-600: #3a89c4;
+  --accent-700: #2d6f9f;
+
+  --danger-100: #3a1d20;
+  --danger-300: #7d3d44;
+  --danger-700: #ffc5cb;
+  --warning-100: #352b18;
+  --warning-300: #786238;
+  --warning-700: #ffd58a;
+
+  --text-strong: #e6f1ff;
+  --text: #d3e2f4;
+  --text-muted: #a6bbd4;
+
+  --shadow-sm: 0 10px 30px rgba(0, 0, 0, 0.38);
+
+  --page-bg-1: rgba(52, 128, 201, 0.2);
+  --page-bg-2: rgba(34, 143, 116, 0.16);
+  --page-bg-main-top: #0b1119;
+  --page-bg-main-bottom: #111a26;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 6%, var(--page-bg-1), transparent 40%),
+    radial-gradient(circle at 96% 10%, var(--page-bg-2), transparent 42%),
+    linear-gradient(180deg, var(--page-bg-main-top), var(--surface-0) 46%, var(--page-bg-main-bottom));
+  color: var(--text);
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-strong);
+  margin: 0;
+}
+
+pre,
+code {
+  font-family: "IBM Plex Mono", "SFMono-Regular", ui-monospace, Menlo, monospace;
+}
+
+a {
+  color: var(--accent-600);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

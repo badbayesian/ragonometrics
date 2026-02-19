@@ -1,8 +1,10 @@
 # Docker Deployment Guide
 
-This project is intended to run primarily via Docker Compose.
+This is the canonical Docker runbook for Ragonometrics web deployment.
 
-## Required `.env` values
+## Required `.env`
+
+Set these first so containers can access keys, papers, and Postgres.
 
 ```bash
 OPENAI_API_KEY=your_key_here
@@ -11,51 +13,37 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
 Notes:
-- `PAPERS_HOST_DIR` is mounted to `/app/papers` in app containers.
-- `CONTAINER_DATABASE_URL` is used inside containers and should use host `postgres` (not `localhost`).
-- Optional Streamlit auth bootstrap:
-  - `STREAMLIT_USERS_JSON={"admin":"pass","tester":"pass"}`
-  - `STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV=1`
 
-## Start services
+- `PAPERS_HOST_DIR` is mounted to `/app/papers`.
+- `CONTAINER_DATABASE_URL` should use host `postgres` for container-to-container connectivity.
+
+## Start Services
+
+Run these in order to initialize schema and then start the runtime services.
 
 Apply migrations first:
 
 ```bash
 docker compose run --rm migrate
 ```
+On a cold start, Postgres is empty; this step creates the app schema so `web` and `rq-worker` do not fail with missing-table errors.
 
-Core stack (recommended):
-
-```bash
-docker compose up -d --build
-```
-
-Default startup brings up core runtime services only:
-- `postgres`
-- `streamlit`
-- `rq-worker`
-- `pgadmin`
-
-Batch services are profile-gated and started on demand:
+Start web runtime:
 
 ```bash
-docker compose --profile batch up -d worker indexer workflow
+docker compose --profile web up -d --build postgres web rq-worker pgadmin
 ```
 
-Check status:
+Open the app:
 
-```bash
-docker compose ps
-```
+- `http://localhost:8590`
 
-Open Streamlit:
-- `http://localhost:8585`
-- UI tabs include Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage.
+## Workflow Runs
 
-## Run workflow from Docker
+Use these commands to execute workflow jobs in the batch profile.
 
 All papers:
+Runs one workflow pass across every PDF under `/app/papers`.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -67,17 +55,19 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Single paper:
+Runs the same workflow for one specific paper path.
 
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
-  --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
+  --papers "/app/papers/Your Paper.pdf" \
   --agentic \
   --agentic-citations \
   --report-question-set both
 ```
 
 Async enqueue:
+Queues the workflow for background processing instead of blocking the terminal.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -90,37 +80,51 @@ docker compose --profile batch run --rm workflow \
   --meta-db-url "$DATABASE_URL"
 ```
 
-The `rq-worker` service consumes jobs from `workflow.async_jobs`.
+## Frontend Test and Rebuild
 
-## Artifacts and data
+Use this section to validate UI behavior and roll out web-only code changes.
 
-Filesystem:
-- `reports/workflow-report-<run_id>.json` (default path)
-- `reports/prep-manifest-<run_id>.json` (default path)
-- `reports/audit-workflow-report-<run_id>.md` (if audit rendering enabled)
-- `reports/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
-
-Optional organization:
-- You can move artifacts into subfolders such as `reports/workflow/`, `reports/prep/`, and `reports/audit/` for browsing.
-
-Postgres:
-- Workflow lineage: `workflow.run_records`
-- Queue: `workflow.async_jobs`
-- Retrieval cache: `retrieval.query_cache`
-- Usage telemetry: `observability.token_usage`
-
-Migration ownership:
-- Alembic (`alembic/versions/*`) is the schema source of truth.
-- Runtime modules do not run hot-path DDL.
-- Postgres is the only supported runtime persistence backend.
-
-## pgAdmin
-
-Start:
+Run frontend tests:
+Checks frontend behavior before deploys.
 
 ```bash
-python tools/standup_pgadmin.py
+python tools/run_frontend_tests.py
 ```
 
-Default URL:
-- `http://localhost:5052`
+Rebuild web container:
+Rebuilds and restarts just the `web` service.
+
+```bash
+docker compose --profile web up -d --build web
+```
+
+## Health Checks
+
+Use these commands to confirm services are up and diagnose runtime issues.
+
+List services:
+Shows container status and port mappings.
+
+```bash
+docker compose ps
+```
+
+Tail web logs:
+Streams API/web server logs.
+
+```bash
+docker compose logs -f web
+```
+
+Tail worker logs:
+Streams async worker logs.
+
+```bash
+docker compose logs -f rq-worker
+```
+
+## Related Documents
+
+- [UI guide](../guides/ui.md)
+- [Workflow guide](../guides/workflow.md)
+- [System architecture](../architecture/architecture.md)

@@ -22,3 +22,5 @@ dist/
 
 .ipynb_checkpoints/
 *.ipynb
+webapp/node_modules/
+webapp/dist/
