@@ -23,6 +23,19 @@ def _scope_sql(*, user_id: Optional[int], username: str) -> tuple[str, List[Any]
     return ("lower(username) = lower(%s)", [username])
 
 
+def _parse_json_list(value: Any) -> List[Any]:
+    """Return parsed JSON list payloads; fallback to empty list."""
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, str):
+        return []
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
 def list_notes(
     db_url: str,
     *,
@@ -39,7 +52,7 @@ def list_notes(
     if not db_url or not clean_user or not clean_paper:
         return []
     scope_sql, scope_params = _scope_sql(user_id=user_id, username=clean_user)
-    params: List[Any] = [clean_paper, *scope_params]
+    params: List[Any] = [clean_paper, clean_project, clean_project, *scope_params]
     page_clause = ""
     if page_number is not None:
         page_clause = "AND COALESCE(page_number, -1) = %s"
@@ -59,26 +72,21 @@ def list_notes(
                   {page_clause}
                 ORDER BY created_at DESC
                 """,
-                tuple([clean_paper, clean_project, clean_project, *scope_params, *([] if page_number is None else [int(page_number)])]),
+                tuple(params),
             )
             rows = cur.fetchall()
     except Exception:
         return []
     out: List[Dict[str, Any]] = []
     for row in rows:
-        terms = row[4]
-        if isinstance(terms, str):
-            try:
-                terms = json.loads(terms)
-            except Exception:
-                terms = []
+        terms = _parse_json_list(row[4])
         out.append(
             {
                 "id": int(row[0]),
                 "paper_id": str(row[1] or ""),
                 "page_number": int(row[2]) if row[2] is not None else None,
                 "highlight_text": str(row[3] or ""),
-                "highlight_terms": terms if isinstance(terms, list) else [],
+                "highlight_terms": terms,
                 "note_text": str(row[5] or ""),
                 "color": str(row[6] or ""),
                 "created_at": row[7].isoformat() if hasattr(row[7], "isoformat") else str(row[7] or ""),
@@ -249,19 +257,33 @@ def delete_note(
                 """,
                 (int(note_id), clean_project, clean_project, *scope_params),
             )
-            check = conn.cursor()
-            check.execute(
-                f"""
-                SELECT 1
-                FROM retrieval.paper_notes
-                WHERE id = %s
-                  AND (%s = '' OR COALESCE(project_id, '') = %s)
-                  AND {scope_sql}
-                LIMIT 1
-                """,
-                (int(note_id), clean_project, clean_project, *scope_params),
-            )
-            deleted = 0 if check.fetchone() else 1
+            deleted = int(getattr(cur, "rowcount", 0) or 0)
+            if deleted < 0:
+                cur.execute(
+                    f"""
+                    SELECT 1
+                    FROM retrieval.paper_notes
+                    WHERE id = %s
+                      AND (%s = '' OR COALESCE(project_id, '') = %s)
+                      AND {scope_sql}
+                    LIMIT 1
+                    """,
+                    (int(note_id), clean_project, clean_project, *scope_params),
+                )
+                deleted = 0 if cur.fetchone() else 1
+            elif deleted == 0:
+                cur.execute(
+                    f"""
+                    SELECT 1
+                    FROM retrieval.paper_notes
+                    WHERE id = %s
+                      AND (%s = '' OR COALESCE(project_id, '') = %s)
+                      AND {scope_sql}
+                    LIMIT 1
+                    """,
+                    (int(note_id), clean_project, clean_project, *scope_params),
+                )
+                deleted = 0 if cur.fetchone() else 1
             conn.commit()
             return deleted > 0
     except Exception:

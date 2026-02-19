@@ -26,6 +26,32 @@ def _history_scope_sql(*, user_id: Optional[int], username: str) -> tuple[str, L
     return ("lower(username) = lower(%s)", [username])
 
 
+def _parse_json_list(value: Any) -> List[Any]:
+    """Parse a JSON list payload; fallback to empty list."""
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, str):
+        return []
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _parse_json_dict(value: Any) -> Dict[str, Any]:
+    """Parse a JSON object payload; fallback to empty dict."""
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return {}
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 def list_turns(
     db_url: str,
     *,
@@ -76,26 +102,16 @@ def list_turns(
 
     out: List[Dict[str, Any]] = []
     for row in rows:
-        citations = row[4]
-        stats = row[5]
-        if isinstance(citations, str):
-            try:
-                citations = json.loads(citations)
-            except Exception:
-                citations = []
-        if isinstance(stats, str):
-            try:
-                stats = json.loads(stats)
-            except Exception:
-                stats = {}
+        citations = _parse_json_list(row[4])
+        stats = _parse_json_dict(row[5])
         out.append(
             {
                 "query": str(row[0] or ""),
                 "answer": str(row[1] or ""),
                 "paper_path": str(row[2] or ""),
                 "model": str(row[3] or ""),
-                "citations": citations if isinstance(citations, list) else [],
-                "retrieval_stats": stats if isinstance(stats, dict) else {},
+                "citations": citations,
+                "retrieval_stats": stats,
                 "cache_hit": bool(row[6]) if row[6] is not None else None,
                 "variation_mode": bool(row[7]),
                 "request_id": str(row[8] or ""),
@@ -205,38 +221,30 @@ def clear_turns(
         return 0
 
     scope_sql, scope_params = _history_scope_sql(user_id=user_id, username=clean_username)
+    where_sql = (
+        f"""
+        FROM retrieval.chat_history_turns
+        WHERE paper_id = %s
+          AND (%s = '' OR COALESCE(project_id, '') = %s)
+          AND {scope_sql}
+        """
+    )
+    where_params = [clean_paper_id, clean_project_id, clean_project_id, *scope_params]
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
             cur.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM retrieval.chat_history_turns
-                WHERE paper_id = %s
-                  AND (%s = '' OR COALESCE(project_id, '') = %s)
-                  AND {scope_sql}
-                """,
-                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
+                f"SELECT COUNT(*) {where_sql}",
+                where_params,
             )
             before = int((cur.fetchone() or [0])[0] or 0)
             cur.execute(
-                f"""
-                DELETE FROM retrieval.chat_history_turns
-                WHERE paper_id = %s
-                  AND (%s = '' OR COALESCE(project_id, '') = %s)
-                  AND {scope_sql}
-                """,
-                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
+                f"DELETE {where_sql}",
+                where_params,
             )
             cur.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM retrieval.chat_history_turns
-                WHERE paper_id = %s
-                  AND (%s = '' OR COALESCE(project_id, '') = %s)
-                  AND {scope_sql}
-                """,
-                [clean_paper_id, clean_project_id, clean_project_id, *scope_params],
+                f"SELECT COUNT(*) {where_sql}",
+                where_params,
             )
             after = int((cur.fetchone() or [0])[0] or 0)
             conn.commit()
