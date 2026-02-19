@@ -61,16 +61,21 @@ docker compose --profile batch run --rm workflow \
 
 ## Important Flags
 
-- `--papers <dir-or-file>`
-- `--agentic`
-- `--agentic-citations`
-- `--report-question-set structured|agentic|both|none`
-- `--question "<prompt>"`
-- `--workstream-id <id>`
-- `--arm <label>`
-- `--parent-run-id <run_id>`
-- `--trigger-source <label>`
-- `--async`
+| Flag | What it controls | Typical use |
+| --- | --- | --- |
+| `--papers <dir-or-file>` | Input scope for the run (one PDF or a directory of PDFs). | `--papers /app/papers` for full corpus, or a single file path for targeted reruns. |
+| `--agentic` | Enables agentic planning/sub-question synthesis stage. | Use when you want open-ended reasoning beyond fixed structured questions. |
+| `--question "<prompt>"` | Overrides the default main agentic question. | Use for focused investigations, for example one policy or method question. |
+| `--agentic-model <model>` | Model override used by the agentic step. | A/B model quality/cost on the same papers without changing global config. |
+| `--agentic-citations` | Enriches agentic context with citation API evidence. | Use when citation grounding quality matters more than runtime cost. |
+| `--report-question-set structured\|agentic\|both\|none` | Controls which report question bundles are emitted. | `both` for production comparability, `structured` for low-cost runs, `none` for minimal metadata-only runs. |
+| `--meta-db-url <postgres-url>` | Postgres URL for run metadata and workflow record writes. | Use to point a run at a specific DB (dev/staging/prod). |
+| `--queue-db-url <postgres-url>` | Postgres URL for async queue storage (falls back to `--meta-db-url` or `DATABASE_URL`). | Set explicitly when queue DB differs from metadata DB. |
+| `--async` | Enqueues a job instead of running immediately in the current process. | Use for non-blocking execution from CI, API-triggered jobs, or batch orchestration. |
+| `--workstream-id <id>` | Logical grouping key across related runs. | Group a campaign of runs (for example: `wk-2026-02-citation-refresh`). |
+| `--arm <label>` | Variant label for experimental branch/config/model. | Track comparisons like `baseline`, `gpt-5-nano`, `rerank-v2`. |
+| `--parent-run-id <run_id>` | Links a run to a baseline/parent run for lineage. | Use for reruns, remediation runs, or branch comparisons. |
+| `--trigger-source <label>` | Source tag for run initiation. | Standardize labels like `cli`, `api`, `queue`, `cron`, `ci`. |
 
 ## Outputs
 

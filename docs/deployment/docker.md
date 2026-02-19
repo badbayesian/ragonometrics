@@ -22,6 +22,7 @@ Apply migrations first:
 ```bash
 docker compose run --rm migrate
 ```
+On a cold start, Postgres is empty; this step creates the app schema so `web` and `rq-worker` do not fail with missing-table errors.
 
 Start web runtime:
 

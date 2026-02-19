@@ -24,6 +24,7 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```bash
 docker compose run --rm migrate
 ```
+This bootstraps an empty Postgres instance on cold start by creating the required schemas, tables, and indexes before the app serves requests.
 
 3. Start services:
 
@@ -37,6 +38,8 @@ docker compose --profile web up -d --build postgres web rq-worker pgadmin
 
 ## Workflow Run (Structured + Agentic)
 
+Use this when you want a full end-to-end analysis pass across the corpus: structured canonical questions plus agentic decomposition/synthesis.
+
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
@@ -49,18 +52,21 @@ docker compose --profile batch run --rm workflow \
 ## Common Commands
 
 Frontend tests:
+Checks web UI behavior and catches regressions before deploys.
 
 ```bash
 python tools/run_frontend_tests.py
 ```
 
 Rebuild the web container:
+Rebuilds and restarts only the web app service after API/UI changes.
 
 ```bash
 docker compose --profile web up -d --build web
 ```
 
 Single-paper workflow run:
+Runs the same structured+agentic workflow for one target paper file.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -72,6 +78,7 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Optional manual OpenAlex link:
+Forces a known OpenAlex work mapping when automatic matching is wrong or missing.
 
 ```bash
 python tools/manual_openalex_link.py \
