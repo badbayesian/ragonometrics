@@ -24,7 +24,10 @@ Run lineage is persisted in `workflow.run_records`.
 
 ## Core Commands
 
+Use these entrypoints to run the same workflow in full-corpus, single-paper, or queued mode.
+
 All papers:
+Runs one structured+agentic workflow pass for every paper in the mounted corpus.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -36,6 +39,7 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Single paper:
+Runs the workflow for one specific paper path to speed up targeted reruns.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -47,6 +51,7 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Async enqueue:
+Creates a queued job so execution continues in a background worker.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -78,6 +83,8 @@ docker compose --profile batch run --rm workflow \
 | `--trigger-source <label>` | Source tag for run initiation. | Standardize labels like `cli`, `api`, `queue`, `cron`, `ci`. |
 
 ## Outputs
+
+A completed run writes artifacts to both filesystem and Postgres.
 
 Filesystem:
 

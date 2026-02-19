@@ -4,6 +4,8 @@ This is the canonical Docker runbook for Ragonometrics web deployment.
 
 ## Required `.env`
 
+Set these first so containers can access keys, papers, and Postgres.
+
 ```bash
 OPENAI_API_KEY=your_key_here
 PAPERS_HOST_DIR=./papers
@@ -16,6 +18,8 @@ Notes:
 - `CONTAINER_DATABASE_URL` should use host `postgres` for container-to-container connectivity.
 
 ## Start Services
+
+Run these in order to initialize schema and then start the runtime services.
 
 Apply migrations first:
 
@@ -36,7 +40,10 @@ Open the app:
 
 ## Workflow Runs
 
+Use these commands to execute workflow jobs in the batch profile.
+
 All papers:
+Runs one workflow pass across every PDF under `/app/papers`.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -48,6 +55,7 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Single paper:
+Runs the same workflow for one specific paper path.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -59,6 +67,7 @@ docker compose --profile batch run --rm workflow \
 ```
 
 Async enqueue:
+Queues the workflow for background processing instead of blocking the terminal.
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -73,13 +82,17 @@ docker compose --profile batch run --rm workflow \
 
 ## Frontend Test and Rebuild
 
+Use this section to validate UI behavior and roll out web-only code changes.
+
 Run frontend tests:
+Checks frontend behavior before deploys.
 
 ```bash
 python tools/run_frontend_tests.py
 ```
 
 Rebuild web container:
+Rebuilds and restarts just the `web` service.
 
 ```bash
 docker compose --profile web up -d --build web
@@ -87,19 +100,24 @@ docker compose --profile web up -d --build web
 
 ## Health Checks
 
+Use these commands to confirm services are up and diagnose runtime issues.
+
 List services:
+Shows container status and port mappings.
 
 ```bash
 docker compose ps
 ```
 
 Tail web logs:
+Streams API/web server logs.
 
 ```bash
 docker compose logs -f web
 ```
 
 Tail worker logs:
+Streams async worker logs.
 
 ```bash
 docker compose logs -f rq-worker

@@ -26,6 +26,8 @@ Layout
 Usage (Example)
 ---------------
 
+Use this sequence as the minimum path to adapt and apply these stubs.
+
 1. Copy the files to your infra repo or extend in-place.
 2. Fill in placeholders (project IDs, VPC IDs, subnets, etc.).
 3. Run `terraform init`, `terraform plan`, and `terraform apply`.

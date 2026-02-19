@@ -11,6 +11,8 @@ Ragonometrics is a web app for paper Q&A, structured extraction, and agentic ana
 
 ## Quick Start
 
+Use this path to bring up a working local stack from a cold start.
+
 1. Create `.env`:
 
 ```bash
@@ -50,6 +52,8 @@ docker compose --profile batch run --rm workflow \
 ```
 
 ## Common Commands
+
+Use these for routine validation, rebuilds, and targeted reruns.
 
 Frontend tests:
 Checks web UI behavior and catches regressions before deploys.
