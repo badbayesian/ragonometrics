@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
@@ -87,6 +88,19 @@ def _openalex_author_items(meta: Dict[str, Any]) -> List[Dict[str, str]]:
             }
         )
     return items
+
+
+def _parse_json_object(value: Any) -> Optional[Dict[str, Any]]:
+    """Parse one JSON object payload, returning None when invalid."""
+    if isinstance(value, dict):
+        return value
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def _abstract_from_inverted_index(inv: Any) -> str:
@@ -203,8 +217,6 @@ def paper_overview(ref: PaperRef) -> Dict[str, Any]:
 
 def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
     """Load OpenAlex payload from metadata table when available."""
-    import os
-
     db_url = (os.environ.get("DATABASE_URL") or "").strip()
     if not db_url:
         return None
@@ -230,16 +242,7 @@ def _db_openalex_metadata_for_paper(path: Path) -> Optional[Dict[str, Any]]:
             row = cur.fetchone()
             if not row:
                 return None
-            payload = row[0]
-            if isinstance(payload, dict):
-                return payload
-            if isinstance(payload, str):
-                try:
-                    parsed = json.loads(payload)
-                except Exception:
-                    return None
-                return parsed if isinstance(parsed, dict) else None
-            return None
+            return _parse_json_object(row[0])
     except Exception:
         return None
 
