@@ -306,6 +306,33 @@ def _openalex_venue(meta: Dict[str, Any]) -> str:
     return str(host.get("display_name") or "").strip()
 
 
+def _entity_items(items: Any) -> List[Dict[str, Any]]:
+    """Normalize OpenAlex topic/concept entities with links and scores."""
+    out: List[Dict[str, Any]] = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        raw_id = str(item.get("id") or "").strip()
+        out.append(
+            {
+                "name": str(item.get("display_name") or "").strip(),
+                "id": raw_id,
+                "openalex_url": _work_or_entity_url(raw_id),
+                "score": item.get("score"),
+            }
+        )
+    return out
+
+
+def _doi_url(value: Any) -> str:
+    """Return normalized https DOI URL from raw OpenAlex DOI value."""
+    doi = str(value or "").strip()
+    if not doi:
+        return ""
+    token = doi.replace("https://doi.org/", "").replace("http://doi.org/", "").strip()
+    return f"https://doi.org/{token}" if token else ""
+
+
 def metadata_for_paper(paper_ref: PaperRef) -> Dict[str, Any]:
     """Return one normalized OpenAlex metadata payload for a selected paper."""
     paper, _, _, _ = load_prepared(paper_ref)
@@ -326,34 +353,8 @@ def metadata_for_paper(paper_ref: PaperRef) -> Dict[str, Any]:
         referenced_works_count = len(meta.get("referenced_works"))
     abstract = _abstract_from_inverted_index(meta.get("abstract_inverted_index"))
     author_items = _openalex_author_items(meta)
-
-    topics: List[Dict[str, Any]] = []
-    for item in meta.get("topics") or []:
-        if not isinstance(item, dict):
-            continue
-        raw_id = str(item.get("id") or "").strip()
-        topics.append(
-            {
-                "name": str(item.get("display_name") or "").strip(),
-                "id": raw_id,
-                "openalex_url": _work_or_entity_url(raw_id),
-                "score": item.get("score"),
-            }
-        )
-
-    concepts: List[Dict[str, Any]] = []
-    for item in meta.get("concepts") or []:
-        if not isinstance(item, dict):
-            continue
-        raw_id = str(item.get("id") or "").strip()
-        concepts.append(
-            {
-                "name": str(item.get("display_name") or "").strip(),
-                "id": raw_id,
-                "openalex_url": _work_or_entity_url(raw_id),
-                "score": item.get("score"),
-            }
-        )
+    topics = _entity_items(meta.get("topics"))
+    concepts = _entity_items(meta.get("concepts"))
 
     return {
         "available": True,
@@ -365,9 +366,7 @@ def metadata_for_paper(paper_ref: PaperRef) -> Dict[str, Any]:
             "title": str(meta.get("display_name") or meta.get("title") or ""),
             "publication_year": meta.get("publication_year"),
             "doi": str(meta.get("doi") or ""),
-            "doi_url": f"https://doi.org/{str(meta.get('doi') or '').replace('https://doi.org/', '').replace('http://doi.org/', '').strip()}"
-            if str(meta.get("doi") or "").strip()
-            else "",
+            "doi_url": _doi_url(meta.get("doi")),
             "cited_by_count": meta.get("cited_by_count"),
             "referenced_works_count": referenced_works_count,
             "venue": _openalex_venue(meta),
