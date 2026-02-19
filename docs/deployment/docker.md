@@ -1,8 +1,8 @@
-# Docker Deployment Guide
+﻿# Docker Deployment Guide
 
-This project is intended to run primarily via Docker Compose.
+This is the canonical Docker runbook for Ragonometrics web deployment.
 
-## Required `.env` values
+## Required `.env`
 
 ```bash
 OPENAI_API_KEY=your_key_here
@@ -11,13 +11,10 @@ CONTAINER_DATABASE_URL=postgres://postgres:postgres@postgres:5432/ragonometrics
 ```
 
 Notes:
-- `PAPERS_HOST_DIR` is mounted to `/app/papers` in app containers.
-- `CONTAINER_DATABASE_URL` is used inside containers and should use host `postgres` (not `localhost`).
-- Optional Streamlit auth bootstrap:
-  - `STREAMLIT_USERS_JSON={"admin":"pass","tester":"pass"}`
-  - `STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV=1`
+- `PAPERS_HOST_DIR` is mounted to `/app/papers`.
+- `CONTAINER_DATABASE_URL` is for container-to-container connectivity and should use host `postgres`.
 
-## Start services
+## Start Services
 
 Apply migrations first:
 
@@ -25,67 +22,16 @@ Apply migrations first:
 docker compose run --rm migrate
 ```
 
-Core stack (recommended):
+Start web runtime:
 
 ```bash
-docker compose up -d --build
+docker compose --profile web up -d --build postgres web rq-worker pgadmin
 ```
 
-Default startup brings up core runtime services only:
-- `postgres`
-- `streamlit`
-- `rq-worker`
-- `pgadmin`
-
-Flask API + React web surface (incremental migration target):
-
-```bash
-docker compose --profile web up -d --build web
-```
-
-This does not replace Streamlit yet; both UIs are intended to run side-by-side.
-
-Web URL:
+Open the app:
 - `http://localhost:8590`
-- After frontend changes, rebuild with:
-  - `docker compose --profile web up -d --build web`
 
-Batch services are profile-gated and started on demand:
-
-```bash
-docker compose --profile batch up -d worker indexer workflow
-```
-
-Check status:
-
-```bash
-docker compose ps
-```
-
-Open Streamlit:
-- `http://localhost:8585`
-- UI tabs include Chat, Structured Workstream, OpenAlex Metadata, Citation Network, and Usage.
-
-Open Web:
-- `http://localhost:8590`
-- Tabs include Chat, Paper Viewer, Structured Workstream, OpenAlex Metadata, Citation Network, Usage, and Compare.
-- Debug mode toggle (top bar) reveals Workflow Cache and Cache Inspector tabs.
-
-## Frontend tests (React)
-
-Run frontend tests through Docker (no local npm required):
-
-```bash
-docker compose --profile ops run --rm --build frontend-tests
-```
-
-Or use the helper wrapper:
-
-```bash
-python tools/run_frontend_tests.py
-```
-
-## Run workflow from Docker
+## Workflow Runs
 
 All papers:
 
@@ -103,7 +49,7 @@ Single paper:
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
-  --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
+  --papers "/app/papers/Your Paper.pdf" \
   --agentic \
   --agentic-citations \
   --report-question-set both
@@ -122,37 +68,36 @@ docker compose --profile batch run --rm workflow \
   --meta-db-url "$DATABASE_URL"
 ```
 
-The `rq-worker` service consumes jobs from `workflow.async_jobs`.
+## Frontend Test and Rebuild
 
-## Artifacts and data
-
-Filesystem:
-- `reports/workflow-report-<run_id>.json` (default path)
-- `reports/prep-manifest-<run_id>.json` (default path)
-- `reports/audit-workflow-report-<run_id>.md` (if audit rendering enabled)
-- `reports/audit-workflow-report-<run_id>-latex.pdf` (if PDF rendering enabled)
-
-Optional organization:
-- You can move artifacts into subfolders such as `reports/workflow/`, `reports/prep/`, and `reports/audit/` for browsing.
-
-Postgres:
-- Workflow lineage: `workflow.run_records`
-- Queue: `workflow.async_jobs`
-- Retrieval cache: `retrieval.query_cache`
-- Usage telemetry: `observability.token_usage`
-
-Migration ownership:
-- Alembic (`alembic/versions/*`) is the schema source of truth.
-- Runtime modules do not run hot-path DDL.
-- Postgres is the only supported runtime persistence backend.
-
-## pgAdmin
-
-Start:
+Run frontend tests:
 
 ```bash
-python tools/standup_pgadmin.py
+python tools/run_frontend_tests.py
 ```
 
-Default URL:
-- `http://localhost:5052`
+Rebuild web container:
+
+```bash
+docker compose --profile web up -d --build web
+```
+
+## Health Checks
+
+List services:
+
+```bash
+docker compose ps
+```
+
+Tail web logs:
+
+```bash
+docker compose logs -f web
+```
+
+Tail worker logs:
+
+```bash
+docker compose logs -f rq-worker
+```

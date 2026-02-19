@@ -1,23 +1,29 @@
-# Workflow Guide
+﻿# Workflow Guide
 
-This page focuses on the end-to-end `ragonometrics workflow` command.
+This guide covers `ragonometrics workflow` execution and outputs.
 
-## What a workflow run does
+## Workflow Stages
 
-A run executes:
-1. `prep` (corpus/profile manifest)
-2. `ingest` (PDF extraction + chunking)
-3. `enrich` (OpenAlex/CitEc, when available)
-4. `agentic` (optional, with structured questions)
-5. `index` (optional metadata/index writes)
-6. `evaluate`
-7. `report` (JSON + optional audit artifacts)
+A standard run executes:
+1. `prep`: corpus validation and manifest inputs
+2. `ingest`: PDF extraction and chunking
+3. `enrich`: OpenAlex/CitEc metadata enrichment
+4. `agentic`: optional decomposition + synthesis
+5. `index`: optional index writes
+6. `evaluate`: run-level quality/usage accounting
+7. `report`: workflow report artifacts
 
-All run lineage is persisted to `workflow.run_records` keyed by `run_id`.
+Run lineage is persisted in `workflow.run_records`.
 
-## Docker-first usage
+## Structured vs Agentic
 
-All papers in mounted `/app/papers`:
+- `Structured` focuses on canonical fixed questions for comparability and caching.
+- `Agentic` handles open-ended reasoning by planning sub-questions and synthesizing evidence-backed answers.
+- Recommended production runs use both via `--report-question-set both` with `--agentic`.
+
+## Core Commands
+
+All papers:
 
 ```bash
 docker compose --profile batch run --rm workflow \
@@ -25,8 +31,7 @@ docker compose --profile batch run --rm workflow \
   --papers /app/papers \
   --agentic \
   --agentic-citations \
-  --report-question-set both \
-  --question "What are the paper's main contribution, identification strategy, key results, and limitations?"
+  --report-question-set both
 ```
 
 Single paper:
@@ -34,7 +39,7 @@ Single paper:
 ```bash
 docker compose --profile batch run --rm workflow \
   ragonometrics workflow \
-  --papers "/app/papers/Calorie Posting in Chain Restaurants - Bollinger et al. (2011).pdf" \
+  --papers "/app/papers/Your Paper.pdf" \
   --agentic \
   --agentic-citations \
   --report-question-set both
@@ -53,9 +58,7 @@ docker compose --profile batch run --rm workflow \
   --meta-db-url "$DATABASE_URL"
 ```
 
-`rq-worker` consumes jobs from `workflow.async_jobs`.
-
-## Important flags
+## Important Flags
 
 - `--papers <dir-or-file>`
 - `--agentic`
@@ -71,29 +74,12 @@ docker compose --profile batch run --rm workflow \
 ## Outputs
 
 Filesystem:
-- `reports/workflow-report-<run_id>.json` (default path)
-- `reports/prep-manifest-<run_id>.json` (default path)
-- `reports/audit-workflow-report-<run_id>.md` (if enabled)
-- `reports/audit-workflow-report-<run_id>-latex.pdf` (if enabled)
-
-Optional organization:
-- You may move generated files into `reports/workflow/`, `reports/prep/`, and `reports/audit/` after runs.
+- `reports/workflow-report-<run_id>.json`
+- `reports/prep-manifest-<run_id>.json`
+- optional audit artifacts under `reports/`
 
 Postgres:
-- `workflow.run_records` (run/step/report/question/artifact lineage)
-- `observability.token_usage`
+- `workflow.run_records`
 - `retrieval.query_cache`
-- indexing and ingestion tables when indexing is enabled
-
-Structured question payloads in `workflow.run_records` are the source for Streamlit
-`Full` structured exports. If older rows are compact-only, run:
-
-```bash
-python tools/backfill_structured_question_fields.py --db-url "$DATABASE_URL" --apply
-```
-
-## Related docs
-
-- `docs/deployment/docker.md`
-- `docs/architecture/workflow_architecture.md`
-- `docs/architecture/data-model-erd.md`
+- `observability.token_usage`
+- indexing/ingestion tables when indexing is enabled
