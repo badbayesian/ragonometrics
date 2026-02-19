@@ -18,6 +18,42 @@ _HASH_MIN_ITERATIONS = 100_000
 _HASH_DEFAULT_ITERATIONS = 390_000
 
 
+def _active_user_by_identifier(
+    cur: Any,
+    *,
+    identifier: str,
+    include_password_hash: bool = False,
+) -> Dict[str, Any]:
+    """Lookup one active user by username/email, optionally including password hash."""
+    ident = str(identifier or "").strip()
+    if not ident:
+        return {}
+    select_columns = "id, username, email"
+    if include_password_hash:
+        select_columns = "id, username, email, password_hash"
+    cur.execute(
+        f"""
+        SELECT {select_columns}
+        FROM auth.streamlit_users
+        WHERE (lower(username) = lower(%s) OR lower(COALESCE(email, '')) = lower(%s))
+          AND is_active = TRUE
+        LIMIT 1
+        """,
+        (ident, ident),
+    )
+    row = cur.fetchone()
+    if not row:
+        return {}
+    payload = {
+        "user_id": int(row[0]),
+        "username": str(row[1] or ident).strip() or ident,
+        "email": str(row[2] or "").strip() or None,
+    }
+    if include_password_hash:
+        payload["password_hash"] = str(row[3] or "")
+    return payload
+
+
 def load_env_credentials() -> Dict[str, str]:
     """Load fallback credentials from environment variables."""
     raw_users_json = (os.getenv("STREAMLIT_USERS_JSON") or "").strip()
@@ -174,23 +210,13 @@ def verify_db_login(db_url: str, *, username: str, password: str) -> Tuple[bool,
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT id, username, password_hash, email
-                FROM auth.streamlit_users
-                WHERE (lower(username) = lower(%s) OR lower(COALESCE(email, '')) = lower(%s))
-                  AND is_active = TRUE
-                LIMIT 1
-                """,
-                (identifier, identifier),
-            )
-            row = cur.fetchone()
-            if not row:
+            user_row = _active_user_by_identifier(cur, identifier=identifier, include_password_hash=True)
+            if not user_row:
                 return False, {}
-            user_id = int(row[0])
-            canonical_username = str(row[1] or identifier).strip() or identifier
-            stored_hash = str(row[2] or "")
-            email = str(row[3] or "").strip() or None
+            user_id = int(user_row.get("user_id") or 0)
+            canonical_username = str(user_row.get("username") or identifier).strip() or identifier
+            stored_hash = str(user_row.get("password_hash") or "")
+            email = user_row.get("email")
             if not password_verify(password, stored_hash):
                 return False, {}
             cur.execute(
@@ -279,24 +305,7 @@ def _lookup_active_user_by_identifier(db_url: str, *, identifier: str) -> Dict[s
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
-            cur.execute(
-                """
-                SELECT id, username, email
-                FROM auth.streamlit_users
-                WHERE (lower(username) = lower(%s) OR lower(COALESCE(email, '')) = lower(%s))
-                  AND is_active = TRUE
-                LIMIT 1
-                """,
-                (ident, ident),
-            )
-            row = cur.fetchone()
-            if not row:
-                return {}
-            return {
-                "user_id": int(row[0]),
-                "username": str(row[1] or "").strip(),
-                "email": str(row[2] or "").strip() or None,
-            }
+            return _active_user_by_identifier(cur, identifier=ident, include_password_hash=False)
     except Exception:
         return {}
 
