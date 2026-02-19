@@ -180,6 +180,25 @@ def _usage_rows_payload(rows: List[Any]) -> List[Dict[str, Any]]:
     return [_usage_row_payload(row) for row in rows]
 
 
+def _relation_has_column(cur: Any, *, schema: str, table: str, column: str) -> bool:
+    """Return whether one relation has a given column."""
+    try:
+        cur.execute(
+            """
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = %s
+              AND table_name = %s
+              AND column_name = %s
+            LIMIT 1
+            """,
+            (str(schema or ""), str(table or ""), str(column or "")),
+        )
+        return bool(cur.fetchone())
+    except Exception:
+        return False
+
+
 def list_runs_for_paper(paper_path: str, limit: int = 50, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Return paper-scoped workflow runs ordered by recency."""
     db_url = _db_url()
@@ -431,56 +450,116 @@ def usage_rollup_for_run(run_id: str, project_id: Optional[str] = None) -> List[
     try:
         with pooled_connection(db_url) as conn:
             cur = conn.cursor()
+            rollup_has_project_id = _relation_has_column(
+                cur,
+                schema="observability",
+                table="token_usage_rollup",
+                column="project_id",
+            )
+            usage_has_project_id = _relation_has_column(
+                cur,
+                schema="observability",
+                table="token_usage",
+                column="project_id",
+            )
             try:
-                cur.execute(
-                    """
-                    SELECT
-                        COALESCE(step, '') AS step,
-                        COALESCE(model, '') AS model,
-                        COALESCE(question_id, '') AS question_id,
-                        call_count,
-                        input_tokens,
-                        output_tokens,
-                        total_tokens,
-                        cost_usd_total
-                    FROM observability.token_usage_rollup
-                    WHERE run_id = %s
-                      AND (
-                            %s = ''
-                         OR COALESCE(project_id, '') = %s
-                         OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
-                      )
-                    ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
-                    """,
-                    (wanted, *scope_params),
-                )
+                if rollup_has_project_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            COALESCE(step, '') AS step,
+                            COALESCE(model, '') AS model,
+                            COALESCE(question_id, '') AS question_id,
+                            call_count,
+                            input_tokens,
+                            output_tokens,
+                            total_tokens,
+                            cost_usd_total
+                        FROM observability.token_usage_rollup
+                        WHERE run_id = %s
+                          AND (
+                                %s = ''
+                             OR COALESCE(project_id, '') = %s
+                             OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                          )
+                        ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
+                        """,
+                        (wanted, *scope_params),
+                    )
+                elif not scoped_project:
+                    cur.execute(
+                        """
+                        SELECT
+                            COALESCE(step, '') AS step,
+                            COALESCE(model, '') AS model,
+                            COALESCE(question_id, '') AS question_id,
+                            call_count,
+                            input_tokens,
+                            output_tokens,
+                            total_tokens,
+                            cost_usd_total
+                        FROM observability.token_usage_rollup
+                        WHERE run_id = %s
+                        ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
+                        """,
+                        (wanted,),
+                    )
+                else:
+                    # Rollup table does not support project scoping on this schema version.
+                    raise RuntimeError("token_usage_rollup lacks project_id; falling back to token_usage")
                 rows = cur.fetchall()
                 out = _usage_rows_payload(rows)
                 return out
             except Exception:
-                cur.execute(
-                    """
-                    SELECT
-                        COALESCE(step, '') AS step,
-                        COALESCE(model, '') AS model,
-                        COALESCE(question_id, '') AS question_id,
-                        COUNT(*) AS call_count,
-                        COALESCE(SUM(input_tokens), 0) AS input_tokens,
-                        COALESCE(SUM(output_tokens), 0) AS output_tokens,
-                        COALESCE(SUM(total_tokens), 0) AS total_tokens,
-                        COALESCE(SUM(cost_usd_total), 0) AS cost_usd_total
-                    FROM observability.token_usage
-                    WHERE run_id = %s
-                      AND (
-                            %s = ''
-                         OR COALESCE(project_id, '') = %s
-                         OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
-                      )
-                    GROUP BY COALESCE(step, ''), COALESCE(model, ''), COALESCE(question_id, '')
-                    ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
-                    """,
-                    (wanted, *scope_params),
-                )
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                if usage_has_project_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            COALESCE(step, '') AS step,
+                            COALESCE(model, '') AS model,
+                            COALESCE(question_id, '') AS question_id,
+                            COUNT(*) AS call_count,
+                            COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                            COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                            COALESCE(SUM(total_tokens), 0) AS total_tokens,
+                            COALESCE(SUM(cost_usd_total), 0) AS cost_usd_total
+                        FROM observability.token_usage
+                        WHERE run_id = %s
+                          AND (
+                                %s = ''
+                             OR COALESCE(project_id, '') = %s
+                             OR (%s = 'default-shared' AND COALESCE(project_id, '') = '')
+                          )
+                        GROUP BY COALESCE(step, ''), COALESCE(model, ''), COALESCE(question_id, '')
+                        ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
+                        """,
+                        (wanted, *scope_params),
+                    )
+                elif not scoped_project:
+                    cur.execute(
+                        """
+                        SELECT
+                            COALESCE(step, '') AS step,
+                            COALESCE(model, '') AS model,
+                            COALESCE(question_id, '') AS question_id,
+                            COUNT(*) AS call_count,
+                            COALESCE(SUM(input_tokens), 0) AS input_tokens,
+                            COALESCE(SUM(output_tokens), 0) AS output_tokens,
+                            COALESCE(SUM(total_tokens), 0) AS total_tokens,
+                            COALESCE(SUM(cost_usd_total), 0) AS cost_usd_total
+                        FROM observability.token_usage
+                        WHERE run_id = %s
+                        GROUP BY COALESCE(step, ''), COALESCE(model, ''), COALESCE(question_id, '')
+                        ORDER BY total_tokens DESC, call_count DESC, step ASC, model ASC
+                        """,
+                        (wanted,),
+                    )
+                else:
+                    return []
                 rows = cur.fetchall()
                 out = _usage_rows_payload(rows)
                 return out
