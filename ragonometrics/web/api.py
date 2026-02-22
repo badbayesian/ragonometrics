@@ -7,7 +7,7 @@ import os
 import smtplib
 from pathlib import Path
 from functools import wraps
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 from uuid import uuid4
 from email.message import EmailMessage
 
@@ -20,6 +20,7 @@ from ragonometrics.services import cache_inspector as cache_inspector_service
 from ragonometrics.services import chat as chat_service
 from ragonometrics.services import chat_history as chat_history_service
 from ragonometrics.services import citation_network as citation_network_service
+from ragonometrics.services import multi_paper_chat as multi_paper_chat_service
 from ragonometrics.services import openalex_metadata as openalex_metadata_service
 from ragonometrics.services import notes as notes_service
 from ragonometrics.services import paper_compare as paper_compare_service
@@ -38,6 +39,8 @@ from ragonometrics.web.schemas import (
     CompareFillMissingRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    MultiChatNetworkRequest,
+    MultiChatTurnRequest,
     OpenAlexManualLinkRequest,
     PaperNoteCreateRequest,
     PaperNoteUpdateRequest,
@@ -908,6 +911,24 @@ def _paper_title_hint(ref: papers_service.PaperRef) -> str:
     return " ".join(stem.replace("_", " ").split())
 
 
+def _query_list_param(name: str) -> List[str]:
+    """Parse repeated or comma-separated query parameters into a cleaned list."""
+    raw_items = list(request.args.getlist(name) or [])
+    if len(raw_items) <= 1:
+        one = str(raw_items[0] if raw_items else request.args.get(name) or "").strip()
+        if one:
+            raw_items = [part.strip() for part in one.split(",")]
+    out: List[str] = []
+    seen = set()
+    for item in raw_items:
+        clean = str(item or "").strip()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        out.append(clean)
+    return out
+
+
 @api_bp.route("/compare/similar-papers", methods=["GET"])
 @require_auth
 def compare_similar_papers():
@@ -1619,6 +1640,225 @@ def chat_turn_stream():
     return Response(stream_with_context(stream_rows()), mimetype="application/x-ndjson")
 
 
+@api_bp.route("/chat/multi/turn", methods=["POST"])
+@require_auth
+def chat_multi_turn():
+    """Execute one non-streaming multi-paper synthesis chat turn."""
+    try:
+        payload = parse_model(MultiChatTurnRequest, request.get_json(silent=True))
+    except ValidationError as exc:
+        return _err("validation_error", str(exc), status=422)
+    current_user = dict(getattr(g, "current_user", {}) or {})
+    limited = _rate_limit(
+        subject_key=f"chat_multi:{current_user.get('user_id') or current_user.get('username')}",
+        route="chat_multi_turn",
+        limit_env="WEB_CHAT_RATE_LIMIT",
+        window_env="WEB_CHAT_RATE_WINDOW_SECONDS",
+    )
+    if limited is not None:
+        return limited
+    context = _current_project_context()
+    req_id = _request_id()
+    history = [item.model_dump() for item in payload.history]
+    try:
+        out = multi_paper_chat_service.multi_chat_turn(
+            paper_ids=[str(item or "").strip() for item in list(payload.paper_ids or [])],
+            question=payload.question,
+            model=payload.model,
+            top_k=payload.top_k,
+            session_id=str(getattr(g, "session_id", "") or ""),
+            request_id=req_id,
+            history=history,
+            project_id=context.project_id,
+            persona_id=context.persona_id,
+            allow_cross_project_answer_reuse=context.allow_cross_project_answer_reuse,
+            allow_custom_question_sharing=context.allow_custom_question_sharing,
+            user_id=current_user.get("user_id"),
+            conversation_id=str(payload.conversation_id or "").strip() or None,
+            seed_paper_id=str(payload.seed_paper_id or "").strip() or None,
+        )
+    except ValueError as exc:
+        return _err("validation_error", str(exc), status=422)
+    except Exception as exc:
+        return _err("chat_multi_failed", f"Multi-paper chat failed: {exc}", status=500)
+
+    paper_answers = [item for item in (out.get("paper_answers") or []) if isinstance(item, dict)]
+    scope = out.get("scope") if isinstance(out.get("scope"), dict) else {}
+    paper_ids = [str(v or "") for v in list(scope.get("paper_ids") or []) if str(v or "").strip()]
+    paper_paths = [str((row or {}).get("paper_path") or "") for row in paper_answers if str((row or {}).get("paper_path") or "").strip()]
+    conversation_id = multi_paper_chat_service.ensure_conversation(
+        _db_url(),
+        user_id=current_user.get("user_id"),
+        username=str(current_user.get("username") or ""),
+        project_id=context.project_id,
+        persona_id=context.persona_id,
+        session_id=str(getattr(g, "session_id", "") or ""),
+        paper_ids=paper_ids,
+        paper_paths=paper_paths,
+        conversation_id=str(out.get("conversation_id") or "").strip() or None,
+        seed_paper_id=str(scope.get("seed_paper_id") or "").strip() or None,
+    )
+    out["conversation_id"] = conversation_id
+    answer = str(out.get("answer") or "").strip()
+    if answer:
+        multi_paper_chat_service.append_turn(
+            _db_url(),
+            conversation_id=conversation_id,
+            user_id=current_user.get("user_id"),
+            username=str(current_user.get("username") or ""),
+            project_id=context.project_id,
+            persona_id=context.persona_id,
+            session_id=str(getattr(g, "session_id", "") or ""),
+            model=str(out.get("model") or payload.model or ""),
+            query=payload.question,
+            answer=answer,
+            paper_ids=paper_ids,
+            paper_answers=paper_answers,
+            comparison_summary=out.get("comparison_summary") if isinstance(out.get("comparison_summary"), dict) else {},
+            aggregate_provenance=out.get("aggregate_provenance") if isinstance(out.get("aggregate_provenance"), dict) else {},
+            suggested_papers=out.get("suggested_papers") if isinstance(out.get("suggested_papers"), dict) else {},
+            request_id=req_id,
+        )
+    _log_mutation(
+        "chat.multi_turn",
+        extra={
+            "conversation_id": conversation_id,
+            "paper_count": len(paper_ids),
+            "variation_mode_requested": bool(payload.variation_mode),
+        },
+    )
+    return _ok(out)
+
+
+@api_bp.route("/chat/multi/turn-stream", methods=["POST"])
+@require_auth
+def chat_multi_turn_stream():
+    """Execute one streaming multi-paper synthesis chat turn and emit NDJSON."""
+    try:
+        payload = parse_model(MultiChatTurnRequest, request.get_json(silent=True))
+    except ValidationError as exc:
+        return _err("validation_error", str(exc), status=422)
+    current_user = dict(getattr(g, "current_user", {}) or {})
+    limited = _rate_limit(
+        subject_key=f"chat_multi:{current_user.get('user_id') or current_user.get('username')}",
+        route="chat_multi_turn_stream",
+        limit_env="WEB_CHAT_RATE_LIMIT",
+        window_env="WEB_CHAT_RATE_WINDOW_SECONDS",
+    )
+    if limited is not None:
+        return limited
+    context = _current_project_context()
+    req_id = _request_id()
+    session_id = str(getattr(g, "session_id", "") or "")
+    history = [item.model_dump() for item in payload.history]
+    username = str(current_user.get("username") or "")
+    user_id = current_user.get("user_id")
+
+    def stream_rows() -> Iterable[str]:
+        """Handle multi-paper stream rows."""
+        persisted = False
+        _log_mutation(
+            "chat.multi_turn_stream_start",
+            extra={
+                "paper_count": len(list(payload.paper_ids or [])),
+                "variation_mode_requested": bool(payload.variation_mode),
+            },
+        )
+        try:
+            for row in multi_paper_chat_service.stream_multi_chat_turn(
+                paper_ids=[str(item or "").strip() for item in list(payload.paper_ids or [])],
+                question=payload.question,
+                model=payload.model,
+                top_k=payload.top_k,
+                session_id=session_id,
+                request_id=req_id,
+                history=history,
+                project_id=context.project_id,
+                persona_id=context.persona_id,
+                allow_cross_project_answer_reuse=context.allow_cross_project_answer_reuse,
+                allow_custom_question_sharing=context.allow_custom_question_sharing,
+                user_id=user_id,
+                conversation_id=str(payload.conversation_id or "").strip() or None,
+                seed_paper_id=str(payload.seed_paper_id or "").strip() or None,
+            ):
+                if not persisted:
+                    try:
+                        parsed = json.loads(str(row or "").strip())
+                        if isinstance(parsed, dict) and str(parsed.get("event") or "") == "done":
+                            scope = parsed.get("scope") if isinstance(parsed.get("scope"), dict) else {}
+                            paper_answers = [item for item in (parsed.get("paper_answers") or []) if isinstance(item, dict)]
+                            paper_ids = [str(v or "") for v in list(scope.get("paper_ids") or []) if str(v or "").strip()]
+                            paper_paths = [
+                                str((item or {}).get("paper_path") or "")
+                                for item in paper_answers
+                                if str((item or {}).get("paper_path") or "").strip()
+                            ]
+                            conversation_id = multi_paper_chat_service.ensure_conversation(
+                                _db_url(),
+                                user_id=user_id,
+                                username=username,
+                                project_id=context.project_id,
+                                persona_id=context.persona_id,
+                                session_id=session_id,
+                                paper_ids=paper_ids,
+                                paper_paths=paper_paths,
+                                conversation_id=str(parsed.get("conversation_id") or "").strip() or None,
+                                seed_paper_id=str(scope.get("seed_paper_id") or "").strip() or None,
+                            )
+                            parsed["conversation_id"] = conversation_id
+                            answer = str(parsed.get("answer") or "").strip()
+                            if answer:
+                                multi_paper_chat_service.append_turn(
+                                    _db_url(),
+                                    conversation_id=conversation_id,
+                                    user_id=user_id,
+                                    username=username,
+                                    project_id=context.project_id,
+                                    persona_id=context.persona_id,
+                                    session_id=session_id,
+                                    model=str(parsed.get("model") or payload.model or ""),
+                                    query=payload.question,
+                                    answer=answer,
+                                    paper_ids=paper_ids,
+                                    paper_answers=paper_answers,
+                                    comparison_summary=parsed.get("comparison_summary") if isinstance(parsed.get("comparison_summary"), dict) else {},
+                                    aggregate_provenance=parsed.get("aggregate_provenance") if isinstance(parsed.get("aggregate_provenance"), dict) else {},
+                                    suggested_papers=parsed.get("suggested_papers") if isinstance(parsed.get("suggested_papers"), dict) else {},
+                                    request_id=req_id,
+                                )
+                            persisted = True
+                            row = json.dumps(parsed, ensure_ascii=False) + "\n"
+                            _log_mutation(
+                                "chat.multi_turn_stream_done",
+                                extra={
+                                    "conversation_id": conversation_id,
+                                    "paper_count": len(paper_ids),
+                                },
+                            )
+                    except Exception:
+                        pass
+                yield row
+        except ValueError as exc:
+            payload_row = {
+                "event": "error",
+                "code": "validation_error",
+                "message": str(exc),
+                "request_id": req_id,
+            }
+            yield json.dumps(payload_row, ensure_ascii=False) + "\n"
+        except Exception as exc:
+            _log_mutation("chat.multi_turn_stream_error", extra={"error": str(exc)})
+            payload_row = {
+                "event": "error",
+                "code": "chat_multi_failed",
+                "message": str(exc),
+                "request_id": req_id,
+            }
+            yield json.dumps(payload_row, ensure_ascii=False) + "\n"
+
+    return Response(stream_with_context(stream_rows()), mimetype="application/x-ndjson")
+
+
 @api_bp.route("/chat/suggestions", methods=["GET"])
 @require_auth
 def chat_suggestions():
@@ -1687,6 +1927,113 @@ def chat_history_delete():
     )
     _log_mutation("chat.history_clear", paper_id=ref.paper_id, extra={"deleted_count": int(deleted_count)})
     return _ok({"paper_id": ref.paper_id, "deleted_count": deleted_count})
+
+
+@api_bp.route("/chat/multi/standard-questions", methods=["GET"])
+@require_auth
+def chat_multi_standard_questions():
+    """Return deterministic standard prompts for multi-paper synthesis chat."""
+    questions = multi_paper_chat_service.suggested_multi_paper_questions()
+    return _ok({"questions": questions, "count": len(questions)})
+
+
+@api_bp.route("/chat/multi/suggestions", methods=["GET"])
+@require_auth
+def chat_multi_suggestions():
+    """Return companion paper suggestions for a selected multi-paper set."""
+    paper_ids = _query_list_param("paper_ids")
+    if len(paper_ids) < 2:
+        return _err("validation_error", "At least 2 paper_ids are required.", status=422)
+    context = _current_project_context()
+    try:
+        data = multi_paper_chat_service.suggest_companion_papers(
+            paper_ids=paper_ids,
+            project_id=context.project_id,
+        )
+    except ValueError as exc:
+        return _err("validation_error", str(exc), status=422)
+    except Exception as exc:
+        return _err("chat_multi_suggestions_failed", f"Multi-paper suggestions failed: {exc}", status=500)
+    return _ok(data)
+
+
+@api_bp.route("/chat/multi/network", methods=["POST"])
+@require_auth
+def chat_multi_network():
+    """Return selected-paper interaction graph data for multi-paper chat."""
+    try:
+        payload = parse_model(MultiChatNetworkRequest, request.get_json(silent=True))
+    except ValidationError as exc:
+        return _err("validation_error", str(exc), status=422)
+    context = _current_project_context()
+    try:
+        data = multi_paper_chat_service.selected_paper_interaction_graph(
+            paper_ids=list(payload.paper_ids or []),
+            project_id=context.project_id,
+            include_topic_edges=bool(payload.include_topic_edges),
+            include_author_edges=bool(payload.include_author_edges),
+            include_citation_edges=bool(payload.include_citation_edges),
+            min_similarity=float(payload.min_similarity),
+        )
+    except ValueError as exc:
+        return _err("validation_error", str(exc), status=422)
+    except Exception as exc:
+        return _err("chat_multi_network_failed", f"Multi-paper network failed: {exc}", status=500)
+    return _ok(data)
+
+
+@api_bp.route("/chat/multi/history", methods=["GET"])
+@require_auth
+def chat_multi_history_get():
+    """Return persisted multi-paper chat history for the current user and context."""
+    paper_ids = _query_list_param("paper_ids")
+    conversation_id = str(request.args.get("conversation_id") or "").strip() or None
+    if not conversation_id and len(paper_ids) < 2:
+        return _err("validation_error", "conversation_id or at least 2 paper_ids are required.", status=422)
+    try:
+        limit = int(request.args.get("limit") or 50)
+    except Exception:
+        limit = 50
+    user = dict(getattr(g, "current_user", {}) or {})
+    context = _current_project_context()
+    data = multi_paper_chat_service.list_turns(
+        _db_url(),
+        user_id=user.get("user_id"),
+        username=str(user.get("username") or ""),
+        project_id=context.project_id,
+        conversation_id=conversation_id,
+        paper_ids=paper_ids or None,
+        limit=limit,
+    )
+    return _ok(data)
+
+
+@api_bp.route("/chat/multi/history", methods=["DELETE"])
+@require_auth
+def chat_multi_history_delete():
+    """Delete persisted multi-paper chat history for the current user and context."""
+    paper_ids = _query_list_param("paper_ids")
+    conversation_id = str(request.args.get("conversation_id") or "").strip() or None
+    if not conversation_id and len(paper_ids) < 2:
+        return _err("validation_error", "conversation_id or at least 2 paper_ids are required.", status=422)
+    user = dict(getattr(g, "current_user", {}) or {})
+    context = _current_project_context()
+    data = multi_paper_chat_service.clear_turns(
+        _db_url(),
+        user_id=user.get("user_id"),
+        username=str(user.get("username") or ""),
+        project_id=context.project_id,
+        conversation_id=conversation_id,
+        paper_ids=paper_ids or None,
+    )
+    _log_mutation(
+        "chat.multi_history_clear",
+        extra={
+            "conversation_id": str(data.get("conversation_id") or ""),
+            "deleted_count": int(data.get("deleted_count") or 0),
+        },
+    )
+    return _ok(data)
 
 
 @api_bp.route("/structured/questions", methods=["GET"])

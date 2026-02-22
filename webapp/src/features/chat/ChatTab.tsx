@@ -4,7 +4,18 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
 import { api } from "../../shared/api";
-import { ChatHistoryItem, ChatSuggestionPayload, CitationChunk, ProvenanceScore } from "../../shared/types";
+import {
+  ChatHistoryItem,
+  ChatSuggestionPayload,
+  CitationChunk,
+  MultiAggregateProvenance,
+  MultiChatHistoryItem as MultiChatHistoryRow,
+  MultiChatTurnPayload,
+  MultiPaperAnswerRow,
+  PaperRow,
+  ProvenanceScore,
+  SimilarPaperSuggestion,
+} from "../../shared/types";
 import { Spinner } from "../../shared/Spinner";
 import robotAvatar from "../../assets/robot-avatar.svg";
 import css from "./ChatTab.module.css";
@@ -25,6 +36,22 @@ type ChatHistoryResponse = {
   count: number;
 };
 
+type MultiChatHistoryResponse = {
+  conversation_id: string;
+  rows: MultiChatHistoryRow[];
+  count: number;
+};
+
+type MultiChatSuggestionsPayload = {
+  project?: SimilarPaperSuggestion[];
+  external?: Array<Record<string, unknown>>;
+};
+
+type MultiStandardQuestionsPayload = {
+  questions: string[];
+  count: number;
+};
+
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -39,6 +66,12 @@ type ChatMessage = {
   model?: string;
   isStreaming?: boolean;
   provenance?: ProvenanceScore | null;
+  aggregateProvenance?: MultiAggregateProvenance | null;
+  multiPaperAnswers?: MultiPaperAnswerRow[];
+  multiPaperIds?: string[];
+  comparisonSummary?: Record<string, unknown>;
+  suggestedPapers?: Record<string, unknown>;
+  scopeMode?: "single" | "multi";
 };
 
 type InsightKind = "provenance" | "freshness" | "cache-layer" | "model";
@@ -60,7 +93,14 @@ type Props = {
   paperId: string;
   paperName: string;
   paperPath: string;
+  papers: PaperRow[];
   model: string;
+  chatScopeMode: "single" | "multi";
+  onChatScopeModeChange: (mode: "single" | "multi") => void;
+  multiPaperIds: string[];
+  onMultiPaperIdsChange: (paperIds: string[]) => void;
+  multiConversationId: string;
+  onMultiConversationIdChange: (conversationId: string) => void;
   queuedQuestion: string;
   onQuestionConsumed: () => void;
   onStatus: (text: string) => void;
@@ -86,6 +126,11 @@ function shortTime(iso: string): string {
 function formatProvenanceLabel(provenance: ProvenanceScore | null | undefined): string {
   if (!provenance) return "";
   return `Prov ${Math.round((Number(provenance.score || 0) * 1000) / 10)}% (${provenance.status})`;
+}
+
+function formatAggregateProvenanceLabel(provenance: MultiAggregateProvenance | null | undefined): string {
+  if (!provenance) return "";
+  return `Prov ${Math.round((Number(provenance.score || 0) * 1000) / 10)}% (multi)`;
 }
 
 function answerSourceLabel(message: ChatMessage): string {
@@ -115,6 +160,12 @@ function insightHeading(kind: InsightKind): string {
 
 function insightExplanation(kind: InsightKind, message: ChatMessage): string {
   if (kind === "provenance") {
+    if (message.scopeMode === "multi" && message.aggregateProvenance) {
+      const score = Math.round((Number(message.aggregateProvenance.score || 0) * 1000) / 10);
+      const status = String(message.aggregateProvenance.status || "low");
+      const coverage = (message.aggregateProvenance.coverage || {}) as Record<string, unknown>;
+      return `Multi-paper provenance summarizes per-paper grounding across the selected papers. This synthesis is ${score}% (${status}) with ${Number(coverage.cited_answer_count || 0)}/${Number(coverage.selected_paper_count || 0)} papers contributing cited subanswers.`;
+    }
     const provenance = message.provenance;
     const score = Math.round((Number(provenance?.score || 0) * 1000) / 10);
     const status = String(provenance?.status || "low");
@@ -160,6 +211,39 @@ function historyToMessages(rows: ChatHistoryItem[]): ChatMessage[] {
       cacheHitLayer: String(row.cache_hit_layer || ""),
       cacheMissReason: String(row.cache_miss_reason || ""),
       model: row.model,
+      scopeMode: "single",
+    });
+  }
+  return out;
+}
+
+function multiHistoryToMessages(rows: MultiChatHistoryRow[]): ChatMessage[] {
+  const out: ChatMessage[] = [];
+  for (let idx = 0; idx < rows.length; idx += 1) {
+    const row = rows[idx] || {};
+    const created = String(row.created_at || nowIso());
+    const key = String(row.created_at || `${idx}`);
+    out.push({
+      id: `u-multi-${key}-${idx}`,
+      role: "user",
+      text: String(row.query || ""),
+      createdAt: created,
+      scopeMode: "multi",
+      multiPaperIds: Array.isArray(row.paper_ids) ? row.paper_ids : [],
+    });
+    out.push({
+      id: `a-multi-${key}-${idx}`,
+      role: "assistant",
+      text: String(row.answer || ""),
+      prompt: String(row.query || ""),
+      createdAt: created,
+      model: row.model,
+      aggregateProvenance: (row.aggregate_provenance as MultiAggregateProvenance) || null,
+      multiPaperAnswers: Array.isArray(row.paper_answers) ? (row.paper_answers as MultiPaperAnswerRow[]) : [],
+      multiPaperIds: Array.isArray(row.paper_ids) ? row.paper_ids : [],
+      comparisonSummary: (row.comparison_summary as Record<string, unknown>) || {},
+      suggestedPapers: (row.suggested_papers as Record<string, unknown>) || {},
+      scopeMode: "multi",
     });
   }
   return out;
@@ -192,11 +276,30 @@ function messagesToHistory(messages: ChatMessage[], paperPath: string): ChatHist
   return out.slice(-8);
 }
 
+function messagesToMultiHistory(messages: ChatMessage[], selectedPaperIds: string[]): MultiChatHistoryRow[] {
+  const out: MultiChatHistoryRow[] = [];
+  for (let i = 0; i < messages.length; i += 1) {
+    const current = messages[i];
+    if (current.role !== "user") continue;
+    const next = messages[i + 1];
+    if (!next || next.role !== "assistant") continue;
+    if (next.scopeMode !== "multi") continue;
+    if (!current.text.trim() || !next.text.trim()) continue;
+    out.push({
+      query: current.text,
+      answer: next.text,
+      paper_ids: Array.isArray(next.multiPaperIds) && next.multiPaperIds.length > 0 ? next.multiPaperIds : selectedPaperIds,
+    });
+  }
+  return out.slice(-8);
+}
+
 export function ChatTab(props: Props) {
   const [variationMode, setVariationMode] = useState(false);
   const [question, setQuestion] = useState("");
   const [queuedPrompts, setQueuedPrompts] = useState<QueuedPrompt[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [multiProjectSuggestions, setMultiProjectSuggestions] = useState<SimilarPaperSuggestion[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
   const [expandedInsight, setExpandedInsight] = useState<ExpandedInsight | null>(null);
@@ -204,7 +307,9 @@ export function ChatTab(props: Props) {
   const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scoredMessageIdsRef = useRef<Set<string>>(new Set());
-  const queueButtonsDisabled = !props.paperId;
+  const isMultiMode = props.chatScopeMode === "multi";
+  const selectedMultiPaperIds = Array.isArray(props.multiPaperIds) ? props.multiPaperIds : [];
+  const queueButtonsDisabled = isMultiMode ? selectedMultiPaperIds.length < 2 : !props.paperId;
 
   useEffect(() => {
     if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === "function") {
@@ -244,38 +349,98 @@ export function ChatTab(props: Props) {
       setError("");
       setQuestion("");
       setQueuedPrompts([]);
-      const [historyOut, suggestionsOut] = await Promise.all([
-        api<ChatHistoryResponse>(`/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}&limit=80`),
-        api<ChatSuggestionPayload>(`/api/v1/chat/suggestions?paper_id=${encodeURIComponent(props.paperId)}`),
+      setMultiProjectSuggestions([]);
+      if (!isMultiMode) {
+        const [historyOut, suggestionsOut] = await Promise.all([
+          api<ChatHistoryResponse>(`/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}&limit=80`),
+          api<ChatSuggestionPayload>(`/api/v1/chat/suggestions?paper_id=${encodeURIComponent(props.paperId)}`),
+        ]);
+        if (historyOut.ok && historyOut.data?.rows) {
+          setMessages(historyToMessages(historyOut.data.rows));
+        } else {
+          setMessages([]);
+        }
+        setExpandedMessageId(null);
+        setExpandedInsight(null);
+        if (suggestionsOut.ok && Array.isArray(suggestionsOut.data?.questions)) {
+          setSuggestions(suggestionsOut.data?.questions || []);
+        } else {
+          setSuggestions([]);
+        }
+        if (!historyOut.ok && !suggestionsOut.ok) {
+          const message = historyOut.error?.message || suggestionsOut.error?.message || "Unable to load chat context.";
+          setError(message);
+          props.onStatus(message);
+        }
+        return;
+      }
+      if (selectedMultiPaperIds.length < 2) {
+        const questionsOut = await api<MultiStandardQuestionsPayload>("/api/v1/chat/multi/standard-questions");
+        setMessages([]);
+        setExpandedMessageId(null);
+        setExpandedInsight(null);
+        setSuggestions(questionsOut.ok && Array.isArray(questionsOut.data?.questions) ? questionsOut.data?.questions || [] : []);
+        return;
+      }
+      const params = new URLSearchParams();
+      params.set("limit", "80");
+      if (props.multiConversationId) {
+        params.set("conversation_id", props.multiConversationId);
+      } else {
+        for (const pid of selectedMultiPaperIds) params.append("paper_ids", pid);
+      }
+      const paperIdParam = selectedMultiPaperIds.map((id) => encodeURIComponent(id)).join(",");
+      const [historyOut, questionsOut, companionOut] = await Promise.all([
+        api<MultiChatHistoryResponse>(`/api/v1/chat/multi/history?${params.toString()}`),
+        api<MultiStandardQuestionsPayload>("/api/v1/chat/multi/standard-questions"),
+        selectedMultiPaperIds.length >= 2
+          ? api<MultiChatSuggestionsPayload>(`/api/v1/chat/multi/suggestions?paper_ids=${paperIdParam}`)
+          : Promise.resolve({ ok: true, data: { project: [] } } as any),
       ]);
       if (historyOut.ok && historyOut.data?.rows) {
-        setMessages(historyToMessages(historyOut.data.rows));
+        setMessages(multiHistoryToMessages(historyOut.data.rows));
+        if (historyOut.data.conversation_id) {
+          props.onMultiConversationIdChange(String(historyOut.data.conversation_id || ""));
+        }
       } else {
         setMessages([]);
       }
       setExpandedMessageId(null);
       setExpandedInsight(null);
-      if (suggestionsOut.ok && Array.isArray(suggestionsOut.data?.questions)) {
-        setSuggestions(suggestionsOut.data?.questions || []);
+      if (questionsOut.ok && Array.isArray(questionsOut.data?.questions)) {
+        setSuggestions(questionsOut.data?.questions || []);
       } else {
         setSuggestions([]);
       }
-      if (!historyOut.ok && !suggestionsOut.ok) {
-        const message = historyOut.error?.message || suggestionsOut.error?.message || "Unable to load chat context.";
+      if (companionOut.ok) {
+        setMultiProjectSuggestions(Array.isArray(companionOut.data?.project) ? (companionOut.data?.project || []) : []);
+      }
+      if (!historyOut.ok && !questionsOut.ok) {
+        const message = historyOut.error?.message || questionsOut.error?.message || "Unable to load multi-paper chat context.";
         setError(message);
         props.onStatus(message);
       }
     }
     void bootstrap();
-  }, [props.paperId]);
+  }, [props.paperId, props.chatScopeMode, props.multiConversationId, selectedMultiPaperIds.join(",")]);
 
-  const historyPayload = useMemo(() => messagesToHistory(messages, props.paperPath), [messages, props.paperPath]);
+  const historyPayload = useMemo(() => {
+    if (isMultiMode) return messagesToMultiHistory(messages, selectedMultiPaperIds);
+    return messagesToHistory(messages, props.paperPath);
+  }, [messages, props.paperPath, isMultiMode, selectedMultiPaperIds.join(",")]);
 
   function addPendingTurn(userText: string): { userId: string; assistantId: string; createdAt: string } {
     const createdAt = nowIso();
     const userId = `u-live-${createdAt}-${Math.random().toString(16).slice(2)}`;
     const assistantId = `a-live-${createdAt}-${Math.random().toString(16).slice(2)}`;
-    const userMsg: ChatMessage = { id: userId, role: "user", text: userText, createdAt };
+    const userMsg: ChatMessage = {
+      id: userId,
+      role: "user",
+      text: userText,
+      createdAt,
+      scopeMode: isMultiMode ? "multi" : "single",
+      multiPaperIds: isMultiMode ? selectedMultiPaperIds : undefined,
+    };
     const assistantMsg: ChatMessage = {
       id: assistantId,
       role: "assistant",
@@ -285,6 +450,8 @@ export function ChatTab(props: Props) {
       isStreaming: true,
       citations: [],
       retrievalStats: {},
+      scopeMode: isMultiMode ? "multi" : "single",
+      multiPaperIds: isMultiMode ? selectedMultiPaperIds : undefined,
     };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     return { userId, assistantId, createdAt };
@@ -310,7 +477,7 @@ export function ChatTab(props: Props) {
   }
 
   async function scoreProvenanceForMessage(message: ChatMessage) {
-    if (!props.paperId || message.role !== "assistant") return;
+    if (!props.paperId || message.role !== "assistant" || message.scopeMode === "multi") return;
     if (!message.text.trim()) return;
     const out = await api<ProvenanceScore>(
       "/api/v1/chat/provenance-score",
@@ -345,6 +512,7 @@ export function ChatTab(props: Props) {
       const pending = messages.filter(
         (item) =>
           item.role === "assistant" &&
+          item.scopeMode !== "multi" &&
           !item.isStreaming &&
           Boolean(item.text.trim()) &&
           !scoredMessageIdsRef.current.has(item.id)
@@ -360,38 +528,81 @@ export function ChatTab(props: Props) {
   async function runPrompt(prompt: string, stream: boolean) {
     const trimmedPrompt = prompt.trim();
     if (!props.paperId || !trimmedPrompt || isAsking) return;
+    if (isMultiMode && selectedMultiPaperIds.length < 2) return;
     setIsAsking(true);
     setError("");
     props.onStatus(stream ? "Streaming answer..." : "Fetching answer...");
 
     const { assistantId } = addPendingTurn(trimmedPrompt);
-    const payload = {
+    const singlePayload = {
       paper_id: props.paperId,
       question: trimmedPrompt,
       model: props.model || undefined,
       history: historyPayload,
       variation_mode: variationMode,
     };
+    const multiPayload = {
+      paper_ids: selectedMultiPaperIds,
+      question: trimmedPrompt,
+      model: props.model || undefined,
+      history: historyPayload,
+      variation_mode: false,
+      conversation_id: props.multiConversationId || undefined,
+      seed_paper_id: props.paperId || undefined,
+    };
 
     if (!stream) {
-      const out = await api<ChatTurnData>("/api/v1/chat/turn", { method: "POST", body: JSON.stringify(payload) }, props.csrfToken);
+      if (!isMultiMode) {
+        const out = await api<ChatTurnData>("/api/v1/chat/turn", { method: "POST", body: JSON.stringify(singlePayload) }, props.csrfToken);
+        if (!out.ok || !out.data) {
+          const message = out.error?.message || "Chat failed.";
+          setError(message);
+          updateAssistantMessage(assistantId, { text: message, isStreaming: false, scopeMode: "single" });
+          props.onStatus(message);
+          setIsAsking(false);
+          return;
+        }
+        updateAssistantMessage(assistantId, {
+          text: String(out.data.answer || ""),
+          citations: Array.isArray(out.data.citations) ? out.data.citations : [],
+          retrievalStats: (out.data.retrieval_stats as Record<string, unknown>) || {},
+          cacheHit: typeof out.data.cache_hit === "boolean" ? out.data.cache_hit : null,
+          cacheHitLayer: String(out.data.cache_hit_layer || ""),
+          cacheMissReason: String(out.data.cache_miss_reason || ""),
+          model: String(out.data.model || props.model || ""),
+          isStreaming: false,
+          scopeMode: "single",
+        });
+        props.onStatus("Ready");
+        setIsAsking(false);
+        return;
+      }
+      const out = await api<MultiChatTurnPayload>(
+        "/api/v1/chat/multi/turn",
+        { method: "POST", body: JSON.stringify(multiPayload) },
+        props.csrfToken
+      );
       if (!out.ok || !out.data) {
-        const message = out.error?.message || "Chat failed.";
+        const message = out.error?.message || "Multi-paper chat failed.";
         setError(message);
-        updateAssistantMessage(assistantId, { text: message, isStreaming: false });
+        updateAssistantMessage(assistantId, { text: message, isStreaming: false, scopeMode: "multi" });
         props.onStatus(message);
         setIsAsking(false);
         return;
       }
+      if (out.data.conversation_id) {
+        props.onMultiConversationIdChange(String(out.data.conversation_id || ""));
+      }
       updateAssistantMessage(assistantId, {
         text: String(out.data.answer || ""),
-        citations: Array.isArray(out.data.citations) ? out.data.citations : [],
-        retrievalStats: (out.data.retrieval_stats as Record<string, unknown>) || {},
-        cacheHit: typeof out.data.cache_hit === "boolean" ? out.data.cache_hit : null,
-        cacheHitLayer: String(out.data.cache_hit_layer || ""),
-        cacheMissReason: String(out.data.cache_miss_reason || ""),
+        aggregateProvenance: (out.data.aggregate_provenance as MultiAggregateProvenance) || null,
+        multiPaperAnswers: Array.isArray(out.data.paper_answers) ? out.data.paper_answers : [],
+        multiPaperIds: Array.isArray(out.data.scope?.paper_ids) ? out.data.scope?.paper_ids || [] : selectedMultiPaperIds,
+        comparisonSummary: (out.data.comparison_summary as Record<string, unknown>) || {},
+        suggestedPapers: (out.data.suggested_papers as Record<string, unknown>) || {},
         model: String(out.data.model || props.model || ""),
         isStreaming: false,
+        scopeMode: "multi",
       });
       props.onStatus("Ready");
       setIsAsking(false);
@@ -399,11 +610,12 @@ export function ChatTab(props: Props) {
     }
 
     try {
-      const res = await fetch("/api/v1/chat/turn-stream", {
+      const streamPath = isMultiMode ? "/api/v1/chat/multi/turn-stream" : "/api/v1/chat/turn-stream";
+      const res = await fetch(streamPath, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": props.csrfToken },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(isMultiMode ? multiPayload : singlePayload),
       });
       if (!res.ok || !res.body) {
         const bodyPreview = ((await res.text()) || "").replace(/\s+/g, " ").trim().slice(0, 240);
@@ -425,6 +637,11 @@ export function ChatTab(props: Props) {
       let finalCacheHit: boolean | null = null;
       let finalCacheHitLayer = "";
       let finalCacheMissReason = "";
+      let finalAggregateProvenance: MultiAggregateProvenance | null = null;
+      let finalMultiPaperAnswers: MultiPaperAnswerRow[] = [];
+      let finalMultiPaperIds: string[] = [];
+      let finalComparisonSummary: Record<string, unknown> = {};
+      let finalSuggestedPapers: Record<string, unknown> = {};
 
       while (true) {
         const { value, done } = await reader.read();
@@ -439,15 +656,34 @@ export function ChatTab(props: Props) {
             const event = String(parsed.event || "");
             if (event === "delta") {
               finalAnswer = String(parsed.text || finalAnswer || "");
-              updateAssistantMessage(assistantId, { text: finalAnswer, isStreaming: true });
+              updateAssistantMessage(assistantId, { text: finalAnswer, isStreaming: true, scopeMode: isMultiMode ? "multi" : "single" });
+            } else if (event === "paper_answer") {
+              const index = Number(parsed.index || 0);
+              const total = Number(parsed.total || 0);
+              const title = String(parsed.paper_title || parsed.paper_id || "");
+              if (index > 0 && total > 0) {
+                props.onStatus(`Processing paper ${index}/${total}: ${title}`);
+              }
             } else if (event === "done") {
               finalAnswer = String(parsed.answer || finalAnswer || "");
-              finalCitations = Array.isArray(parsed.citations) ? (parsed.citations as CitationChunk[]) : finalCitations;
-              finalStats = (parsed.retrieval_stats as Record<string, unknown>) || finalStats;
+              if (!isMultiMode) {
+                finalCitations = Array.isArray(parsed.citations) ? (parsed.citations as CitationChunk[]) : finalCitations;
+                finalStats = (parsed.retrieval_stats as Record<string, unknown>) || finalStats;
+                finalCacheHit = typeof parsed.cache_hit === "boolean" ? (parsed.cache_hit as boolean) : finalCacheHit;
+                finalCacheHitLayer = String(parsed.cache_hit_layer || finalCacheHitLayer || "");
+                finalCacheMissReason = String(parsed.cache_miss_reason || finalCacheMissReason || "");
+              } else {
+                finalAggregateProvenance = (parsed.aggregate_provenance as MultiAggregateProvenance) || finalAggregateProvenance;
+                finalMultiPaperAnswers = Array.isArray(parsed.paper_answers) ? (parsed.paper_answers as MultiPaperAnswerRow[]) : finalMultiPaperAnswers;
+                finalComparisonSummary = (parsed.comparison_summary as Record<string, unknown>) || finalComparisonSummary;
+                finalSuggestedPapers = (parsed.suggested_papers as Record<string, unknown>) || finalSuggestedPapers;
+                const scope = (parsed.scope as Record<string, unknown>) || {};
+                finalMultiPaperIds = Array.isArray(scope.paper_ids) ? (scope.paper_ids as string[]) : finalMultiPaperIds;
+                if (String(parsed.conversation_id || "").trim()) {
+                  props.onMultiConversationIdChange(String(parsed.conversation_id || ""));
+                }
+              }
               finalModel = String(parsed.model || finalModel || props.model || "");
-              finalCacheHit = typeof parsed.cache_hit === "boolean" ? (parsed.cache_hit as boolean) : finalCacheHit;
-              finalCacheHitLayer = String(parsed.cache_hit_layer || finalCacheHitLayer || "");
-              finalCacheMissReason = String(parsed.cache_miss_reason || finalCacheMissReason || "");
               updateAssistantMessage(assistantId, {
                 text: finalAnswer,
                 citations: finalCitations,
@@ -456,7 +692,13 @@ export function ChatTab(props: Props) {
                 cacheHit: finalCacheHit,
                 cacheHitLayer: finalCacheHitLayer,
                 cacheMissReason: finalCacheMissReason,
+                aggregateProvenance: finalAggregateProvenance,
+                multiPaperAnswers: finalMultiPaperAnswers,
+                multiPaperIds: finalMultiPaperIds,
+                comparisonSummary: finalComparisonSummary,
+                suggestedPapers: finalSuggestedPapers,
                 isStreaming: false,
+                scopeMode: isMultiMode ? "multi" : "single",
               });
             } else if (event === "error") {
               const message = String(parsed.message || parsed.code || "Chat failed");
@@ -483,6 +725,7 @@ export function ChatTab(props: Props) {
   function submitPrompt(stream: boolean) {
     const prompt = question.trim();
     if (!props.paperId || !prompt) return;
+    if (isMultiMode && selectedMultiPaperIds.length < 2) return;
     setQuestion("");
     enqueuePrompt(prompt, stream);
   }
@@ -527,13 +770,23 @@ export function ChatTab(props: Props) {
   }
 
   async function clearHistory() {
-    if (!props.paperId || isAsking || queuedPrompts.length > 0) return;
+    if ((!props.paperId && !isMultiMode) || isAsking || queuedPrompts.length > 0) return;
     setError("");
-    const out = await api<{ deleted_count: number }>(
-      `/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}`,
-      { method: "DELETE" },
-      props.csrfToken
-    );
+    const out = isMultiMode
+      ? await api<{ deleted_count: number; conversation_id?: string }>(
+          `/api/v1/chat/multi/history?conversation_id=${encodeURIComponent(props.multiConversationId || "")}${
+            !props.multiConversationId && selectedMultiPaperIds.length >= 2
+              ? selectedMultiPaperIds.map((id) => `&paper_ids=${encodeURIComponent(id)}`).join("")
+              : ""
+          }`,
+          { method: "DELETE" },
+          props.csrfToken
+        )
+      : await api<{ deleted_count: number }>(
+          `/api/v1/chat/history?paper_id=${encodeURIComponent(props.paperId)}`,
+          { method: "DELETE" },
+          props.csrfToken
+        );
     if (!out.ok) {
       const message = out.error?.message || "Failed to clear chat history.";
       setError(message);
@@ -541,6 +794,7 @@ export function ChatTab(props: Props) {
       return;
     }
     setMessages([]);
+    if (isMultiMode) props.onMultiConversationIdChange("");
     props.onStatus(`Cleared ${out.data?.deleted_count || 0} history rows.`);
   }
 
@@ -549,9 +803,29 @@ export function ChatTab(props: Props) {
       <header className={css.headerRow}>
         <div>
           <h2>Chat</h2>
-          <p className={css.paperLabel}>Selected paper: {props.paperName || "n/a"}</p>
+          <p className={css.paperLabel}>
+            {isMultiMode
+              ? `Multi-paper mode: ${selectedMultiPaperIds.length} selected`
+              : `Selected paper: ${props.paperName || "n/a"}`}
+          </p>
         </div>
         <div className={css.headerActions}>
+          <div className={css.toggleRow}>
+            <button
+              type="button"
+              className={props.chatScopeMode === "single" ? css.secondaryButton : css.queueRemove}
+              onClick={() => props.onChatScopeModeChange("single")}
+            >
+              Single paper
+            </button>
+            <button
+              type="button"
+              className={props.chatScopeMode === "multi" ? css.secondaryButton : css.queueRemove}
+              onClick={() => props.onChatScopeModeChange("multi")}
+            >
+              Multi-paper
+            </button>
+          </div>
           <label className={css.toggleRow}>
             <input type="checkbox" checked={variationMode} onChange={(e) => setVariationMode(e.target.checked)} />
             Variation mode
@@ -565,6 +839,65 @@ export function ChatTab(props: Props) {
           </button>
         </div>
       </header>
+
+      {isMultiMode && (
+        <section className={css.queuePanel}>
+          <div className={css.queueHeader}>
+            <strong>Multi-Paper Selection ({selectedMultiPaperIds.length}/10)</strong>
+            <button
+              className={css.secondaryButton}
+              onClick={() => props.onMultiConversationIdChange("")}
+              type="button"
+            >
+              New Conversation
+            </button>
+          </div>
+          <div className={css.suggestions}>
+            {props.papers.map((paper) => {
+              const pid = String(paper.paper_id || "");
+              const label = String(paper.display_title || paper.title || paper.name || pid);
+              const checked = selectedMultiPaperIds.includes(pid);
+              const disableAdd = !checked && selectedMultiPaperIds.length >= 10;
+              return (
+                <label key={`multi-select-${pid}`} className={css.toggleRow}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={disableAdd}
+                    onChange={() => {
+                      if (checked) {
+                        props.onMultiPaperIdsChange(selectedMultiPaperIds.filter((id) => id !== pid));
+                        return;
+                      }
+                      props.onMultiPaperIdsChange([...selectedMultiPaperIds, pid].slice(0, 10));
+                    }}
+                  />
+                  <span title={label}>{label}</span>
+                </label>
+              );
+            })}
+          </div>
+          {multiProjectSuggestions.length > 0 && (
+            <div>
+              <strong>Suggested companions</strong>
+              <div className={css.suggestions}>
+                {multiProjectSuggestions.slice(0, 8).map((item) => (
+                  <button
+                    key={`multi-suggest-${item.paper_id}`}
+                    className={css.suggestionChip}
+                    onClick={() => {
+                      if (selectedMultiPaperIds.includes(item.paper_id)) return;
+                      props.onMultiPaperIdsChange([...selectedMultiPaperIds, item.paper_id].slice(0, 10));
+                    }}
+                  >
+                    {item.title} ({Number(item.score || 0).toFixed(2)})
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {suggestions.length > 0 && (
         <div className={css.suggestions}>
@@ -610,6 +943,7 @@ export function ChatTab(props: Props) {
             const isAssistant = message.role === "assistant";
             const isExpanded = isAssistant && expandedMessageId === message.id;
             const provenanceLabel = formatProvenanceLabel(message.provenance);
+            const aggregateProvenanceLabel = formatAggregateProvenanceLabel(message.aggregateProvenance);
             const activeInsight = isExpanded && expandedInsight?.messageId === message.id ? expandedInsight.kind : null;
             return (
             <div key={message.id} className={`${css.messageRow} ${message.role === "user" ? css.userRow : css.assistantRow}`}>
@@ -672,6 +1006,15 @@ export function ChatTab(props: Props) {
                         {message.model}
                       </button>
                     )}
+                    {message.aggregateProvenance && (
+                      <button
+                        type="button"
+                        className={`${css.metaBadge} ${css.metaBadgeButton}`}
+                        onClick={(event) => openInsight(event, message.id, "provenance")}
+                      >
+                        {aggregateProvenanceLabel}
+                      </button>
+                    )}
                     {message.provenance && (
                       <button
                         type="button"
@@ -699,16 +1042,33 @@ export function ChatTab(props: Props) {
                     <div className={css.provenanceBlock}>
                       <strong>About this answer</strong>
                       <ul className={css.aboutList}>
+                        {message.scopeMode === "multi" && <li>Scope: Multi-paper synthesis ({(message.multiPaperIds || []).length} papers)</li>}
                         <li>Response source: {answerSourceLabel(message)}</li>
                         <li>Retrieval method: {retrievalMethodLabel(message)}</li>
                         <li>Citation chunks: {Array.isArray(message.citations) ? message.citations.length : 0}</li>
                         {message.model && <li>Model: {message.model}</li>}
                         {message.cacheHitLayer && <li>Cache layer: {message.cacheHitLayer}</li>}
                         {message.cacheMissReason && <li>Cache miss reason: {message.cacheMissReason}</li>}
+                        {message.aggregateProvenance && <li>Aggregate provenance: {aggregateProvenanceLabel}</li>}
                         {message.provenance && <li>Provenance: {provenanceLabel}</li>}
                       </ul>
                     </div>
-                    {Array.isArray(message.citations) && message.citations.length > 0 ? (
+                    {message.scopeMode === "multi" && Array.isArray(message.multiPaperAnswers) && message.multiPaperAnswers.length > 0 && (
+                      <details>
+                        <summary>Per-paper answers ({message.multiPaperAnswers.length})</summary>
+                        <ul className={css.citationList}>
+                          {message.multiPaperAnswers.map((row, idx) => (
+                            <li key={`${message.id}-mp-${idx}`}>
+                              <div>
+                                <strong>{row.paper_title || row.paper_id}</strong> {row.cache_hit ? "(cache)" : "(fresh)"}
+                              </div>
+                              <p className={css.citationText}>{String(row.answer || "").slice(0, 260)}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                    {message.scopeMode !== "multi" && Array.isArray(message.citations) && message.citations.length > 0 ? (
                       <ul className={css.citationList}>
                         {message.citations.slice(0, 3).map((c, idx) => (
                           <li key={`${message.id}-citation-${idx}`}>
@@ -735,9 +1095,9 @@ export function ChatTab(props: Props) {
                           </li>
                         ))}
                       </ul>
-                    ) : (
+                    ) : message.scopeMode !== "multi" ? (
                       <span>No citation chunks returned.</span>
-                    )}
+                    ) : null}
                     {message.provenance && (
                       <div className={css.provenanceBlock}>
                         <strong>Provenance score:</strong>{" "}
@@ -751,6 +1111,12 @@ export function ChatTab(props: Props) {
                             ))}
                           </ul>
                         )}
+                      </div>
+                    )}
+                    {message.aggregateProvenance && (
+                      <div className={css.provenanceBlock}>
+                        <strong>Aggregate provenance score:</strong> {aggregateProvenanceLabel.replace("Prov ", "")}
+                        <pre className={css.stats}>{JSON.stringify(message.aggregateProvenance, null, 2)}</pre>
                       </div>
                     )}
                     <pre className={css.stats}>{JSON.stringify(message.retrievalStats || {}, null, 2)}</pre>
@@ -770,7 +1136,7 @@ export function ChatTab(props: Props) {
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={4}
-          placeholder="Ask a question about this paper"
+          placeholder={isMultiMode ? "Ask a field-level question across the selected papers" : "Ask a question about this paper"}
         />
         <div className={css.composerActions}>
           <button

@@ -36,6 +36,7 @@ def test_normalize_alembic_revision_aliases():
     assert db_connection.normalize_alembic_revision("0012_projects_core") == "0012"
     assert db_connection.normalize_alembic_revision("0013_project_scope_existing_tables") == "0013"
     assert db_connection.normalize_alembic_revision("0014_hybrid_query_cache") == "0014"
+    assert db_connection.normalize_alembic_revision("0015_multi_paper_chat") == "0015"
     assert db_connection.normalize_alembic_revision("0004_extra_text") == "0004"
     assert db_connection.normalize_alembic_revision("0006_extra_text") == "0006"
     assert db_connection.normalize_alembic_revision("0007_extra_text") == "0007"
@@ -51,6 +52,7 @@ def test_normalize_alembic_revision_aliases():
     assert db_connection.normalize_alembic_revision("0012") == "0012"
     assert db_connection.normalize_alembic_revision("0013") == "0013"
     assert db_connection.normalize_alembic_revision("0014") == "0014"
+    assert db_connection.normalize_alembic_revision("0015") == "0015"
     assert db_connection.normalize_alembic_revision(None) == ""
 
 
@@ -69,7 +71,7 @@ def test_normalize_alembic_version_marker_updates_db():
         row = cur.fetchone()
         assert row[0] == "0002"
     finally:
-        _set_revision("0014")
+        _set_revision("0015")
 
 
 def test_ensure_schema_ready_accepts_legacy_marker_alias():
@@ -78,4 +80,4 @@ def test_ensure_schema_ready_accepts_legacy_marker_alias():
     try:
         db_connection.ensure_schema_ready(conn, expected_revision="0005")
     finally:
-        _set_revision("0014")
+        _set_revision("0015")

@@ -34,6 +34,23 @@ class ChatTurnRequest(BaseModel):
     history: List[ChatHistoryItem] = Field(default_factory=list)
 
 
+class MultiChatHistoryItem(BaseModel):
+    query: str = ""
+    answer: str = ""
+    paper_ids: List[str] = Field(default_factory=list)
+
+
+class MultiChatTurnRequest(BaseModel):
+    paper_ids: List[str] = Field(default_factory=list)
+    question: str = Field(min_length=1, max_length=4000)
+    model: Optional[str] = None
+    top_k: Optional[int] = Field(default=None, ge=1, le=30)
+    variation_mode: bool = False
+    history: List[MultiChatHistoryItem] = Field(default_factory=list)
+    conversation_id: str = Field(default="", max_length=128)
+    seed_paper_id: str = Field(default="", max_length=64)
+
+
 class ChatProvenanceScoreRequest(BaseModel):
     paper_id: str = Field(min_length=1, max_length=64)
     question: str = Field(default="", max_length=4000)
@@ -82,6 +99,14 @@ class CompareFillMissingRequest(BaseModel):
 
 class CompareExportRequest(BaseModel):
     format: str = Field(default="json", max_length=16)
+
+
+class MultiChatNetworkRequest(BaseModel):
+    paper_ids: List[str] = Field(default_factory=list)
+    include_topic_edges: bool = True
+    include_author_edges: bool = True
+    include_citation_edges: bool = True
+    min_similarity: float = Field(default=0.15, ge=0.0, le=1.0)
 
 
 class ForgotPasswordRequest(BaseModel):

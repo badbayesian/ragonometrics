@@ -4,6 +4,20 @@ import sys
 import types
 import sqlite3
 import re
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# Some environments have a previously installed ragonometrics package. Purge it so tests
+# always import the local workspace code.
+_loaded = sys.modules.get("ragonometrics")
+_loaded_path = str(getattr(_loaded, "__file__", "") or "").lower()
+if _loaded_path and str(ROOT).lower() not in _loaded_path:
+    for _name in [name for name in list(sys.modules) if name == "ragonometrics" or name.startswith("ragonometrics.")]:
+        sys.modules.pop(_name, None)
 
 
 class SQLiteCursorWrapper:
@@ -67,7 +81,7 @@ class SQLiteConnWrapper:
         cur = self._conn.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS alembic_version (version_num TEXT PRIMARY KEY)")
         cur.execute("DELETE FROM alembic_version")
-        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0014')")
+        cur.execute("INSERT INTO alembic_version(version_num) VALUES ('0015')")
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS run_records (

@@ -111,6 +111,118 @@ export type ChatSuggestionPayload = {
   questions: string[];
 };
 
+export type MultiChatHistoryItem = {
+  query: string;
+  answer: string;
+  paper_ids: string[];
+  model?: string;
+  paper_answers?: MultiPaperAnswerRow[];
+  comparison_summary?: Record<string, unknown>;
+  aggregate_provenance?: MultiAggregateProvenance;
+  suggested_papers?: Record<string, unknown>;
+  request_id?: string;
+  created_at?: string;
+};
+
+export type MultiPaperAnswerRow = {
+  paper_id: string;
+  paper_path?: string;
+  paper_name?: string;
+  paper_title?: string;
+  authors?: string;
+  openalex_url?: string;
+  answer: string;
+  citations?: CitationChunk[];
+  retrieval_stats?: Record<string, unknown>;
+  cache_hit?: boolean;
+  cache_hit_layer?: string;
+  cache_scope?: string;
+  cache_miss_reason?: string;
+  model?: string;
+  provenance?: Record<string, unknown>;
+};
+
+export type MultiAggregateProvenance = {
+  score: number;
+  status: "high" | "medium" | "low";
+  per_paper?: Array<{ paper_id: string; score: number; status: "high" | "medium" | "low" }>;
+  coverage?: Record<string, unknown>;
+};
+
+export type ExternalPaperSuggestion = {
+  paper_id?: string;
+  name?: string;
+  path?: string;
+  title: string;
+  authors?: string;
+  openalex_url?: string;
+  openalex_id?: string;
+  publication_year?: number | null;
+  doi?: string;
+  score?: number;
+  source?: string;
+  ingested?: boolean;
+  reason?: string;
+};
+
+export type MultiChatTurnPayload = {
+  conversation_id: string;
+  answer: string;
+  model: string;
+  request_id: string;
+  scope: {
+    mode: "multi";
+    paper_ids: string[];
+    seed_paper_id?: string;
+    paper_count: number;
+  };
+  paper_answers: MultiPaperAnswerRow[];
+  comparison_summary?: {
+    consensus_points?: string[];
+    disagreement_points?: string[];
+    methods_contrasts?: string[];
+    evidence_gaps?: string[];
+  };
+  aggregate_provenance?: MultiAggregateProvenance;
+  suggested_followups?: string[];
+  suggested_papers?: {
+    selected_paper_ids?: string[];
+    project?: SimilarPaperSuggestion[];
+    external?: ExternalPaperSuggestion[];
+    rationale_summary?: Record<string, unknown>;
+  };
+};
+
+export type PaperInteractionNode = {
+  id: string;
+  paper_id: string;
+  label: string;
+  title?: string;
+  authors?: string;
+  publication_year?: number | null;
+  openalex_url?: string;
+  openalex_id?: string;
+  group?: string;
+};
+
+export type PaperInteractionEdge = {
+  from: string;
+  to: string;
+  type: string;
+  weight?: number;
+  label?: string;
+  directed?: boolean;
+  details?: Record<string, unknown>;
+};
+
+export type MultiPaperNetworkPayload = {
+  nodes: PaperInteractionNode[];
+  edges: PaperInteractionEdge[];
+  summary?: Record<string, unknown>;
+  legend?: Record<string, unknown>;
+  warnings?: string[];
+};
+
 export type StructuredQuestion = { id: string; category: string; question: string };
 
 export type StructuredExportRow = {

@@ -75,6 +75,9 @@ export function App() {
   const [status, setStatus] = useState<string>("");
   const [tab, setTab] = useState<TabKey>("chat");
   const [queuedQuestion, setQueuedQuestion] = useState<string>("");
+  const [chatScopeMode, setChatScopeMode] = useState<"single" | "multi">("single");
+  const [multiPaperIds, setMultiPaperIds] = useState<string[]>([]);
+  const [multiConversationId, setMultiConversationId] = useState<string>("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [debugMode, setDebugMode] = useState(false);
@@ -228,6 +231,19 @@ export function App() {
   useEffect(() => {
     void refreshAuthAndPapers();
   }, []);
+
+  useEffect(() => {
+    if (!paperId) return;
+    setMultiPaperIds((prev) => {
+      if (prev.includes(paperId)) return prev;
+      if (prev.length >= 10) return prev;
+      return [paperId, ...prev].slice(0, 10);
+    });
+  }, [paperId]);
+
+  useEffect(() => {
+    setMultiConversationId("");
+  }, [currentProjectId, currentPersonaId]);
 
   useEffect(() => {
     const stored = String(window.localStorage.getItem("rag_theme") || "").trim();
@@ -691,7 +707,17 @@ export function App() {
                 paperId={paperId}
                 paperName={selectedPaperTitle || selectedPaper.name}
                 paperPath={selectedPaper.path}
+                papers={papers}
                 model={model}
+                chatScopeMode={chatScopeMode}
+                onChatScopeModeChange={setChatScopeMode}
+                multiPaperIds={multiPaperIds}
+                onMultiPaperIdsChange={(ids) => {
+                  setMultiPaperIds(ids.slice(0, 10));
+                  setMultiConversationId("");
+                }}
+                multiConversationId={multiConversationId}
+                onMultiConversationIdChange={setMultiConversationId}
                 queuedQuestion={queuedQuestion}
                 onQuestionConsumed={() => setQueuedQuestion("")}
                 onStatus={setStatus}
@@ -731,7 +757,15 @@ export function App() {
               <OpenAlexTab csrfToken={csrfToken} paperId={paperId} onStatus={setStatus} />
             )}
 
-            {tab === "network" && selectedPaper && <CitationNetworkTab paperId={paperId} onStatus={setStatus} />}
+            {tab === "network" && selectedPaper && (
+              <CitationNetworkTab
+                paperId={paperId}
+                csrfToken={csrfToken}
+                multiPaperIds={multiPaperIds}
+                chatScopeMode={chatScopeMode}
+                onStatus={setStatus}
+              />
+            )}
 
             {tab === "usage" && <UsageTab onStatus={setStatus} />}
             {debugMode && tab === "workflow" && selectedPaper && <WorkflowCacheTab paperId={paperId} onStatus={setStatus} />}

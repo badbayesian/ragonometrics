@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../shared/api";
+import { MultiPaperNetworkPayload } from "../../shared/types";
 import { Spinner } from "../../shared/Spinner";
 import css from "./CitationNetworkTab.module.css";
 
@@ -24,6 +25,7 @@ type GraphEdge = {
   to: string;
   relation?: string;
   hop?: number;
+  weight?: number;
 };
 
 type GraphPayload = {
@@ -56,6 +58,9 @@ type NetworkPayload = {
 
 type Props = {
   paperId: string;
+  csrfToken?: string;
+  multiPaperIds?: string[];
+  chatScopeMode?: "single" | "multi";
   onStatus: (text: string) => void;
 };
 
@@ -112,6 +117,7 @@ export function CitationNetworkTab(props: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [graphError, setGraphError] = useState("");
+  const isMultiMode = props.chatScopeMode === "multi" && (props.multiPaperIds || []).length >= 2;
   const graphRef = useRef<HTMLDivElement | null>(null);
   const networkRef = useRef<any>(null);
   const centerNodeIdRef = useRef<string>("");
@@ -149,12 +155,28 @@ export function CitationNetworkTab(props: Props) {
     requestSeqRef.current = seq;
     setLoading(true);
     setError("");
-    const path =
-      `/api/v1/openalex/citation-network?paper_id=${encodeURIComponent(props.paperId)}` +
-      `&max_references=${encodeURIComponent(String(effectiveMaxReferences))}` +
-      `&max_citing=${encodeURIComponent(String(effectiveMaxCiting))}` +
-      `&n_hops=${encodeURIComponent(String(effectiveHops))}`;
-    const out = await api<NetworkPayload>(path);
+    const out = isMultiMode
+      ? await api<MultiPaperNetworkPayload>(
+          "/api/v1/chat/multi/network",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              paper_ids: (props.multiPaperIds || []).slice(0, 10),
+              include_topic_edges: true,
+              include_author_edges: true,
+              include_citation_edges: true,
+              min_similarity: 0.15,
+            }),
+          }
+          ,
+          props.csrfToken || undefined
+        )
+      : await api<NetworkPayload>(
+          `/api/v1/openalex/citation-network?paper_id=${encodeURIComponent(props.paperId)}` +
+            `&max_references=${encodeURIComponent(String(effectiveMaxReferences))}` +
+            `&max_citing=${encodeURIComponent(String(effectiveMaxCiting))}` +
+            `&n_hops=${encodeURIComponent(String(effectiveHops))}`
+        );
     if (seq !== requestSeqRef.current) {
       return;
     }
@@ -165,8 +187,46 @@ export function CitationNetworkTab(props: Props) {
       setLoading(false);
       return;
     }
-    setData(out.data);
-    const cacheStatus = String(out.data.cache?.status || "n/a");
+    if (isMultiMode) {
+      const multi = out.data as unknown as MultiPaperNetworkPayload;
+      const nodes = Array.isArray(multi.nodes)
+        ? multi.nodes.map((row, idx) => ({
+            id: String(row.paper_id || row.id || `selected-${idx}`),
+            openalex_url: String(row.openalex_url || ""),
+            title: String(row.title || row.label || row.paper_id || `Paper ${idx + 1}`),
+            publication_year: row.publication_year ?? null,
+            doi: "",
+            cited_by_count: 0,
+            group: idx === 0 ? "center" : "neighborhood",
+            hop: 1,
+          }))
+        : [];
+      const edges = Array.isArray(multi.edges)
+        ? multi.edges.map((row) => ({
+            from: String(row.from || ""),
+            to: String(row.to || ""),
+            relation: String(row.type || "references"),
+            hop: 1,
+            weight: Number(row.weight || 0),
+          }))
+        : [];
+      const adapted: NetworkPayload = {
+        available: true,
+        message: "",
+        center: nodes[0] || null,
+        references: [],
+        citing: [],
+        graph: { nodes, edges, n_hops: 1, node_count: nodes.length, edge_count: edges.length },
+        cache: { status: "multi_interactions" },
+        summary: { ...(multi.summary || {}), mode: "selected_interactions" },
+      };
+      setData(adapted);
+      props.onStatus(`Selected-paper interaction graph loaded (${nodes.length} nodes).`);
+      setLoading(false);
+      return;
+    }
+    setData(out.data as unknown as NetworkPayload);
+    const cacheStatus = String((out.data as any).cache?.status || "n/a");
     const reason = String(opts?.reason || "reload");
     props.onStatus(`Citation network loaded (${reason}; cache=${cacheStatus}).`);
     setLoading(false);
@@ -194,6 +254,10 @@ export function CitationNetworkTab(props: Props) {
 
   useEffect(() => {
     if (!props.paperId) return;
+    if (props.chatScopeMode === "multi" && (props.multiPaperIds || []).length < 2) {
+      setData(null);
+      return;
+    }
     const paperChanged = prevPaperIdRef.current !== props.paperId;
     prevPaperIdRef.current = props.paperId;
     clearAutoRefreshTimer();
@@ -211,7 +275,7 @@ export function CitationNetworkTab(props: Props) {
     return () => {
       clearAutoRefreshTimer();
     };
-  }, [props.paperId, maxReferences, maxCiting, nHops]);
+  }, [props.paperId, props.chatScopeMode, (props.multiPaperIds || []).join(","), maxReferences, maxCiting, nHops]);
 
   useEffect(() => {
     if (!data || !data.available || !data.center || !graphRef.current) return;
@@ -229,10 +293,54 @@ export function CitationNetworkTab(props: Props) {
 
         const rawGraphNodes = Array.isArray(data.graph?.nodes) ? data.graph?.nodes || [] : [];
         const rawGraphEdges = Array.isArray(data.graph?.edges) ? data.graph?.edges || [] : [];
+        const interactionMode = String(data.summary?.mode || "") === "selected_interactions";
 
         let nodes: any[] = [];
         let edges: any[] = [];
-        if (rawGraphNodes.length > 0) {
+        if (interactionMode && rawGraphNodes.length > 0) {
+          nodes = rawGraphNodes.map((row, idx) => ({
+            id: String(row.id || workKey(row, idx, "multi-node")),
+            label: row.title,
+            title: `${row.title}\nYear: ${row.publication_year || "n/a"}`,
+            size: 24,
+            group: row.group === "center" ? "center" : "neighborhood",
+            openalex_url: row.openalex_url,
+          }));
+          edges = rawGraphEdges
+            .map((edge, idx) => {
+              const from = String(edge.from || "");
+              const to = String(edge.to || "");
+              if (!from || !to) return null;
+              const relation = String(edge.relation || "relation");
+              const weight = Math.max(1, Math.min(6, 1 + Number(edge.weight || 0) * 4));
+              return {
+                id: `edge-${idx}`,
+                from,
+                to,
+                arrows: String(relation).includes("cites") ? "to" : "",
+                relation,
+                title: `${relation}${edge.weight != null ? ` (${Number(edge.weight).toFixed(3)})` : ""}`,
+                color: {
+                  color:
+                    relation === "topic_overlap"
+                      ? "#6f63c2"
+                      : relation === "concept_overlap"
+                        ? "#8b7fd3"
+                        : relation === "author_overlap"
+                          ? "#6b8f3f"
+                          : relation === "shared_references"
+                            ? "#b4792f"
+                            : relation === "cites" || relation === "cited_by_selected"
+                              ? "#2f9b88"
+                              : "#4c6278",
+                  opacity: 0.8,
+                },
+                width: weight,
+                dashes: !(relation === "cites" || relation === "cited_by_selected"),
+              };
+            })
+            .filter(Boolean);
+        } else if (rawGraphNodes.length > 0) {
           const idMap = new Map<string, string>();
           const sideMap = new Map<string, "left" | "right" | "center">();
           const centerCanonicalId = String(data.center?.id || "").trim();
@@ -479,10 +587,14 @@ export function CitationNetworkTab(props: Props) {
         <div>
           <h2>Citation Network</h2>
           <p className={css.caption}>
-            Colors and arrows stay consistent across hops: one color for papers this paper cites, one for papers that cite this paper.
+            {isMultiMode
+              ? "Selected-paper interaction graph using citation links, topic overlap, concept overlap, author overlap, and shared references."
+              : "Colors and arrows stay consistent across hops: one color for papers this paper cites, one for papers that cite this paper."}
           </p>
         </div>
         <div className={css.controls}>
+          {!isMultiMode && (
+            <>
           <label>
             Max references
             <input
@@ -516,6 +628,8 @@ export function CitationNetworkTab(props: Props) {
               onChange={(e) => setNHops(Number(e.target.value || DEFAULT_HOPS))}
             />
           </label>
+            </>
+          )}
           <button
             className={css.button}
             onClick={() => {
@@ -531,7 +645,9 @@ export function CitationNetworkTab(props: Props) {
           </button>
         </div>
       </header>
-      <p className={css.autoHint}>Auto-refresh runs 2 seconds after edits.</p>
+      <p className={css.autoHint}>
+        {isMultiMode ? "Auto-refresh runs 2 seconds after multi-paper selection edits." : "Auto-refresh runs 2 seconds after edits."}
+      </p>
 
       {error && <div className={css.error}>{error}</div>}
 
@@ -542,25 +658,32 @@ export function CitationNetworkTab(props: Props) {
       ) : (
         <>
           <div className={css.summaryRow}>
-            <span className={css.summaryItem}>Center: {centerSummary}</span>
-            <span className={css.summaryItem}>References: {data.references.length}</span>
-            <span className={css.summaryItem}>Citing: {data.citing.length}</span>
-            <span className={css.summaryItem}>Hops: {Number(data.summary?.n_hops_requested || nHops)}</span>
+            {!isMultiMode && <span className={css.summaryItem}>Center: {centerSummary}</span>}
+            {!isMultiMode && <span className={css.summaryItem}>References: {data.references.length}</span>}
+            {!isMultiMode && <span className={css.summaryItem}>Citing: {data.citing.length}</span>}
+            {!isMultiMode && <span className={css.summaryItem}>Hops: {Number(data.summary?.n_hops_requested || nHops)}</span>}
             <span className={css.summaryItem}>Nodes: {Number(data.summary?.nodes_shown || data.graph?.node_count || 0)}</span>
-            <span className={css.summaryItem}>Cache: {String(data.cache?.status || "n/a")}</span>
+            <span className={css.summaryItem}>
+              {isMultiMode ? "Edges" : "Cache"}:{" "}
+              {isMultiMode ? Number((data.summary as any)?.edge_count || data.graph?.edge_count || 0) : String(data.cache?.status || "n/a")}
+            </span>
           </div>
           <div className={css.legendRow}>
-            <span className={css.legendItem}>
-              <span className={`${css.legendSwatch} ${css.legendReference}`} />
-              Selected paper cites this paper
-            </span>
-            <span className={css.legendItem}>
-              <span className={`${css.legendSwatch} ${css.legendCites}`} />
-              Selected paper was cited by this paper
-            </span>
+            {!isMultiMode && (
+              <>
+                <span className={css.legendItem}>
+                  <span className={`${css.legendSwatch} ${css.legendReference}`} />
+                  Selected paper cites this paper
+                </span>
+                <span className={css.legendItem}>
+                  <span className={`${css.legendSwatch} ${css.legendCites}`} />
+                  Selected paper was cited by this paper
+                </span>
+              </>
+            )}
             <span className={css.legendItem}>
               <span className={`${css.legendSwatch} ${css.legendCenter}`} />
-              selected paper
+              {isMultiMode ? "selected paper node" : "selected paper"}
             </span>
           </div>
 
@@ -569,7 +692,7 @@ export function CitationNetworkTab(props: Props) {
             {graphError && <div className={css.graphError}>{graphError}</div>}
           </div>
 
-          <div className={css.tableGrid}>
+          {!isMultiMode && <div className={css.tableGrid}>
             <section className={css.tableCard}>
               <h3>References</h3>
               <ul className={css.list}>
@@ -596,7 +719,7 @@ export function CitationNetworkTab(props: Props) {
                 ))}
               </ul>
             </section>
-          </div>
+          </div>}
 
           <details className={css.rawPanel}>
             <summary>Network JSON</summary>

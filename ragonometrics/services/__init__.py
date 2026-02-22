@@ -1,6 +1,6 @@
-"""Shared service-layer modules used by Streamlit and Flask surfaces."""
+"""Shared service-layer modules used by web and CLI surfaces."""
 
-from . import auth, cache_inspector, chat, chat_history, citation_network, notes, openalex_metadata, paper_compare, papers, projects, provenance, rate_limit, structured, usage
+from . import auth, cache_inspector, chat, chat_history, citation_network, multi_paper_chat, notes, openalex_metadata, paper_compare, papers, projects, provenance, rate_limit, structured, usage
 from . import workflow_cache
 
 __all__ = [
@@ -8,6 +8,7 @@ __all__ = [
     "cache_inspector",
     "chat",
     "chat_history",
+    "multi_paper_chat",
     "papers",
     "projects",
     "provenance",

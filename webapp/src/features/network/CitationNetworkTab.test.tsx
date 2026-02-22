@@ -89,7 +89,7 @@ describe("CitationNetworkTab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<CitationNetworkTab paperId="p1" onStatus={() => undefined} />);
+    render(<CitationNetworkTab paperId="p1" chatScopeMode="single" multiPaperIds={["p1"]} onStatus={() => undefined} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Center: Center Paper/i)).toBeInTheDocument();
@@ -143,7 +143,7 @@ describe("CitationNetworkTab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<CitationNetworkTab paperId="p1" onStatus={() => undefined} />);
+    render(<CitationNetworkTab paperId="p1" chatScopeMode="single" multiPaperIds={["p1"]} onStatus={() => undefined} />);
     await Promise.resolve();
     await Promise.resolve();
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -186,7 +186,7 @@ describe("CitationNetworkTab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    render(<CitationNetworkTab paperId="p1" onStatus={() => undefined} />);
+    render(<CitationNetworkTab paperId="p1" chatScopeMode="single" multiPaperIds={["p1"]} onStatus={() => undefined} />);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 
     fireEvent.change(screen.getByLabelText("Max references"), { target: { value: "21" } });

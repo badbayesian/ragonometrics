@@ -63,7 +63,14 @@ describe("ChatTab", () => {
         paperId="p1"
         paperName="Paper.pdf"
         paperPath="/app/papers/Paper.pdf"
+        papers={[{ paper_id: "p1", name: "Paper.pdf", path: "/app/papers/Paper.pdf", display_title: "Paper" }]}
         model="gpt-5-nano"
+        chatScopeMode="single"
+        onChatScopeModeChange={() => undefined}
+        multiPaperIds={["p1"]}
+        onMultiPaperIdsChange={() => undefined}
+        multiConversationId=""
+        onMultiConversationIdChange={() => undefined}
         queuedQuestion=""
         onQuestionConsumed={() => undefined}
         onStatus={onStatus}
@@ -163,7 +170,14 @@ describe("ChatTab", () => {
         paperId="p1"
         paperName="Paper.pdf"
         paperPath="/app/papers/Paper.pdf"
+        papers={[{ paper_id: "p1", name: "Paper.pdf", path: "/app/papers/Paper.pdf", display_title: "Paper" }]}
         model="gpt-5-nano"
+        chatScopeMode="single"
+        onChatScopeModeChange={() => undefined}
+        multiPaperIds={["p1"]}
+        onMultiPaperIdsChange={() => undefined}
+        multiConversationId=""
+        onMultiConversationIdChange={() => undefined}
         queuedQuestion=""
         onQuestionConsumed={() => undefined}
         onStatus={() => undefined}
@@ -261,7 +275,14 @@ describe("ChatTab", () => {
         paperId="p1"
         paperName="Paper.pdf"
         paperPath="/app/papers/Paper.pdf"
+        papers={[{ paper_id: "p1", name: "Paper.pdf", path: "/app/papers/Paper.pdf", display_title: "Paper" }]}
         model="gpt-5-nano"
+        chatScopeMode="single"
+        onChatScopeModeChange={() => undefined}
+        multiPaperIds={["p1"]}
+        onMultiPaperIdsChange={() => undefined}
+        multiConversationId=""
+        onMultiConversationIdChange={() => undefined}
         queuedQuestion=""
         onQuestionConsumed={() => undefined}
         onStatus={() => undefined}
