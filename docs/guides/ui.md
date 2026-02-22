@@ -9,6 +9,7 @@ This guide covers the web app at `http://localhost:8590`.
   - register
   - forgot password
   - reset password
+- New registrations can require manual admin approval before first login.
 - Header controls may include project and persona selectors.
 
 ## Paper Selection

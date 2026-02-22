@@ -244,7 +244,22 @@ def test_auth_register_creates_user_and_sends_alert(monkeypatch) -> None:
         assert created_payload["ok"] is True
         assert created_payload["data"]["created"] is True
         assert created_payload["data"]["username"] == "new_user"
+        assert created_payload["data"]["approved"] is False
+        assert created_payload["data"]["requires_approval"] is True
         assert created_payload["data"]["alert_email_sent"] is True
+
+        login_pending = client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "new_user", "password": "newpass123"},
+        )
+        assert login_pending.status_code == 403
+        login_pending_payload = login_pending.get_json()
+        assert login_pending_payload["ok"] is False
+        assert login_pending_payload["error"]["code"] == "account_pending_approval"
+
+        activated, activation_out = auth_service.set_user_active("dummy", identifier="new_user", is_active=True)
+        assert activated is True
+        assert bool((activation_out or {}).get("is_active")) is True
 
         login = client.post(
             "/api/v1/auth/login",

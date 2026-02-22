@@ -36,6 +36,7 @@ from ragonometrics.pipeline.workflow import run_workflow
 from ragonometrics.pipeline.report_store import store_workflow_reports_from_dir
 from ragonometrics.integrations.rq_queue import enqueue_workflow
 from ragonometrics.integrations.openalex_store import store_openalex_metadata_by_title_author
+from ragonometrics.services import auth as auth_service
 from ragonometrics.services import paper_compare as paper_compare_service
 
 
@@ -148,6 +149,31 @@ def cmd_usage(args: argparse.Namespace) -> int:
             f"{int(row[4] or 0)}\t{int(row[5] or 0)}\t{int(row[6] or 0)}\t"
             f"{int(row[7] or 0)}\t{float(row[8] or 0.0):.6f}"
         )
+    return 0
+
+
+def cmd_auth_approve_user(args: argparse.Namespace) -> int:
+    """Approve one pending user account by username or email."""
+    db_url = (args.db_url or os.environ.get("DATABASE_URL") or "").strip()
+    if not db_url:
+        print("No database URL configured. Pass --db-url or set DATABASE_URL.")
+        return 1
+    identifier = str(args.identifier or "").strip()
+    if not identifier:
+        print("Provide --identifier (username or email).")
+        return 1
+    ok, out = auth_service.set_user_active(
+        db_url,
+        identifier=identifier,
+        is_active=True,
+    )
+    if not ok:
+        print(str(out.get("message") or "Could not approve user."))
+        return 1
+    print(
+        f"Approved user: username={out.get('username')} "
+        f"email={out.get('email') or ''} active={bool(out.get('is_active'))}"
+    )
     return 0
 
 
@@ -754,6 +780,13 @@ def build_parser() -> argparse.ArgumentParser:
     db_migrate = db_sub.add_parser("migrate", help="Apply Alembic migrations to Postgres")
     db_migrate.add_argument("--db-url", type=str, default=None)
     db_migrate.set_defaults(func=cmd_db_migrate)
+
+    auth = sub.add_parser("auth", help="Authentication account administration")
+    auth_sub = auth.add_subparsers(dest="auth_cmd", required=True)
+    auth_approve = auth_sub.add_parser("approve-user", help="Approve one pending user account")
+    auth_approve.add_argument("--identifier", type=str, required=True, help="Username or email.")
+    auth_approve.add_argument("--db-url", type=str, default=None)
+    auth_approve.set_defaults(func=cmd_auth_approve_user)
 
     usage = sub.add_parser("usage", help="Show token usage rollups from Postgres")
     usage.add_argument("--db-url", type=str, default=None)

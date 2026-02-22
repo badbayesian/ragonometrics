@@ -237,6 +237,12 @@ def _registration_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _registration_auto_approve_enabled() -> bool:
+    """Internal helper for registration auto approve."""
+    raw = str(os.getenv("WEB_REGISTRATION_AUTO_APPROVE", "0")).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _set_auth_cookies(response: Response, *, session_id: str, csrf_token: str) -> None:
     """Internal helper for set auth cookies."""
     max_age = int(current_app.config.get("WEB_SESSION_MAX_AGE_SECONDS", 60 * 60 * 12))
@@ -345,6 +351,13 @@ def login():
 
     ok, user = auth_service.authenticate_user(identifier, payload.password)
     if not ok:
+        err_code = str((user or {}).get("code") or "").strip()
+        if err_code == "account_pending_approval":
+            return _err(
+                "account_pending_approval",
+                "Account created. An administrator must approve it before login.",
+                status=403,
+            )
         return _err("invalid_credentials", "Invalid email/username or password.", status=401)
 
     sid = auth_service.persist_session(
@@ -423,6 +436,7 @@ def register():
         username=username,
         email=email,
         password=password,
+        is_active=_registration_auto_approve_enabled(),
     )
     if not ok:
         code = str(out.get("code") or "register_failed")
@@ -449,6 +463,8 @@ def register():
             "created": True,
             "username": str(out.get("username") or username),
             "email": str(out.get("email") or email),
+            "approved": bool(out.get("is_active")),
+            "requires_approval": not bool(out.get("is_active")),
             "alert_email_sent": bool(alert_sent),
         },
         status=201,

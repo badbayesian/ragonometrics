@@ -91,6 +91,13 @@ python tools/manual_openalex_link.py \
   --db-url "$DATABASE_URL"
 ```
 
+Approve a pending web account:
+Activates a newly registered user after manual review.
+
+```bash
+ragonometrics auth approve-user --identifier "<username-or-email>" --db-url "$DATABASE_URL"
+```
+
 ## Documentation
 
 - [Docker deployment](docs/deployment/docker.md)

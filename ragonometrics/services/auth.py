@@ -18,25 +18,32 @@ _HASH_MIN_ITERATIONS = 100_000
 _HASH_DEFAULT_ITERATIONS = 390_000
 
 
-def _active_user_by_identifier(
+def _user_by_identifier(
     cur: Any,
     *,
     identifier: str,
     include_password_hash: bool = False,
+    active_only: bool = True,
+    inactive_only: bool = False,
 ) -> Dict[str, Any]:
-    """Lookup one active user by username/email, optionally including password hash."""
+    """Lookup one user by username/email, optionally filtering by active state."""
     ident = str(identifier or "").strip()
     if not ident:
         return {}
     select_columns = "id, username, email"
     if include_password_hash:
         select_columns = "id, username, email, password_hash"
+    active_filter = ""
+    if active_only:
+        active_filter = "AND is_active = TRUE"
+    elif inactive_only:
+        active_filter = "AND is_active = FALSE"
     cur.execute(
         f"""
         SELECT {select_columns}
         FROM auth.streamlit_users
         WHERE (lower(username) = lower(%s) OR lower(COALESCE(email, '')) = lower(%s))
-          AND is_active = TRUE
+          {active_filter}
         LIMIT 1
         """,
         (ident, ident),
@@ -52,6 +59,37 @@ def _active_user_by_identifier(
     if include_password_hash:
         payload["password_hash"] = str(row[3] or "")
     return payload
+
+
+def _active_user_by_identifier(
+    cur: Any,
+    *,
+    identifier: str,
+    include_password_hash: bool = False,
+) -> Dict[str, Any]:
+    """Lookup one active user by username/email, optionally including password hash."""
+    return _user_by_identifier(
+        cur,
+        identifier=identifier,
+        include_password_hash=include_password_hash,
+        active_only=True,
+    )
+
+
+def _inactive_user_by_identifier(
+    cur: Any,
+    *,
+    identifier: str,
+    include_password_hash: bool = False,
+) -> Dict[str, Any]:
+    """Lookup one inactive user by username/email, optionally including password hash."""
+    return _user_by_identifier(
+        cur,
+        identifier=identifier,
+        include_password_hash=include_password_hash,
+        active_only=False,
+        inactive_only=True,
+    )
 
 
 def load_env_credentials() -> Dict[str, str]:
@@ -229,14 +267,38 @@ def verify_db_login(db_url: str, *, username: str, password: str) -> Tuple[bool,
         return False, {}
 
 
+def verify_pending_db_login(db_url: str, *, username: str, password: str) -> Tuple[bool, Dict[str, Any]]:
+    """Verify credentials for one inactive DB user to support pending-approval feedback."""
+    identifier = str(username or "").strip()
+    if not db_url or not identifier:
+        return False, {}
+    try:
+        with pooled_connection(db_url) as conn:
+            cur = conn.cursor()
+            user_row = _inactive_user_by_identifier(cur, identifier=identifier, include_password_hash=True)
+            if not user_row:
+                return False, {}
+            stored_hash = str(user_row.get("password_hash") or "")
+            if not password_verify(password, stored_hash):
+                return False, {}
+            return True, {
+                "user_id": int(user_row.get("user_id") or 0),
+                "username": str(user_row.get("username") or identifier).strip() or identifier,
+                "email": user_row.get("email"),
+            }
+    except Exception:
+        return False, {}
+
+
 def register_db_user(
     db_url: str,
     *,
     username: str,
     email: Optional[str],
     password: str,
+    is_active: bool = False,
 ) -> Tuple[bool, Dict[str, Any]]:
-    """Create one active DB-backed auth user."""
+    """Create one DB-backed auth user with configurable activation state."""
     user_name = str(username or "").strip()
     user_email = str(email or "").strip() or None
     raw_password = str(password or "")
@@ -286,15 +348,66 @@ def register_db_user(
                 INSERT INTO auth.streamlit_users
                     (username, email, password_hash, is_active, created_at, updated_at)
                 VALUES
-                    (%s, %s, %s, TRUE, NOW(), NOW())
+                    (%s, %s, %s, %s, NOW(), NOW())
                 """,
-                (user_name, user_email, password_hash_value),
+                (user_name, user_email, password_hash_value, bool(is_active)),
             )
             conn.commit()
     except Exception:
         return False, {"code": "register_failed", "message": "Could not create account."}
 
-    return True, {"username": user_name, "email": user_email}
+    return True, {"username": user_name, "email": user_email, "is_active": bool(is_active)}
+
+
+def set_user_active(
+    db_url: str,
+    *,
+    identifier: str,
+    is_active: bool = True,
+) -> Tuple[bool, Dict[str, Any]]:
+    """Update one DB user activation state by username or email."""
+    ident = str(identifier or "").strip()
+    if not db_url:
+        return False, {"code": "auth_unavailable", "message": "Database auth is unavailable."}
+    if not ident:
+        return False, {"code": "validation_error", "message": "identifier is required."}
+    if not auth_tables_ready(db_url):
+        return False, {"code": "auth_unavailable", "message": "Auth tables are not ready."}
+    try:
+        with pooled_connection(db_url) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT id, username, email
+                FROM auth.streamlit_users
+                WHERE lower(username) = lower(%s) OR lower(COALESCE(email, '')) = lower(%s)
+                LIMIT 1
+                """,
+                (ident, ident),
+            )
+            row = cur.fetchone()
+            if not row:
+                return False, {"code": "user_not_found", "message": "User not found."}
+            user_id = int(row[0])
+            username = str(row[1] or "").strip()
+            email = str(row[2] or "").strip() or None
+            cur.execute(
+                """
+                UPDATE auth.streamlit_users
+                SET is_active = %s, updated_at = NOW()
+                WHERE id = %s
+                """,
+                (bool(is_active), user_id),
+            )
+            conn.commit()
+            return True, {
+                "user_id": user_id,
+                "username": username,
+                "email": email,
+                "is_active": bool(is_active),
+            }
+    except Exception:
+        return False, {"code": "user_update_failed", "message": "Could not update user state."}
 
 
 def _lookup_active_user_by_identifier(db_url: str, *, identifier: str) -> Dict[str, Any]:
@@ -564,12 +677,21 @@ def authenticate_user(username: str, password: str) -> Tuple[bool, Dict[str, Any
     if ready and env_credentials and str(os.getenv("STREAMLIT_AUTH_BOOTSTRAP_FROM_ENV", "1")).strip() != "0":
         upsert_users_from_env(db_url, env_credentials)
     db_users = active_db_user_count(db_url) if ready else 0
-    if ready and db_users > 0:
+    if ready:
         ok, user = verify_db_login(db_url, username=username, password=password)
-        if not ok:
+        if ok:
+            user["source"] = "db"
+            return True, user
+        pending_ok, pending_user = verify_pending_db_login(db_url, username=username, password=password)
+        if pending_ok:
+            return False, {
+                "code": "account_pending_approval",
+                "message": "Account exists but is pending admin approval.",
+                "username": pending_user.get("username"),
+                "source": "db",
+            }
+        if db_users > 0:
             return False, {}
-        user["source"] = "db"
-        return True, user
     entered = str(username or "").strip()
     expected = env_credentials.get(entered)
     if expected and hmac.compare_digest(str(expected), str(password or "")):

@@ -292,3 +292,26 @@ def test_cmd_compare_export_writes_json(monkeypatch, tmp_path) -> None:
     assert rc == 0
     assert out_path.exists()
     assert "comparison_id" in out_path.read_text(encoding="utf-8")
+
+
+def test_auth_approve_user_parser_accepts_identifier() -> None:
+    parser = entrypoints.build_parser()
+    args = parser.parse_args(["auth", "approve-user", "--identifier", "new_user", "--db-url", "dummy"])
+    assert args.identifier == "new_user"
+    assert args.db_url == "dummy"
+
+
+def test_cmd_auth_approve_user_calls_service(monkeypatch) -> None:
+    parser = entrypoints.build_parser()
+    args = parser.parse_args(["auth", "approve-user", "--identifier", "pending_user", "--db-url", "dummy"])
+
+    monkeypatch.setattr(
+        entrypoints.auth_service,
+        "set_user_active",
+        lambda db_url, identifier, is_active=True: (
+            True,
+            {"username": identifier, "email": "pending@example.com", "is_active": bool(is_active)},
+        ),
+    )
+    rc = entrypoints.cmd_auth_approve_user(args)
+    assert rc == 0
